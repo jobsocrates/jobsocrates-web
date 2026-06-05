@@ -1,0 +1,55 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #0D0D18;
+  --accent: #FF6B35;
+  --font-sans: var(--font-inter), "Pretendard Variable", Pretendard,
+    -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+html, body {
+  background: var(--bg);
+  color: rgba(255, 255, 255, 0.88);
+  font-family: var(--font-sans);
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3 { font-weight: 600; }
+strong, b  { font-weight: 500; }
+
+::placeholder { color: rgba(255, 255, 255, 0.28); }
+
+* { box-sizing: border-box; }
+
+/* ── 스크롤 애니메이션 ── */
+.anim {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.65s ease, transform 0.65s ease;
+}
+.anim.in-view {
+  opacity: 1;
+  transform: none;
+}
+.anim-delay-1 { transition-delay: 0.1s; }
+.anim-delay-2 { transition-delay: 0.2s; }
+.anim-delay-3 { transition-delay: 0.3s; }
+.anim-delay-4 { transition-delay: 0.4s; }
+
+/* ── 히어로 스크롤 섹션 — 데스크탑에서 500vh로 카드 전환 ── */
+.hero-scroll-section {
+  min-height: 100vh;
+}
+@media (min-width: 1024px) {
+  .hero-scroll-section {
+    height: 500vh;
+    min-height: unset;
+  }
+}
+
+/* ── 모바일 safe area ── */
+.pb-safe { padding-bottom: env(safe-area-inset-bottom); }
