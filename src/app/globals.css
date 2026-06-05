@@ -40,16 +40,5 @@ strong, b  { font-weight: 500; }
 .anim-delay-3 { transition-delay: 0.3s; }
 .anim-delay-4 { transition-delay: 0.4s; }
 
-/* ── 히어로 스크롤 섹션 — 데스크탑에서 500vh로 카드 전환 ── */
-.hero-scroll-section {
-  min-height: 100vh;
-}
-@media (min-width: 1024px) {
-  .hero-scroll-section {
-    height: 500vh;
-    min-height: unset;
-  }
-}
-
 /* ── 모바일 safe area ── */
 .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
