@@ -22,7 +22,7 @@ const DOTS = [
 ];
 
 const FIRST_MSG =
-  "안녕하세요. 취업소크라테스에요 🏛️\n먼저 지원 직무가 어떻게 돼요?";
+  "안녕하세요. 취업소크라테스에요 🏛️\n우리 같이 내 이야기로 자소서 만들어봐요!\n\n먼저 지원 직무가 어떻게 돼요?";
 
 type SubStage = "greeting" | "question" | "jd" | "expType" | "expInput" | "digging";
 type MsgUI = "jd-upload" | "chips";
@@ -38,7 +38,7 @@ let _id = 0;
 const uid = () => ++_id;
 
 function stripMd(t: string) {
-  return t.replace(/\*\*(.*?)\*\*/g, "$1").replace(/\*(.*?)\*/g, "$1").replace(/\n{2,}/g, "\n");
+  return t.replace(/\*\*(.*?)\*\*/g, "$1").replace(/\*(.*?)\*/g, "$1");
 }
 
 function ChipBtn({
@@ -260,11 +260,12 @@ export function Step1Digging({
     const next = digCount + 1;
     setDigCount(next);
 
-    const ctx: DiggingContext = { jobTitle, question, jdKeywords, experiences };
-    if (next >= 20) {
+    if (next >= 6) {
       pushBot("충분히 이야기 나눴어요. 이제 분석해드릴게요!");
+      const ctx: DiggingContext = { jobTitle, question, jdKeywords, experiences };
       setCompletionData({ history: newHistory, ctx });
     } else {
+      const ctx: DiggingContext = { jobTitle, question, jdKeywords, experiences };
       await fetchDigQuestion(newHistory, ctx);
     }
   }
@@ -344,11 +345,11 @@ export function Step1Digging({
                     </div>
                   )}
                   <div
-                    className="max-w-[85%] px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap"
+                    className="max-w-[80%] px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap"
                     style={
                       msg.role === "bot"
-                        ? { background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.88)", borderRadius: "4px 16px 16px 16px", wordBreak: "keep-all" }
-                        : { background: ACCENT, color: "#fff", borderRadius: "16px 4px 16px 16px", wordBreak: "keep-all" }
+                        ? { background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.88)", borderRadius: "4px 16px 16px 16px" }
+                        : { background: ACCENT, color: "#fff", borderRadius: "16px 4px 16px 16px" }
                     }
                   >
                     {msg.role === "bot" ? stripMd(msg.text) : msg.text}
@@ -508,9 +509,9 @@ export function Step1Digging({
 
       {/* input */}
       {!completionData && (
-        <div className="px-4 pt-3 pb-6 flex-shrink-0 border-t" style={{ borderColor: "rgba(255,255,255,0.07)" }}>
-          <div className="max-w-xl mx-auto" style={{ display: "flex", alignItems: "center" }}>
-            <div style={{ flex: 1, position: "relative" }}>
+        <div className="px-4 py-4 pb-safe flex-shrink-0 border-t" style={{ borderColor: "rgba(255,255,255,0.07)" }}>
+          <div className="max-w-xl mx-auto flex gap-3 items-end">
+            <div className="flex-1 relative">
               <textarea
                 value={input}
                 onChange={(e) => {
@@ -527,19 +528,18 @@ export function Step1Digging({
                 disabled={inputDisabled}
                 placeholder={placeholder}
                 rows={1}
-                className="w-full focus:outline-none disabled:opacity-30 placeholder:text-white/30"
+                className="w-full resize-none rounded-2xl px-4 py-3 text-sm leading-relaxed focus:outline-none disabled:opacity-30"
                 style={{
-                  resize: "none",
-                  overflow: "hidden",
-                  boxSizing: "border-box",
                   background: "rgba(255,255,255,0.06)",
                   color: "rgba(255,255,255,0.9)",
                   border: "1px solid rgba(255,255,255,0.1)",
-                  borderRadius: "24px",
-                  padding: "12px 16px",
-                  fontSize: "15px",
-                  lineHeight: "1.5",
-                  height: "48px",
+                  minHeight: "48px",
+                  maxHeight: "120px",
+                }}
+                onInput={(e) => {
+                  const t = e.target as HTMLTextAreaElement;
+                  t.style.height = "auto";
+                  t.style.height = Math.min(t.scrollHeight, 120) + "px";
                 }}
               />
               {charLimit && (
@@ -554,8 +554,8 @@ export function Step1Digging({
             <button
               onClick={() => { if (stage === "expInput") submitExpInput(); else handleSend(); }}
               disabled={inputDisabled || !input.trim()}
-              className="rounded-2xl flex items-center justify-center transition-all hover:scale-105 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed flex-shrink-0"
-              style={{ background: ACCENT, height: "48px", width: "48px", borderRadius: "24px", marginLeft: "10px", flexShrink: 0 }}
+              className="w-11 h-11 rounded-2xl flex items-center justify-center transition-all hover:scale-105 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed flex-shrink-0"
+              style={{ background: ACCENT }}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="22" y1="2" x2="11" y2="13" />
