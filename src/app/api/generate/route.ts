@@ -38,9 +38,14 @@ async function stream(system: string, messages: MsgParam[]) {
               ctrl.enqueue(enc.encode(chunk.delta.text));
             }
           }
+        } catch {
+          // 클라이언트 이탈 등으로 스트림이 중단된 경우 무시
         } finally {
-          ctrl.close();
+          try { ctrl.close(); } catch { /* 이미 닫힌 경우 무시 */ }
         }
+      },
+      cancel() {
+        try { s.abort(); } catch { /* 무시 */ }
       },
     }),
     { headers: { "Content-Type": "text/plain; charset=utf-8" } }
@@ -64,7 +69,13 @@ async function generate(system: string, messages: MsgParam[]) {
 }
 
 export async function POST(req: Request) {
-  const body = await req.json();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let body: any;
+  try {
+    body = await req.json();
+  } catch {
+    return Response.json({ error: "invalid json" }, { status: 400 });
+  }
 
   switch (body.type) {
     case "digging": {
@@ -126,6 +137,39 @@ export async function POST(req: Request) {
         },
       ];
       return generate(sys, msgs);
+    }
+
+    case "analyze": {
+      const sys = prompt("analyze") +
+        `\n\n## 세션 정보\n직무: ${body.jobTitle}\n문항: ${body.question || "미입력"}\nJD 키워드: ${(body.jdKeywords ?? []).join(", ") || "없음"}\n\n## 자소서 초안\n${body.draft}`;
+      const msgs: MsgParam[] = body.messages?.length > 0
+        ? body.messages
+        : [{ role: "user", content: "자소서 초안을 분석하고 첫 질문을 시작해줘." }];
+      return stream(sys, msgs);
+    }
+
+    case "interview-questions": {
+      const sys =
+        "당신은 면접 전문가입니다. 자소서를 분석하여 면접관이 실제로 물어볼 법한 예상 질문 4개를 생성하세요. " +
+        "반드시 JSON 배열만 출력하세요. 다른 텍스트 없이: [\"질문1\",\"질문2\",\"질문3\",\"질문4\"]";
+      const messages: MsgParam[] = [
+        {
+          role: "user",
+          content:
+            `직무: ${body.jobTitle || "미입력"}\n자소서 문항: ${body.question || "미입력"}\n\n자소서:\n${body.coverLetter}\n\n` +
+            "이 자소서를 바탕으로 면접관이 실제로 물어볼 법한 예상 질문 4개를 JSON 배열로만 출력해줘.",
+        },
+      ];
+      return generate(sys, messages);
+    }
+
+    case "interview-feedback": {
+      const sys =
+        `면접 코치. 직무: ${body.jobTitle || "미입력"}. 자소서 문항: ${body.question || "미입력"}.\n` +
+        `면접 질문: "${body.interviewQuestion}".\n` +
+        "학생 답변에 피드백을 줘라. 잘한 점과 보완할 점을 구체적으로 짚어줘. \"~요\" 체로 따뜻하게. 4~5문장 이내. 마크다운 볼드(**) 절대 금지.";
+      const messages: MsgParam[] = [{ role: "user", content: body.answer }];
+      return stream(sys, messages);
     }
 
     default:
