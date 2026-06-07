@@ -1,0 +1,524 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
+
+const ADMIN_EMAIL = "ijhan6403@gmail.com";
+const BG = "#0D0D18";
+const ACCENT = "#C96442";
+const BLUE = "#6B8EFF";
+const VIOLET = "#A78BFA";
+const GREEN = "rgb(74,222,128)";
+const RED = "rgb(248,113,113)";
+
+type Tab = "dashboard" | "review" | "notes";
+type Filter = "all" | "good" | "bad" | "none";
+
+interface SessionItem {
+  id: string;
+  job_title: string;
+  created_at: string;
+  profiles: { email: string } | null;
+  admin_reviews: { id?: string; rating: string | null; comment: string }[];
+}
+
+interface CoverItemFull {
+  id: string;
+  question: string;
+  draft: string;
+  status: string;
+  order_index: number;
+  messages: { id: string; role: string; content: string; created_at: string }[];
+  interview_questions: {
+    id: string;
+    question: string;
+    order_index: number;
+    interview_answers: { user_answer: string; ai_feedback: string }[];
+  }[];
+}
+
+interface Breakdown { today: number; week: number; month: number; total: number; }
+interface DashStats {
+  users: Breakdown;
+  sessions: Breakdown;
+  views: Breakdown;
+  dailyViews: { date: string; count: number }[];
+}
+
+export default function AdminPage() {
+  const [authed, setAuthed] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState<Tab>("dashboard");
+
+  // Dashboard
+  const [stats, setStats] = useState<DashStats | null>(null);
+
+  // Review
+  const [sessions, setSessions] = useState<SessionItem[]>([]);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [coverItems, setCoverItems] = useState<CoverItemFull[]>([]);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [filter, setFilter] = useState<Filter>("all");
+  const [rating, setRating] = useState<"good" | "bad" | null>(null);
+  const [comment, setComment] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  // Notes
+  const [goodNotes, setGoodNotes] = useState("");
+  const [badNotes, setBadNotes] = useState("");
+  const [improvementNotes, setImprovementNotes] = useState("");
+  const [notesSaving, setNotesSaving] = useState(false);
+  const [notesSaved, setNotesSaved] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user?.email === ADMIN_EMAIL) {
+        setAuthed(true);
+        fetchDashboard();
+        fetchSessions();
+        fetchNotes();
+      }
+      setLoading(false);
+    });
+  }, []);
+
+  async function fetchDashboard() {
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+    const weekStart = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
+
+    const q = (table: string, from?: string) => {
+      const base = supabase.from(table).select("*", { count: "exact", head: true });
+      return from ? base.gte("created_at", from) : base;
+    };
+
+    const [
+      { count: uTotal }, { count: uToday }, { count: uWeek }, { count: uMonth },
+      { count: sTotal }, { count: sToday }, { count: sWeek }, { count: sMonth },
+      { count: vTotal }, { count: vToday }, { count: vWeek }, { count: vMonth },
+      { data: recentViews },
+    ] = await Promise.all([
+      q("profiles"), q("profiles", todayStart), q("profiles", weekStart), q("profiles", monthStart),
+      q("sessions"), q("sessions", todayStart), q("sessions", weekStart), q("sessions", monthStart),
+      q("page_views"), q("page_views", todayStart), q("page_views", weekStart), q("page_views", monthStart),
+      supabase.from("page_views").select("created_at").gte("created_at", twoWeeksAgo),
+    ]);
+
+    const dailyMap: Record<string, number> = {};
+    (recentViews || []).forEach((v) => {
+      const d = v.created_at.slice(0, 10);
+      dailyMap[d] = (dailyMap[d] || 0) + 1;
+    });
+    const dailyViews = Object.entries(dailyMap)
+      .sort(([a], [b]) => b.localeCompare(a))
+      .map(([date, count]) => ({ date, count }));
+
+    setStats({
+      users:    { today: uToday || 0, week: uWeek || 0, month: uMonth || 0, total: uTotal || 0 },
+      sessions: { today: sToday || 0, week: sWeek || 0, month: sMonth || 0, total: sTotal || 0 },
+      views:    { today: vToday || 0, week: vWeek || 0, month: vMonth || 0, total: vTotal || 0 },
+      dailyViews,
+    });
+  }
+
+  async function fetchSessions() {
+    setSessionsLoading(true);
+    const { data } = await supabase
+      .from("sessions")
+      .select("id, job_title, created_at, profiles(email), admin_reviews(id, rating, comment)")
+      .order("created_at", { ascending: false });
+    setSessions((data as unknown as SessionItem[]) || []);
+    setSessionsLoading(false);
+  }
+
+  async function selectSession(id: string) {
+    if (selectedId === id) return;
+    setSelectedId(id);
+    const s = sessions.find((x) => x.id === id);
+    const rev = s?.admin_reviews?.[0];
+    setRating((rev?.rating as "good" | "bad" | null) || null);
+    setComment(rev?.comment || "");
+    setSaved(false);
+
+    setDetailLoading(true);
+    setCoverItems([]);
+    const { data } = await supabase
+      .from("cover_items")
+      .select(
+        "id, question, draft, status, order_index, messages(id, role, content, created_at), interview_questions(id, question, order_index, interview_answers(user_answer, ai_feedback))"
+      )
+      .eq("session_id", id)
+      .order("order_index");
+    setCoverItems((data as unknown as CoverItemFull[]) || []);
+    setDetailLoading(false);
+  }
+
+  async function saveReview() {
+    if (!selectedId) return;
+    setSaving(true);
+    await supabase
+      .from("admin_reviews")
+      .upsert({ session_id: selectedId, rating, comment, updated_at: new Date().toISOString() }, { onConflict: "session_id" });
+    await fetchSessions();
+    setSaving(false);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  }
+
+  async function fetchNotes() {
+    const { data } = await supabase
+      .from("prompt_notes")
+      .select("good_notes, bad_notes, improvement_notes")
+      .limit(1)
+      .maybeSingle();
+    if (data) {
+      setGoodNotes(data.good_notes || "");
+      setBadNotes(data.bad_notes || "");
+      setImprovementNotes(data.improvement_notes || "");
+    }
+  }
+
+  async function saveNotes() {
+    setNotesSaving(true);
+    const payload = { good_notes: goodNotes, bad_notes: badNotes, improvement_notes: improvementNotes, updated_at: new Date().toISOString() };
+    const { data: ex } = await supabase.from("prompt_notes").select("id").limit(1).maybeSingle();
+    if (ex) {
+      await supabase.from("prompt_notes").update(payload).eq("id", ex.id);
+    } else {
+      await supabase.from("prompt_notes").insert(payload);
+    }
+    setNotesSaving(false);
+    setNotesSaved(true);
+    setTimeout(() => setNotesSaved(false), 2000);
+  }
+
+  const filtered = sessions.filter((s) => {
+    const r = s.admin_reviews?.[0]?.rating;
+    if (filter === "good") return r === "good";
+    if (filter === "bad") return r === "bad";
+    if (filter === "none") return !r;
+    return true;
+  });
+
+  const selectedSession = sessions.find((s) => s.id === selectedId);
+  const maxDaily = Math.max(...(stats?.dailyViews.map((v) => v.count) || [1]), 1);
+
+  if (loading) {
+    return (
+      <div style={{ background: BG, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ width: 24, height: 24, borderRadius: "50%", border: `2px solid rgba(201,100,66,0.3)`, borderTopColor: ACCENT, animation: "spin 0.8s linear infinite" }} />
+        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      </div>
+    );
+  }
+
+  if (!authed) {
+    return (
+      <div style={{ background: BG, minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16 }}>
+        <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)" }}>접근 권한이 없습니다.</p>
+        <a href="/" style={{ fontSize: 12, color: "rgba(255,255,255,0.25)", textDecoration: "none" }}>← 홈으로</a>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ background: BG, minHeight: "100vh", color: "rgba(255,255,255,0.88)", fontFamily: "inherit" }}>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+        textarea { font-family: inherit; }
+        textarea::placeholder { color: rgba(255,255,255,0.2); }
+      `}</style>
+
+      {/* Header */}
+      <header style={{ height: 52, padding: "0 20px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid rgba(255,255,255,0.06)", background: "rgba(13,13,24,0.96)", backdropFilter: "blur(12px)", position: "sticky", top: 0, zIndex: 40 }}>
+        <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.4)" }}>Admin</span>
+
+        <nav style={{ display: "flex", gap: 2 }}>
+          {(["dashboard", "review", "notes"] as Tab[]).map((t) => (
+            <button key={t} onClick={() => setTab(t)} style={{ padding: "5px 14px", borderRadius: 8, fontSize: 12, fontWeight: 500, border: "none", cursor: "pointer", transition: "all 0.15s", background: tab === t ? "rgba(255,255,255,0.09)" : "transparent", color: tab === t ? "rgba(255,255,255,0.88)" : "rgba(255,255,255,0.3)" }}>
+              {t === "dashboard" ? "대시보드" : t === "review" ? "대화 리뷰" : "프롬프트 노트"}
+            </button>
+          ))}
+        </nav>
+
+        <a href="/" style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", textDecoration: "none" }}>← 홈</a>
+      </header>
+
+      {/* ─── DASHBOARD ─── */}
+      {tab === "dashboard" && (
+        <div style={{ padding: "28px 24px", maxWidth: 900, margin: "0 auto" }}>
+
+          {/* 3-category cards */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 20 }}>
+            {[
+              { label: "가입자", icon: "👤", color: ACCENT, borderColor: "rgba(201,100,66,0.25)", bgColor: "rgba(201,100,66,0.05)", data: stats?.users },
+              { label: "세션",   icon: "💬", color: BLUE,   borderColor: "rgba(107,142,255,0.25)", bgColor: "rgba(107,142,255,0.05)", data: stats?.sessions },
+              { label: "방문자", icon: "👁",  color: VIOLET, borderColor: "rgba(167,139,250,0.25)", bgColor: "rgba(167,139,250,0.05)", data: stats?.views },
+            ].map(({ label, icon, color, borderColor, bgColor, data }) => (
+              <div key={label} style={{ borderRadius: 18, border: `1px solid ${borderColor}`, background: bgColor, overflow: "hidden" }}>
+                {/* Card header */}
+                <div style={{ padding: "14px 18px 12px", borderBottom: `1px solid ${borderColor}`, display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 15 }}>{icon}</span>
+                  <p style={{ fontSize: 13, fontWeight: 700, color }}>{label}</p>
+                </div>
+                {/* 4 stats */}
+                <div style={{ padding: "4px 0 8px" }}>
+                  {[
+                    { key: "오늘", val: data?.today },
+                    { key: "이번 주", val: data?.week },
+                    { key: "이번 달", val: data?.month },
+                    { key: "전체", val: data?.total },
+                  ].map(({ key, val }) => (
+                    <div key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 18px" }}>
+                      <span style={{ fontSize: 12, color: "rgba(255,255,255,0.38)" }}>{key}</span>
+                      <span style={{ fontSize: 18, fontWeight: 700, color: val ? color : "rgba(255,255,255,0.2)", letterSpacing: "-0.02em" }}>
+                        {val ?? "…"}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Visitor trend chart */}
+          <div style={{ borderRadius: 16, background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.06)", overflow: "hidden" }}>
+            <div style={{ padding: "13px 18px", borderBottom: "1px solid rgba(255,255,255,0.05)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <p style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.55)" }}>방문자 추이 (최근 14일)</p>
+              <span style={{ fontSize: 11, color: "rgba(255,255,255,0.2)" }}>page_views 기준</span>
+            </div>
+            <div style={{ padding: "8px 0 4px" }}>
+              {stats?.dailyViews.length ? stats.dailyViews.map(({ date, count }) => (
+                <div key={date} style={{ display: "flex", alignItems: "center", gap: 12, padding: "5px 18px" }}>
+                  <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", width: 80, flexShrink: 0 }}>{date.slice(5)}</span>
+                  <div style={{ flex: 1, height: 4, borderRadius: 2, background: "rgba(255,255,255,0.05)", overflow: "hidden" }}>
+                    <div style={{ height: "100%", width: `${(count / maxDaily) * 100}%`, background: VIOLET, borderRadius: 2, transition: "width 0.4s ease" }} />
+                  </div>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.5)", width: 20, textAlign: "right" }}>{count}</span>
+                </div>
+              )) : (
+                <p style={{ padding: "16px 18px", fontSize: 12, color: "rgba(255,255,255,0.18)" }}>아직 방문 데이터가 없어요</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── REVIEW ─── */}
+      {tab === "review" && (
+        <div style={{ display: "flex", height: "calc(100vh - 52px)" }}>
+          {/* Left panel: session list */}
+          <div style={{ width: 272, flexShrink: 0, borderRight: "1px solid rgba(255,255,255,0.06)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+            {/* Filters */}
+            <div style={{ padding: "10px 12px", borderBottom: "1px solid rgba(255,255,255,0.05)", display: "flex", gap: 4, flexWrap: "wrap" }}>
+              {(["all", "good", "bad", "none"] as Filter[]).map((f) => (
+                <button key={f} onClick={() => setFilter(f)} style={{ padding: "4px 11px", borderRadius: 8, fontSize: 11, fontWeight: 500, cursor: "pointer", border: "none", transition: "all 0.15s", background: filter === f ? "rgba(255,255,255,0.1)" : "transparent", color: filter === f ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.3)" }}>
+                  {f === "all" ? `전체 (${sessions.length})` : f === "good" ? "👍 Good" : f === "bad" ? "👎 Bad" : "미평가"}
+                </button>
+              ))}
+            </div>
+
+            {/* List */}
+            <div style={{ flex: 1, overflowY: "auto" }}>
+              {sessionsLoading ? (
+                <div style={{ display: "flex", justifyContent: "center", padding: 24 }}>
+                  <div style={{ width: 18, height: 18, borderRadius: "50%", border: "2px solid rgba(255,255,255,0.1)", borderTopColor: "rgba(255,255,255,0.4)", animation: "spin 0.8s linear infinite" }} />
+                </div>
+              ) : filtered.length === 0 ? (
+                <p style={{ padding: 20, fontSize: 12, color: "rgba(255,255,255,0.2)", textAlign: "center" }}>세션 없음</p>
+              ) : filtered.map((s) => {
+                const rev = s.admin_reviews?.[0];
+                const isSelected = s.id === selectedId;
+                return (
+                  <div key={s.id} onClick={() => selectSession(s.id)} style={{ padding: "11px 14px", cursor: "pointer", borderBottom: "1px solid rgba(255,255,255,0.04)", background: isSelected ? "rgba(255,255,255,0.07)" : "transparent", transition: "background 0.12s" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 3 }}>
+                      {rev?.rating === "good" && <span style={{ fontSize: 10, lineHeight: 1 }}>👍</span>}
+                      {rev?.rating === "bad" && <span style={{ fontSize: 10, lineHeight: 1 }}>👎</span>}
+                      <span style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.82)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {s.job_title || "직무 미입력"}
+                      </span>
+                    </div>
+                    <p style={{ fontSize: 11, color: "rgba(255,255,255,0.28)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 2 }}>
+                      {(s.profiles as any)?.email || "이메일 없음"}
+                    </p>
+                    <p style={{ fontSize: 10, color: "rgba(255,255,255,0.2)" }}>
+                      {s.created_at.slice(0, 10)}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Right panel: detail */}
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
+            {!selectedId ? (
+              <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <p style={{ fontSize: 13, color: "rgba(255,255,255,0.18)" }}>← 세션을 선택하세요</p>
+              </div>
+            ) : (
+              <>
+                {/* Session header */}
+                <div style={{ padding: "12px 20px", borderBottom: "1px solid rgba(255,255,255,0.06)", flexShrink: 0 }}>
+                  <p style={{ fontSize: 14, fontWeight: 700, color: "rgba(255,255,255,0.85)" }}>
+                    {selectedSession?.job_title || "직무 미입력"}
+                  </p>
+                  <p style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 2 }}>
+                    {(selectedSession?.profiles as any)?.email} &middot; {selectedSession?.created_at.slice(0, 10)}
+                  </p>
+                </div>
+
+                {/* Conversation scroll area */}
+                <div style={{ flex: 1, overflowY: "auto", padding: "20px 24px" }}>
+                  {detailLoading ? (
+                    <div style={{ display: "flex", justifyContent: "center", paddingTop: 40 }}>
+                      <div style={{ width: 20, height: 20, borderRadius: "50%", border: `2px solid rgba(201,100,66,0.2)`, borderTopColor: ACCENT, animation: "spin 0.8s linear infinite" }} />
+                    </div>
+                  ) : coverItems.length === 0 ? (
+                    <p style={{ fontSize: 12, color: "rgba(255,255,255,0.2)", textAlign: "center", paddingTop: 40 }}>대화 기록이 없습니다</p>
+                  ) : coverItems.map((item, idx) => (
+                    <div key={item.id} style={{ marginBottom: 36 }}>
+                      {/* Cover letter question + draft */}
+                      <div style={{ padding: "12px 16px", borderRadius: 12, background: `rgba(107,142,255,0.06)`, border: `1px solid rgba(107,142,255,0.15)`, marginBottom: 16 }}>
+                        <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: BLUE, marginBottom: 7 }}>문항 {idx + 1}</p>
+                        <p style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.82)", marginBottom: 8, lineHeight: 1.55 }}>{item.question}</p>
+                        {item.draft && (
+                          <p style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", lineHeight: 1.65, whiteSpace: "pre-wrap" }}>{item.draft}</p>
+                        )}
+                      </div>
+
+                      {/* Chat messages */}
+                      {item.messages
+                        .sort((a, b) => a.created_at.localeCompare(b.created_at))
+                        .map((msg) => (
+                          <div key={msg.id} style={{ display: "flex", justifyContent: msg.role === "user" ? "flex-end" : "flex-start", marginBottom: 8 }}>
+                            <div style={{ maxWidth: "78%", padding: "9px 14px", borderRadius: msg.role === "user" ? "14px 4px 14px 14px" : "4px 14px 14px 14px", background: msg.role === "user" ? ACCENT : "rgba(255,255,255,0.07)", fontSize: 12, lineHeight: 1.65, color: "rgba(255,255,255,0.85)", whiteSpace: "pre-wrap" }}>
+                              {msg.content}
+                            </div>
+                          </div>
+                        ))}
+
+                      {/* Interview questions */}
+                      {item.interview_questions.length > 0 && (
+                        <div style={{ marginTop: 18 }}>
+                          <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: VIOLET, marginBottom: 10 }}>면접 예상 질문</p>
+                          {item.interview_questions
+                            .sort((a, b) => a.order_index - b.order_index)
+                            .map((q) => (
+                              <div key={q.id} style={{ marginBottom: 10, padding: "12px 14px", borderRadius: 12, background: "rgba(167,139,250,0.06)", border: "1px solid rgba(167,139,250,0.15)" }}>
+                                <p style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.8)", marginBottom: q.interview_answers.length ? 10 : 0 }}>{q.question}</p>
+                                {q.interview_answers.map((a, i) => (
+                                  <div key={i} style={{ paddingTop: 8, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                                    <p style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", marginBottom: 4 }}>
+                                      <span style={{ color: "rgba(255,255,255,0.3)", fontWeight: 600 }}>유저: </span>{a.user_answer}
+                                    </p>
+                                    <p style={{ fontSize: 11, color: `rgba(107,142,255,0.8)` }}>
+                                      <span style={{ fontWeight: 600 }}>AI: </span>{a.ai_feedback}
+                                    </p>
+                                  </div>
+                                ))}
+                              </div>
+                            ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Rating + comment footer */}
+                <div style={{ padding: "14px 20px", borderTop: "1px solid rgba(255,255,255,0.06)", flexShrink: 0, background: "rgba(9,9,22,0.85)", backdropFilter: "blur(8px)" }}>
+                  <div style={{ display: "flex", gap: 8, marginBottom: 10, alignItems: "center" }}>
+                    <button onClick={() => setRating((r) => (r === "good" ? null : "good"))} style={{ padding: "6px 16px", borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: "pointer", border: `1px solid ${rating === "good" ? "rgba(74,222,128,0.45)" : "rgba(255,255,255,0.1)"}`, background: rating === "good" ? "rgba(74,222,128,0.12)" : "transparent", color: rating === "good" ? GREEN : "rgba(255,255,255,0.38)", transition: "all 0.15s" }}>
+                      👍 Good
+                    </button>
+                    <button onClick={() => setRating((r) => (r === "bad" ? null : "bad"))} style={{ padding: "6px 16px", borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: "pointer", border: `1px solid ${rating === "bad" ? "rgba(248,113,113,0.45)" : "rgba(255,255,255,0.1)"}`, background: rating === "bad" ? "rgba(248,113,113,0.12)" : "transparent", color: rating === "bad" ? RED : "rgba(255,255,255,0.38)", transition: "all 0.15s" }}>
+                      👎 Bad
+                    </button>
+                    <div style={{ flex: 1 }} />
+                    <button onClick={saveReview} disabled={saving} style={{ padding: "6px 20px", borderRadius: 10, fontSize: 12, fontWeight: 700, cursor: saving ? "default" : "pointer", border: "none", background: saved ? "rgba(74,222,128,0.2)" : ACCENT, color: saved ? GREEN : "#fff", opacity: saving ? 0.6 : 1, transition: "all 0.15s" }}>
+                      {saving ? "저장 중…" : saved ? "저장됨 ✓" : "저장"}
+                    </button>
+                  </div>
+                  <textarea value={comment} onChange={(e) => setComment(e.target.value)} placeholder="코멘트 (패턴 메모, 프롬프트 개선 포인트 등)" rows={2} style={{ width: "100%", padding: "9px 13px", borderRadius: 10, fontSize: 12, lineHeight: 1.65, resize: "none", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.8)", outline: "none", boxSizing: "border-box" }} />
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ─── NOTES ─── */}
+      {tab === "notes" && (
+        <div style={{ padding: "24px", maxWidth: 1000, margin: "0 auto" }}>
+          {/* Header */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, gap: 16 }}>
+            <div>
+              <p style={{ fontSize: 15, fontWeight: 700, color: "rgba(255,255,255,0.85)", marginBottom: 3 }}>프롬프트 개선 노트</p>
+              <p style={{ fontSize: 12, color: "rgba(255,255,255,0.3)" }}>
+                대화 리뷰에서 발견한 패턴을 섹션별로 기록하세요. 다음 프롬프트 수정 시 바로 참고할 수 있어요.
+              </p>
+            </div>
+            <button onClick={saveNotes} disabled={notesSaving} style={{ flexShrink: 0, padding: "8px 22px", borderRadius: 10, fontSize: 12, fontWeight: 700, cursor: notesSaving ? "default" : "pointer", border: "none", background: notesSaved ? "rgba(74,222,128,0.2)" : ACCENT, color: notesSaved ? GREEN : "#fff", opacity: notesSaving ? 0.6 : 1, transition: "all 0.15s" }}>
+              {notesSaving ? "저장 중…" : notesSaved ? "저장됨 ✓" : "저장"}
+            </button>
+          </div>
+
+          {/* Good / Bad 2-column */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+            {/* Good */}
+            <div style={{ borderRadius: 16, border: "1px solid rgba(74,222,128,0.2)", background: "rgba(74,222,128,0.04)", overflow: "hidden" }}>
+              <div style={{ padding: "12px 16px", borderBottom: "1px solid rgba(74,222,128,0.12)", display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 14 }}>👍</span>
+                <p style={{ fontSize: 12, fontWeight: 700, color: GREEN }}>Good 패턴</p>
+                <span style={{ fontSize: 11, color: "rgba(74,222,128,0.4)", marginLeft: "auto" }}>잘 작동하는 것들</span>
+              </div>
+              <textarea
+                value={goodNotes}
+                onChange={(e) => setGoodNotes(e.target.value)}
+                placeholder={"- 경험이 구체적일 때 AI가 연결고리 질문을 잘 꺼냄\n- 수치/결과가 있는 경험에서 탁월함\n- 유저가 직무 맥락을 잘 설명할 때"}
+                style={{ width: "100%", minHeight: 220, padding: "14px 16px", fontSize: 12, lineHeight: 1.8, resize: "vertical", background: "transparent", border: "none", color: "rgba(255,255,255,0.8)", outline: "none", boxSizing: "border-box" }}
+              />
+            </div>
+
+            {/* Bad */}
+            <div style={{ borderRadius: 16, border: "1px solid rgba(248,113,113,0.2)", background: "rgba(248,113,113,0.04)", overflow: "hidden" }}>
+              <div style={{ padding: "12px 16px", borderBottom: "1px solid rgba(248,113,113,0.12)", display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 14 }}>👎</span>
+                <p style={{ fontSize: 12, fontWeight: 700, color: RED }}>Bad 패턴</p>
+                <span style={{ fontSize: 11, color: "rgba(248,113,113,0.4)", marginLeft: "auto" }}>개선이 필요한 것들</span>
+              </div>
+              <textarea
+                value={badNotes}
+                onChange={(e) => setBadNotes(e.target.value)}
+                placeholder={"- 추상적 경험에서 AI가 너무 직접적으로 지적함\n- 직무 관련성 낮을 때 엉뚱한 방향으로 탐색\n- 짧은 초안에서 질문이 너무 많아짐"}
+                style={{ width: "100%", minHeight: 220, padding: "14px 16px", fontSize: 12, lineHeight: 1.8, resize: "vertical", background: "transparent", border: "none", color: "rgba(255,255,255,0.8)", outline: "none", boxSizing: "border-box" }}
+              />
+            </div>
+          </div>
+
+          {/* Improvement — full width */}
+          <div style={{ borderRadius: 16, border: "1px solid rgba(107,142,255,0.2)", background: "rgba(107,142,255,0.04)", overflow: "hidden" }}>
+            <div style={{ padding: "12px 16px", borderBottom: "1px solid rgba(107,142,255,0.12)", display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 14 }}>💡</span>
+              <p style={{ fontSize: 12, fontWeight: 700, color: BLUE }}>다음 프롬프트 수정 방향</p>
+              <span style={{ fontSize: 11, color: "rgba(107,142,255,0.4)", marginLeft: "auto" }}>Bad 패턴을 어떻게 고칠지</span>
+            </div>
+            <textarea
+              value={improvementNotes}
+              onChange={(e) => setImprovementNotes(e.target.value)}
+              placeholder={"- 추상 경험 → 먼저 공감 후 구체화 유도로 변경\n- 직무 키워드 매칭 강화 → JD 키워드를 프롬프트에 동적 삽입\n- 짧은 초안 감지 → 질문 1개로 제한하는 조건 추가"}
+              style={{ width: "100%", minHeight: 140, padding: "14px 16px", fontSize: 12, lineHeight: 1.8, resize: "vertical", background: "transparent", border: "none", color: "rgba(255,255,255,0.8)", outline: "none", boxSizing: "border-box" }}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

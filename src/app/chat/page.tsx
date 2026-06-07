@@ -1,10 +1,11 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { CoverLetterSummary } from "@/components/CoverLetterSummary";
+import { supabase } from "@/lib/supabase";
 
-const ACCENT = "#FF6B35";
+const ACCENT = "#C96442";
 const BG = "#0D0D18";
 const BLUE = "#6B8EFF";
 const GOLD = "#FFD166";
@@ -24,6 +25,7 @@ interface ChatMsg {
 
 interface InterviewQItem {
   id: number;
+  dbId: string | null;
   question: string;
   isExpanded: boolean;
   msgs: ChatMsg[];
@@ -33,6 +35,7 @@ interface InterviewQItem {
 
 interface CoverItem {
   id: number;
+  dbId: string | null;
   question: string;
   draft: string;
   charLimit: string;
@@ -52,6 +55,7 @@ function stripMd(t: string) {
     .replace(/\*(.*?)\*/g, "$1")
     .replace(/\[수정본\][\s\S]*?\[\/수정본\]/g, "")
     .replace(/\[변경사항\][\s\S]*?\[\/변경사항\]/g, "")
+    .replace(/\[참조\]([\s\S]*?)\[\/참조\]/g, "$1")
     .trim();
 }
 
@@ -348,8 +352,76 @@ function InterviewQCard({
   );
 }
 
+/* ── 초안 뷰어 (하이라이팅 포함) ── */
+function DraftViewer({ draft, referenceText, onClose }: { draft: string; referenceText: string | null; onClose: () => void }) {
+  const markRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    if (referenceText && markRef.current) {
+      markRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [referenceText]);
+
+  const segments: { text: string; highlighted: boolean }[] = (() => {
+    if (!referenceText || !draft.includes(referenceText)) {
+      return [{ text: draft, highlighted: false }];
+    }
+    const idx = draft.indexOf(referenceText);
+    return [
+      { text: draft.slice(0, idx), highlighted: false },
+      { text: referenceText, highlighted: true },
+      { text: draft.slice(idx + referenceText.length), highlighted: false },
+    ].filter(s => s.text.length > 0);
+  })();
+
+  return (
+    <div className="flex flex-col h-full overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-3 flex-shrink-0 border-b" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+        <div className="flex items-center gap-2">
+          <div className="w-1 h-3 rounded-full" style={{ background: BLUE }} />
+          <span className="text-xs font-semibold tracking-wider uppercase" style={{ color: "rgba(255,255,255,0.35)", letterSpacing: "0.08em" }}>내 초안</span>
+          {referenceText && (
+            <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: `${ACCENT}18`, color: ACCENT, fontSize: "10px" }}>참조 중</span>
+          )}
+        </div>
+        <button
+          onClick={onClose}
+          className="w-6 h-6 flex items-center justify-center rounded-lg transition-opacity hover:opacity-70"
+          style={{ color: "rgba(255,255,255,0.3)", background: "rgba(255,255,255,0.05)" }}
+        >✕</button>
+      </div>
+      <div className="flex-1 overflow-y-auto px-4 py-4">
+        <p className="text-sm leading-[1.9] whitespace-pre-wrap" style={{ color: "rgba(255,255,255,0.5)", wordBreak: "keep-all" }}>
+          {segments.map((seg, i) =>
+            seg.highlighted ? (
+              <mark
+                key={i}
+                ref={markRef as React.RefObject<HTMLElement>}
+                style={{
+                  background: `${ACCENT}28`,
+                  color: "rgba(255,255,255,0.92)",
+                  borderRadius: "3px",
+                  padding: "2px 4px",
+                  border: `1px solid ${ACCENT}45`,
+                  boxShadow: `0 0 10px ${ACCENT}20`,
+                  display: "inline",
+                }}
+              >
+                {seg.text}
+              </mark>
+            ) : (
+              <span key={i}>{seg.text}</span>
+            )
+          )}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 const initItem: CoverItem = {
   id: uid(),
+  dbId: null,
   question: "",
   draft: "",
   charLimit: "",
@@ -371,18 +443,37 @@ export default function ChatPage() {
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
+  const [showDraftPanel, setShowDraftPanel] = useState(false);
 
   const fileRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const dbSessionIdRef = useRef<string | null>(null);
+
+  const [currentUser, setCurrentUser] = useState<{ id: string } | null>(null);
+  const [welcome, setWelcome] = useState("");
 
   const selected = items.find((it) => it.id === selectedId) ?? null;
+
+  // 로그인 유저 로드 + 환영 메시지
+  useEffect(() => {
+    supabase.from("page_views").insert({ path: "/chat" });
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) setCurrentUser({ id: data.user.id });
+    });
+    const msg = sessionStorage.getItem("welcome");
+    if (msg) {
+      setWelcome(msg.split("@")[0]);
+      sessionStorage.removeItem("welcome");
+      setTimeout(() => setWelcome(""), 3000);
+    }
+  }, []);
 
   function updateItem(id: number, patch: Partial<CoverItem>) {
     setItems((prev) => prev.map((it) => (it.id === id ? { ...it, ...patch } : it)));
   }
 
   function addItem() {
-    const item: CoverItem = { id: uid(), question: "", draft: "", charLimit: "", status: "idle", msgs: [], apiHistory: [], interviewQs: [], isLoadingQs: false };
+    const item: CoverItem = { id: uid(), dbId: null, question: "", draft: "", charLimit: "", status: "idle", msgs: [], apiHistory: [], interviewQs: [], isLoadingQs: false };
     setItems((prev) => [...prev, item]);
     setSelectedId(item.id);
   }
@@ -391,7 +482,7 @@ export default function ChatPage() {
     setItems((prev) => {
       const next = prev.filter((it) => it.id !== id);
       if (next.length === 0) {
-        const fresh: CoverItem = { id: uid(), question: "", draft: "", charLimit: "", status: "idle", msgs: [], apiHistory: [], interviewQs: [], isLoadingQs: false };
+        const fresh: CoverItem = { id: uid(), dbId: null, question: "", draft: "", charLimit: "", status: "idle", msgs: [], apiHistory: [], interviewQs: [], isLoadingQs: false };
         setSelectedId(fresh.id);
         return [fresh];
       }
@@ -409,6 +500,44 @@ export default function ChatPage() {
       )
     );
   }
+
+  // ── Supabase DB 헬퍼 ──────────────────────────────────────────────
+
+  // sessions 테이블에 row 확보. 같은 페이지 세션 내에선 재사용.
+  async function ensureDbSession(): Promise<string | null> {
+    if (!currentUser) return null;
+    if (dbSessionIdRef.current) {
+      await supabase.from("sessions")
+        .update({ job_title: jobTitle, jd_keywords: jdKeywords, updated_at: new Date().toISOString() })
+        .eq("id", dbSessionIdRef.current);
+      return dbSessionIdRef.current;
+    }
+    const { data } = await supabase.from("sessions")
+      .insert({ user_id: currentUser.id, job_title: jobTitle, jd_keywords: jdKeywords })
+      .select("id").single();
+    if (!data) return null;
+    dbSessionIdRef.current = data.id;
+    return data.id;
+  }
+
+  // messages 테이블에 단일 메시지 저장
+  async function saveDbMessage(coverItemDbId: string, role: "user" | "assistant", content: string) {
+    await supabase.from("messages").insert({ cover_item_id: coverItemDbId, role, content });
+  }
+
+  // revisions 테이블에 수정본 저장 + cover_item 상태 done으로 갱신
+  async function saveDbRevision(coverItemDbId: string, content: string, changesText: string) {
+    const changes = changesText
+      .split("\n")
+      .map(l => l.replace(/^[-·•]\s*/, "").trim())
+      .filter(Boolean);
+    await supabase.from("revisions").insert({ cover_item_id: coverItemDbId, content, changes });
+    await supabase.from("cover_items")
+      .update({ status: "done", updated_at: new Date().toISOString() })
+      .eq("id", coverItemDbId);
+  }
+
+  // ─────────────────────────────────────────────────────────────────
 
   function toBase64(f: File): Promise<string> {
     return new Promise((res) => {
@@ -442,7 +571,8 @@ export default function ChatPage() {
     itemId: number,
     draft: string,
     question: string,
-    charLimit?: string
+    charLimit?: string,
+    itemDbId?: string | null
   ) {
     setIsStreaming(true);
     const msgId = uid();
@@ -485,6 +615,22 @@ export default function ChatPage() {
             : it
         )
       );
+
+      // ── DB 저장: 유저 메시지 + AI 응답 ──
+      if (itemDbId) {
+        const userMsg = history[history.length - 1];
+        if (userMsg?.role === "user") {
+          await saveDbMessage(itemDbId, "user", userMsg.content);
+        }
+        await saveDbMessage(itemDbId, "assistant", full);
+
+        // 수정본 감지 → revisions 테이블에도 저장
+        const revMatch = full.match(/\[수정본\]([\s\S]*?)\[\/수정본\]/);
+        const chgMatch = full.match(/\[변경사항\]([\s\S]*?)\[\/변경사항\]/);
+        if (revMatch && chgMatch) {
+          await saveDbRevision(itemDbId, revMatch[1].trim(), chgMatch[1].trim());
+        }
+      }
     } catch {
       setItems((prev) =>
         prev.map((it) =>
@@ -501,12 +647,29 @@ export default function ChatPage() {
   async function startAnalysis() {
     if (!selected || !selected.question.trim() || !selected.draft.trim()) return;
     const seed = [{ role: "user", content: "초안 진단을 시작해줘." }];
+
+    // ── DB: session 확보 → cover_item 생성 ──
+    let itemDbId: string | null = null;
+    const sessionId = await ensureDbSession();
+    if (sessionId) {
+      const orderIndex = items.findIndex(it => it.id === selectedId);
+      const { data } = await supabase.from("cover_items").insert({
+        session_id: sessionId,
+        question: selected.question,
+        draft: selected.draft,
+        char_limit: selected.charLimit ? parseInt(selected.charLimit) : null,
+        status: "chatting",
+        order_index: orderIndex,
+      }).select("id").single();
+      if (data) itemDbId = data.id;
+    }
+
     setItems((prev) =>
       prev.map((it) =>
-        it.id === selectedId ? { ...it, status: "chatting" as const, apiHistory: seed } : it
+        it.id === selectedId ? { ...it, status: "chatting" as const, apiHistory: seed, dbId: itemDbId } : it
       )
     );
-    await fetchBotReply(seed, selectedId, selected.draft, selected.question, selected.charLimit);
+    await fetchBotReply(seed, selectedId, selected.draft, selected.question, selected.charLimit, itemDbId);
   }
 
   async function handleSend() {
@@ -523,7 +686,7 @@ export default function ChatPage() {
       )
     );
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 0);
-    await fetchBotReply(newHistory, selectedId, selected.draft, selected.question, selected.charLimit);
+    await fetchBotReply(newHistory, selectedId, selected.draft, selected.question, selected.charLimit, selected.dbId);
   }
 
   async function handleRevisionRequest() {
@@ -538,7 +701,7 @@ export default function ChatPage() {
       )
     );
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 0);
-    await fetchBotReply(newHistory, selectedId, selected.draft, selected.question, selected.charLimit);
+    await fetchBotReply(newHistory, selectedId, selected.draft, selected.question, selected.charLimit, selected.dbId);
   }
 
   async function fetchInterviewQuestions() {
@@ -563,10 +726,24 @@ export default function ChatPage() {
       let qs: string[] = [];
       if (Array.isArray(data)) qs = data;
       else if (typeof data.raw === "string") { try { qs = JSON.parse(data.raw); } catch { qs = []; } }
+      // ── DB: interview_questions 저장 ──
+      const sliced = qs.slice(0, 4);
+      const dbIdByIndex: Record<number, string> = {};
+      const coverDbId = items.find(it => it.id === selectedId)?.dbId;
+      if (coverDbId && sliced.length > 0) {
+        const rows = sliced.map((q: string, idx: number) => ({
+          cover_item_id: coverDbId,
+          question: q,
+          order_index: idx,
+        }));
+        const { data: savedQs } = await supabase.from("interview_questions").insert(rows).select("id, order_index");
+        if (savedQs) savedQs.forEach(row => { dbIdByIndex[row.order_index] = row.id; });
+      }
+
       updateItem(selectedId, {
         isLoadingQs: false,
-        interviewQs: qs.slice(0, 4).map((q: string) => ({
-          id: uid(), question: q, isExpanded: false, msgs: [], isLoadingFeedback: false, inputText: "",
+        interviewQs: sliced.map((q: string, idx: number) => ({
+          id: uid(), dbId: dbIdByIndex[idx] ?? null, question: q, isExpanded: false, msgs: [], isLoadingFeedback: false, inputText: "",
         })),
       });
       setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
@@ -620,6 +797,15 @@ export default function ChatPage() {
           )
         );
       }
+
+      // ── DB: 면접 답변 + AI 피드백 저장 ──
+      if (qItem.dbId) {
+        await supabase.from("interview_answers").insert({
+          interview_question_id: qItem.dbId,
+          user_answer: answer,
+          ai_feedback: full,
+        });
+      }
     } catch {
       setItems((prev) =>
         prev.map((it) =>
@@ -655,6 +841,18 @@ export default function ChatPage() {
   const showInterviewButton = hasAnyRevision && interviewQs.length === 0 && !isLoadingQs;
   const showSummaryButton = hasAnyRevision && interviewQs.length > 0;
 
+  const referenceText: string | null = (() => {
+    if (!selected) return null;
+    for (let i = selected.msgs.length - 1; i >= 0; i--) {
+      const msg = selected.msgs[i];
+      if (msg.role === "bot") {
+        const match = msg.text.match(/\[참조\]([\s\S]*?)\[\/참조\]/);
+        if (match) return match[1].trim();
+      }
+    }
+    return null;
+  })();
+
   return (
     <>
       <div className="h-dvh flex flex-col" style={{ background: BG, color: "rgba(255,255,255,0.88)" }}>
@@ -684,14 +882,40 @@ export default function ChatPage() {
             <div className="w-1.5 h-1.5 rounded-full" style={{ background: ACCENT }} />
             <span className="text-sm font-semibold" style={{ color: "rgba(255,255,255,0.55)", letterSpacing: "-0.01em" }}>취업소크라테스</span>
           </div>
-          <div className="w-10" />
+          <button
+            onClick={async () => { await supabase.auth.signOut(); window.location.href = "/"; }}
+            className="text-xs px-3 py-1.5 rounded-lg transition-all hover:opacity-80"
+            style={{
+              background: `rgba(201,100,66,0.12)`,
+              border: `1px solid rgba(201,100,66,0.25)`,
+              color: `rgba(201,100,66,0.85)`,
+            }}
+          >
+            로그아웃
+          </button>
         </header>
+
+        {/* 환영 토스트 */}
+        {welcome && (
+          <div
+            className="fixed top-16 left-1/2 z-50 px-5 py-2.5 rounded-2xl text-sm font-medium shadow-lg"
+            style={{
+              transform: "translateX(-50%)",
+              background: "rgba(255,107,53,0.15)",
+              border: "1px solid rgba(255,107,53,0.35)",
+              color: "rgba(255,255,255,0.9)",
+              backdropFilter: "blur(12px)",
+            }}
+          >
+            {welcome}님, 환영합니다! 🎉
+          </div>
+        )}
 
         {/* ── 메인 ── */}
         <div className="flex-1 flex overflow-hidden">
 
-          {/* ────────── 왼쪽 패널 ────────── */}
-          <div className="flex-shrink-0 flex flex-col border-r relative overflow-hidden" style={{ width: "272px", borderColor: "rgba(255,255,255,0.06)", background: "rgba(9,9,22,0.6)" }}>
+          {/* ────────── 왼쪽 패널 (lg 이상에서만) ────────── */}
+          <div className="hidden lg:flex flex-shrink-0 flex-col border-r relative overflow-hidden" style={{ width: "272px", borderColor: "rgba(255,255,255,0.06)", background: "rgba(9,9,22,0.6)" }}>
             {/* 앰비언트 글로우 */}
             <div style={{ position: "absolute", top: -30, left: "50%", transform: "translateX(-50%)", width: 220, height: 140, background: `radial-gradient(circle, ${BLUE}16 0%, transparent 70%)`, pointerEvents: "none", zIndex: 0 }} />
 
@@ -831,7 +1055,74 @@ export default function ChatPage() {
 
               /* ── 편집 패널 ── */
               <div className="flex-1 overflow-y-auto">
-                <div className="max-w-2xl mx-auto px-8 py-10 flex flex-col gap-6">
+
+                {/* ── 모바일 전용: 지원정보 + 항목 탭 ── */}
+                <div className="lg:hidden flex flex-col gap-3 px-4 py-4 border-b flex-shrink-0" style={{ borderColor: "rgba(255,255,255,0.06)", background: "rgba(9,9,22,0.55)" }}>
+                  {/* 직무 + JD */}
+                  <div className="flex gap-2">
+                    <input
+                      value={jobTitle}
+                      onChange={(e) => setJobTitle(e.target.value)}
+                      placeholder="지원 직무 (예: 삼성전자 인프라설계)"
+                      className="glow-input flex-1 px-3 py-2.5 rounded-xl text-sm"
+                      style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)", color: "rgba(255,255,255,0.9)" }}
+                    />
+                    <div
+                      onClick={() => fileRef.current?.click()}
+                      className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl cursor-pointer transition-all"
+                      style={{ background: jdFile ? `${ACCENT}15` : "rgba(255,255,255,0.05)", border: `1px solid ${jdFile ? `${ACCENT}40` : "rgba(255,255,255,0.09)"}` }}
+                    >
+                      {isExtractingJD ? (
+                        <div className="flex gap-0.5 items-center">
+                          {DOTS.map(({ delay, color }) => (
+                            <span key={delay} className="w-1 h-1 rounded-full animate-bounce" style={{ background: color, animationDelay: `${delay}ms` }} />
+                          ))}
+                        </div>
+                      ) : jdFile ? (
+                        <div className="flex items-center gap-1">
+                          <span className="text-sm">📄</span>
+                          {jdKeywords.length > 0 && <span className="text-xs font-bold" style={{ color: ACCENT }}>{jdKeywords.length}</span>}
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-sm">📎</span>
+                          <span className="text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>JD</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {/* 항목 탭 */}
+                  <div className="flex items-center gap-1.5 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
+                    {items.map((item, idx) => {
+                      const isSel = item.id === selectedId;
+                      return (
+                        <button
+                          key={item.id}
+                          onClick={() => setSelectedId(item.id)}
+                          className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
+                          style={{
+                            background: isSel ? `${BLUE}18` : "rgba(255,255,255,0.05)",
+                            border: `1px solid ${isSel ? `${BLUE}40` : "rgba(255,255,255,0.08)"}`,
+                            color: isSel ? BLUE : "rgba(255,255,255,0.42)",
+                            boxShadow: isSel ? `0 0 10px ${BLUE}18` : "none",
+                          }}
+                        >
+                          <span>{String(idx + 1).padStart(2, "0")}</span>
+                          {item.question && (
+                            <span className="max-w-[72px] truncate">{item.question}</span>
+                          )}
+                        </button>
+                      );
+                    })}
+                    <button
+                      onClick={addItem}
+                      className="flex-shrink-0 w-7 h-7 rounded-xl flex items-center justify-center text-base transition-all"
+                      style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.3)" }}
+                    >+</button>
+                  </div>
+                </div>
+
+                <div className="max-w-2xl mx-auto px-5 sm:px-8 py-6 sm:py-10 flex flex-col gap-6">
 
                   {/* 문항 */}
                   <div className="flex flex-col gap-2">
@@ -896,14 +1187,14 @@ export default function ChatPage() {
                   </div>
 
                   {/* 시작 버튼 */}
-                  <div className="flex flex-col gap-3">
+                  <div className="flex flex-col gap-3 pb-4 sm:pb-0">
                     <button
                       onClick={startAnalysis}
                       disabled={!canStart}
                       className="w-full py-4 rounded-2xl text-sm font-semibold text-white transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-20 disabled:cursor-not-allowed"
                       style={{
                         background: canStart ? ACCENT : "rgba(255,255,255,0.08)",
-                        boxShadow: canStart ? `0 0 32px ${ACCENT}40, 0 4px 24px ${ACCENT}30` : "none",
+                        boxShadow: canStart ? `0 4px 20px ${ACCENT}28` : "none",
                         transition: "all 0.2s ease",
                       }}
                     >
@@ -922,9 +1213,33 @@ export default function ChatPage() {
             ) : (
 
               /* ── 채팅 패널 ── */
-              <>
+              <div className="flex-1 flex overflow-hidden">
+              <div className="flex-1 flex flex-col overflow-hidden min-w-0">
                 {/* 항목 헤더 바 */}
-                <div className="px-5 py-2.5 flex-shrink-0 flex items-center gap-3 border-b" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+                <div className="flex-shrink-0 flex flex-col border-b" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+                  {/* 모바일 항목 탭 */}
+                  {items.length > 1 && (
+                    <div className="lg:hidden flex items-center gap-1.5 px-4 py-2 overflow-x-auto border-b" style={{ borderColor: "rgba(255,255,255,0.04)", scrollbarWidth: "none" }}>
+                      {items.map((item, idx) => {
+                        const isSel = item.id === selectedId;
+                        return (
+                          <button
+                            key={item.id}
+                            onClick={() => setSelectedId(item.id)}
+                            className="flex-shrink-0 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all"
+                            style={{
+                              background: isSel ? `${BLUE}18` : "rgba(255,255,255,0.04)",
+                              border: `1px solid ${isSel ? `${BLUE}35` : "rgba(255,255,255,0.07)"}`,
+                              color: isSel ? BLUE : "rgba(255,255,255,0.35)",
+                            }}
+                          >
+                            {String(idx + 1).padStart(2, "0")}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <div className="px-4 py-2.5 flex items-center gap-3">
                   <div className="w-6 h-6 rounded-lg flex items-center justify-center font-bold flex-shrink-0" style={{ background: `${BLUE}18`, color: BLUE, fontSize: "11px" }}>
                     {String(items.findIndex((it) => it.id === selectedId) + 1).padStart(2, "0")}
                   </div>
@@ -934,11 +1249,29 @@ export default function ChatPage() {
                       const userCount = selected.msgs.filter((m) => m.role === "user").length;
                       const active = i === 0 ? userCount === 0 : i === 1 ? userCount < 3 : userCount >= 3;
                       return (
-                        <span key={step} className="text-xs px-2 py-0.5 rounded-full" style={{ background: active ? `${BLUE}22` : "rgba(255,255,255,0.05)", color: active ? BLUE : "rgba(255,255,255,0.2)", fontSize: "10px" }}>
+                        <span key={step} className="hidden sm:block text-xs px-2 py-0.5 rounded-full" style={{ background: active ? `${BLUE}22` : "rgba(255,255,255,0.05)", color: active ? BLUE : "rgba(255,255,255,0.2)", fontSize: "10px" }}>
                           {step}
                         </span>
                       );
                     })}
+                    <button
+                      onClick={() => setShowDraftPanel(v => !v)}
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all relative"
+                      style={{
+                        background: showDraftPanel ? `${BLUE}1A` : "rgba(255,255,255,0.05)",
+                        border: `1px solid ${showDraftPanel ? `${BLUE}40` : "rgba(255,255,255,0.08)"}`,
+                        color: showDraftPanel ? BLUE : "rgba(255,255,255,0.42)",
+                      }}
+                    >
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+                      </svg>
+                      <span>초안</span>
+                      {referenceText && !showDraftPanel && (
+                        <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full" style={{ background: ACCENT }} />
+                      )}
+                    </button>
+                  </div>
                   </div>
                 </div>
 
@@ -1027,7 +1360,7 @@ export default function ChatPage() {
                         onClick={handleRevisionRequest}
                         disabled={isStreaming}
                         className="w-full py-4 rounded-2xl text-sm font-semibold transition-all hover:scale-[1.015] active:scale-[0.985] disabled:opacity-30 flex items-center justify-center gap-2"
-                        style={{ background: ACCENT, color: "#fff", boxShadow: `0 0 28px ${ACCENT}35` }}
+                        style={{ background: ACCENT, color: "#fff", boxShadow: `0 4px 16px ${ACCENT}28` }}
                       >
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
@@ -1073,7 +1406,7 @@ export default function ChatPage() {
                           onClick={handleSend}
                           disabled={isStreaming || !input.trim()}
                           className="flex-shrink-0 flex items-center justify-center rounded-xl transition-all hover:scale-105 active:scale-95 disabled:opacity-25"
-                          style={{ background: ACCENT, width: "46px", height: "46px", boxShadow: input.trim() ? `0 0 16px ${ACCENT}50` : "none", transition: "all 0.2s ease" }}
+                          style={{ background: ACCENT, width: "46px", height: "46px", boxShadow: input.trim() ? `0 4px 14px ${ACCENT}30` : "none", transition: "all 0.2s ease" }}
                         >
                           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                             <line x1="22" y1="2" x2="11" y2="13" />
@@ -1106,7 +1439,47 @@ export default function ChatPage() {
                     )}
                   </div>
                 </div>
-              </>
+              </div>
+
+              {/* ── 오른쪽 초안 패널 — 데스크탑 ── */}
+              {showDraftPanel && (
+                <div
+                  className="hidden lg:flex flex-shrink-0 flex-col border-l"
+                  style={{ width: "288px", borderColor: "rgba(255,255,255,0.06)", background: "rgba(9,9,22,0.55)" }}
+                >
+                  <DraftViewer
+                    draft={selected.draft}
+                    referenceText={referenceText}
+                    onClose={() => setShowDraftPanel(false)}
+                  />
+                </div>
+              )}
+
+              {/* ── 모바일 바텀시트 ── */}
+              {showDraftPanel && (
+                <div className="lg:hidden fixed inset-0 z-50 flex flex-col justify-end">
+                  <div
+                    className="absolute inset-0"
+                    style={{ background: "rgba(0,0,0,0.65)" }}
+                    onClick={() => setShowDraftPanel(false)}
+                  />
+                  <div
+                    className="relative flex flex-col rounded-t-2xl overflow-hidden"
+                    style={{ height: "72vh", background: "#0C0C1E", border: "1px solid rgba(255,255,255,0.09)", borderBottom: "none" }}
+                  >
+                    <div className="flex justify-center pt-2.5 pb-1 flex-shrink-0">
+                      <div className="w-8 h-1 rounded-full" style={{ background: "rgba(255,255,255,0.15)" }} />
+                    </div>
+                    <DraftViewer
+                      draft={selected.draft}
+                      referenceText={referenceText}
+                      onClose={() => setShowDraftPanel(false)}
+                    />
+                  </div>
+                </div>
+              )}
+
+              </div>
             )}
           </div>
         </div>

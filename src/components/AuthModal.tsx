@@ -1,21 +1,24 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 
-const ACCENT = "#FF6B35";
+const ACCENT = "#C96442";
 
 interface Props {
   tab: "login" | "signup";
   onClose: () => void;
 }
 
-function SocialBtn({ color, textColor = "#000", children, onClick }: {
-  color: string; textColor?: string; children: React.ReactNode; onClick?: () => void;
+function SocialBtn({ color, textColor = "#000", children, onClick, disabled }: {
+  color: string; textColor?: string; children: React.ReactNode; onClick?: () => void; disabled?: boolean;
 }) {
   return (
     <button
       onClick={onClick}
-      className="w-full flex items-center justify-center gap-3 py-3 rounded-xl text-sm font-medium transition-all hover:opacity-90 active:scale-[0.98]"
+      disabled={disabled}
+      className="w-full flex items-center justify-center gap-3 py-3 rounded-xl text-sm font-medium transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
       style={{ background: color, color: textColor }}
     >
       {children}
@@ -23,8 +26,8 @@ function SocialBtn({ color, textColor = "#000", children, onClick }: {
   );
 }
 
-function Input({ type = "text", placeholder, value, onChange }: {
-  type?: string; placeholder: string; value: string; onChange: (v: string) => void;
+function Input({ type = "text", placeholder, value, onChange, disabled, onEnter }: {
+  type?: string; placeholder: string; value: string; onChange: (v: string) => void; disabled?: boolean; onEnter?: () => void;
 }) {
   return (
     <input
@@ -32,7 +35,9 @@ function Input({ type = "text", placeholder, value, onChange }: {
       placeholder={placeholder}
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="w-full px-4 py-3 rounded-xl text-sm focus:outline-none transition-colors"
+      onKeyDown={(e) => { if (e.key === "Enter" && onEnter) onEnter(); }}
+      disabled={disabled}
+      className="w-full px-4 py-3 rounded-xl text-sm focus:outline-none transition-colors disabled:opacity-50"
       style={{
         background: "rgba(255,255,255,0.06)",
         border: "1px solid rgba(255,255,255,0.1)",
@@ -79,6 +84,7 @@ function Checkbox({ checked, onChange, children }: {
 }
 
 export function AuthModal({ tab: initialTab, onClose }: Props) {
+  const router = useRouter();
   const [tab, setTab] = useState(initialTab);
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
@@ -86,22 +92,87 @@ export function AuthModal({ tab: initialTab, onClose }: Props) {
   const [agree1, setAgree1] = useState(false);
   const [agree2, setAgree2] = useState(false);
   const [agree3, setAgree3] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
   const backdropRef = useRef<HTMLDivElement>(null);
 
   const allAgree = agree1 && agree2 && agree3;
   const toggleAll = () => { const v = !allAgree; setAgree1(v); setAgree2(v); setAgree3(v); };
 
-  // body scroll lock
   useEffect(() => {
     document.body.style.overflow = "hidden";
     return () => { document.body.style.overflow = ""; };
   }, []);
 
+  useEffect(() => {
+    setError("");
+    setSuccessMsg("");
+  }, [tab]);
+
   function handleBackdrop(e: React.MouseEvent) {
     if (e.target === backdropRef.current) onClose();
   }
 
-  const todo = () => alert("준비 중입니다.");
+  async function handleGoogle() {
+    setLoading(true);
+    setError("");
+    const redirectTo = `${window.location.origin}/auth/callback`;
+    console.log("[Auth] Google OAuth 시작, redirectTo:", redirectTo);
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo },
+    });
+    console.log("[Auth] signInWithOAuth 결과:", { url: data?.url, error: error?.message });
+    if (error) {
+      setError(error.message);
+      setLoading(false);
+    }
+    // 성공 시 브라우저가 Google로 리디렉트됨
+  }
+
+  async function handleSubmit() {
+    setError("");
+    if (!email || !pw) { setError("이메일과 비밀번호를 입력해주세요."); return; }
+
+    if (tab === "signup") {
+      if (pw !== pw2) { setError("비밀번호가 일치하지 않습니다."); return; }
+      if (pw.length < 6) { setError("비밀번호는 6자 이상이어야 합니다."); return; }
+      if (!agree1 || !agree2) { setError("필수 약관에 동의해주세요."); return; }
+    }
+
+    setLoading(true);
+
+    if (tab === "login") {
+      const { error } = await supabase.auth.signInWithPassword({ email, password: pw });
+      if (error) {
+        const msg = error.message === "Invalid login credentials"
+          ? "이메일 또는 비밀번호가 올바르지 않습니다."
+          : error.message === "Email not confirmed"
+          ? "이메일 인증이 필요합니다. 메일함을 확인해주세요."
+          : error.message;
+        setError(msg);
+        setLoading(false);
+      } else {
+        onClose();
+      }
+    } else {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password: pw,
+        options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      });
+      if (error) {
+        setError(error.message);
+        setLoading(false);
+      } else if (data.session) {
+        onClose();
+      } else {
+        setSuccessMsg("가입 확인 이메일을 보냈습니다. 메일함을 확인해주세요.");
+        setLoading(false);
+      }
+    }
+  }
 
   return (
     <div
@@ -133,32 +204,35 @@ export function AuthModal({ tab: initialTab, onClose }: Props) {
 
         <div className="p-6 flex flex-col gap-3 max-h-[80vh] overflow-y-auto">
           {/* 소셜 */}
-          <SocialBtn color="#FEE500" onClick={todo}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <path d="M12 3C6.92 3 2.86 6.26 2.86 10.3c0 2.55 1.63 4.8 4.1 6.15l-1.06 3.9 4.53-2.97c.5.07 1.02.11 1.57.11 5.08 0 9.14-3.26 9.14-7.28S17.08 3 12 3z" fill="#3A1D1D"/>
-            </svg>
-            {tab === "login" ? "카카오로 로그인" : "카카오로 회원가입"}
-          </SocialBtn>
-          <SocialBtn color="white" textColor="#111" onClick={todo}>
+          <SocialBtn color="white" textColor="#111" onClick={handleGoogle} disabled={loading}>
             <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-            {tab === "login" ? "구글로 로그인" : "구글로 회원가입"}
+            {loading ? "처리 중..." : tab === "login" ? "구글로 로그인" : "구글로 회원가입"}
           </SocialBtn>
 
           <Divider />
 
+          {/* 에러 / 성공 메시지 */}
+          {error && (
+            <p className="text-xs px-1" style={{ color: "#FF6B6B" }}>{error}</p>
+          )}
+          {successMsg && (
+            <p className="text-xs px-1" style={{ color: "#6BFF9E" }}>{successMsg}</p>
+          )}
+
           {/* 이메일/비밀번호 */}
-          <Input type="email" placeholder="이메일" value={email} onChange={setEmail} />
-          <Input type="password" placeholder="비밀번호" value={pw} onChange={setPw} />
+          <Input type="email" placeholder="이메일" value={email} onChange={setEmail} disabled={loading} onEnter={handleSubmit} />
+          <Input type="password" placeholder="비밀번호" value={pw} onChange={setPw} disabled={loading} onEnter={handleSubmit} />
           {tab === "signup" && (
-            <Input type="password" placeholder="비밀번호 확인" value={pw2} onChange={setPw2} />
+            <Input type="password" placeholder="비밀번호 확인" value={pw2} onChange={setPw2} disabled={loading} onEnter={handleSubmit} />
           )}
 
           <button
-            onClick={todo}
-            className="w-full py-3.5 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-[0.98]"
+            onClick={handleSubmit}
+            disabled={loading}
+            className="w-full py-3.5 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
             style={{ background: ACCENT }}
           >
-            {tab === "login" ? "로그인" : "회원가입"}
+            {loading ? "처리 중..." : tab === "login" ? "로그인" : "회원가입"}
           </button>
 
           {/* 약관 (회원가입만) */}

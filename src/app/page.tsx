@@ -4,11 +4,12 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AuthModal } from "@/components/AuthModal";
 import { HowSection } from "@/components/HowSection";
+import { supabase } from "@/lib/supabase";
 
-const ACCENT = "#FF6B35";
+const ACCENT = "#C96442";
 const BLUE = "#6B8EFF";
 const BG = "#0D0D18";
-const DOTS = [{ c: "#FF6B35", d: 0 }, { c: "#6B8EFF", d: 150 }, { c: "#FFD166", d: 300 }];
+const DOTS = [{ c: "#C96442", d: 0 }, { c: "#6B8EFF", d: 150 }, { c: "#FFD166", d: 300 }];
 
 const WHY_CARDS = [
   { num: "01", text: "합격 자소서를 봐도 내 경험엔 적용이 안 됨", color: ACCENT },
@@ -127,6 +128,18 @@ export default function Home() {
   const [authOpen, setAuthOpen] = useState(false);
   const [authTab, setAuthTab] = useState<"login" | "signup">("login");
   const [scrolled, setScrolled] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase.from("page_views").insert({ path: "/" });
+    supabase.auth.getSession().then(({ data }) => {
+      setUserEmail(data.session?.user?.email ?? null);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+      setUserEmail(session?.user?.email ?? null);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -138,6 +151,11 @@ export default function Home() {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => { observer.disconnect(); window.removeEventListener("scroll", onScroll); };
   }, []);
+
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    setUserEmail(null);
+  }
 
   function openAuth(tab: "login" | "signup") {
     setAuthTab(tab);
@@ -164,6 +182,37 @@ export default function Home() {
               <span style={{ color: "rgba(255,255,255,0.35)", fontWeight: 400, fontSize: "12px" }}>JobSocrates</span>
             </span>
             <div className="flex items-center gap-1">
+              {userEmail ? (
+                <>
+                  <span className="text-xs mr-2 hidden sm:block" style={{ color: "rgba(255,255,255,0.35)" }}>
+                    {userEmail.split("@")[0]}님
+                  </span>
+                  {userEmail === "ijhan6403@gmail.com" && (
+                    <a
+                      href="/admin"
+                      className="text-xs px-3 py-1.5 rounded-lg transition-colors hover:text-white"
+                      style={{ color: "rgba(255,255,255,0.25)", border: "1px solid rgba(255,255,255,0.1)" }}
+                    >
+                      관리자
+                    </a>
+                  )}
+                  <a
+                    href="/chat"
+                    className="text-sm px-4 py-2 rounded-xl font-medium transition-all hover:scale-[1.03] active:scale-[0.97]"
+                    style={{ background: ACCENT, color: "#fff" }}
+                  >
+                    채팅 시작하기
+                  </a>
+                  <button
+                    onClick={handleLogout}
+                    className="text-sm px-4 py-2 rounded-xl transition-colors hover:text-white"
+                    style={{ color: "rgba(255,255,255,0.35)" }}
+                  >
+                    로그아웃
+                  </button>
+                </>
+              ) : (
+                <>
               <button
                 onClick={() => openAuth("login")}
                 className="text-sm px-4 py-2 rounded-xl transition-colors hover:text-white"
@@ -178,6 +227,8 @@ export default function Home() {
               >
                 회원가입
               </button>
+                </>
+              )}
             </div>
           </div>
         </nav>
@@ -228,9 +279,9 @@ export default function Home() {
                 <Link
                   href="/chat"
                   className="inline-flex items-center gap-2.5 px-7 py-3.5 rounded-2xl text-sm font-semibold text-white transition-all hover:scale-[1.04] active:scale-[0.97]"
-                  style={{ background: ACCENT, boxShadow: `0 0 0 1px ${ACCENT}40, 0 8px 32px ${ACCENT}40` }}
+                  style={{ background: ACCENT, boxShadow: `0 4px 20px ${ACCENT}30` }}
                 >
-                  지금 시작하기
+                  무료로 시작하기
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
                   </svg>
@@ -384,17 +435,17 @@ export default function Home() {
           <div className="absolute inset-0 pointer-events-none">
             <div style={{ position: "absolute", inset: 0, background: `radial-gradient(ellipse at 50% 60%, ${ACCENT}0E 0%, transparent 60%)` }} />
           </div>
-          <div className="max-w-lg mx-auto anim flex flex-col items-center gap-6 relative">
-            <h2 className="text-3xl sm:text-4xl font-bold text-white leading-tight" style={{ letterSpacing: "-0.01em", wordBreak: "keep-all" }}>
+          <div className="max-w-lg mx-auto flex flex-col items-center gap-6 relative">
+            <h2 className="text-3xl sm:text-4xl font-bold text-white leading-tight anim" style={{ letterSpacing: "-0.01em", wordBreak: "keep-all" }}>
               준비됐으면,<br />지금 시작하세요.
             </h2>
-            <p className="text-base" style={{ color: "rgba(255,255,255,0.38)" }}>첫 문항은 무료입니다.</p>
+            <p className="text-base anim anim-delay-1" style={{ color: "rgba(255,255,255,0.38)" }}>첫 문항은 무료입니다.</p>
             <Link
               href="/chat"
               className="inline-flex items-center gap-2.5 px-8 py-4 rounded-2xl text-sm font-semibold text-white transition-all hover:scale-[1.04] active:scale-[0.97]"
-              style={{ background: ACCENT, boxShadow: `0 0 0 1px ${ACCENT}40, 0 12px 40px ${ACCENT}45` }}
+              style={{ background: ACCENT, boxShadow: `0 4px 24px ${ACCENT}30` }}
             >
-              지금 첨삭 시작하기
+              무료로 시작하기
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
               </svg>
@@ -404,7 +455,7 @@ export default function Home() {
 
         {/* ── 푸터 ── */}
         <footer className="py-8 px-6" style={{ borderTop: "1px solid rgba(255,255,255,0.05)", background: "#07091A" }}>
-          <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="max-w-6xl mx-auto flex flex-col items-center gap-2">
             <span className="text-sm" style={{ color: "rgba(255,255,255,0.35)" }}>
               취업소크라테스 <span style={{ color: "rgba(255,255,255,0.15)" }}>·</span> <span style={{ color: "rgba(255,255,255,0.2)" }}>JobSocrates</span>
             </span>
@@ -413,7 +464,7 @@ export default function Home() {
               className="text-xs transition-colors hover:text-white"
               style={{ color: "rgba(255,255,255,0.28)", letterSpacing: "0.01em" }}
             >
-              jobsocrates76@gmail.com
+              co-work · jobsocrates76@gmail.com
             </a>
           </div>
         </footer>
