@@ -1018,7 +1018,7 @@ export default function ChatPage() {
                 <input
                   value={jobTitle}
                   onChange={(e) => setJobTitle(e.target.value)}
-                  placeholder="예) 삼성전자 인프라설계"
+                  placeholder="예: 연구개발"
                   className="glow-input w-full px-3 py-2.5 rounded-xl text-sm"
                   style={{
                     background: "rgba(255,255,255,0.05)",
@@ -1116,14 +1116,6 @@ export default function ChatPage() {
                 );
               })}
 
-              <button
-                onClick={addItem}
-                className="w-full rounded-xl px-3 py-2.5 flex items-center gap-2 mt-0.5 transition-opacity hover:opacity-60"
-                style={{ border: "1px dashed rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.26)" }}
-              >
-                <span className="text-sm">+</span>
-                <span className="text-xs">항목 추가</span>
-              </button>
             </div>
           </div>
 
@@ -1145,7 +1137,7 @@ export default function ChatPage() {
                     <input
                       value={jobTitle}
                       onChange={(e) => setJobTitle(e.target.value)}
-                      placeholder="지원 직무 (예: 삼성전자 인프라설계)"
+                      placeholder="예: 연구개발"
                       className="glow-input flex-1 px-3 py-2.5 rounded-xl text-sm"
                       style={{ background: "rgba(255,255,255,0.05)", border: `1px solid ${toastField === "jobTitle" ? "rgba(201,100,66,0.5)" : "rgba(255,255,255,0.09)"}`, boxShadow: toastField === "jobTitle" ? "0 0 0 2px rgba(201,100,66,0.15)" : "none", color: "rgba(255,255,255,0.9)" }}
                     />
@@ -1196,11 +1188,6 @@ export default function ChatPage() {
                         </button>
                       );
                     })}
-                    <button
-                      onClick={addItem}
-                      className="flex-shrink-0 w-7 h-7 rounded-xl flex items-center justify-center text-base transition-all"
-                      style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.3)" }}
-                    >+</button>
                   </div>
                 </div>
 
@@ -1237,14 +1224,20 @@ export default function ChatPage() {
                       <input
                         type="number"
                         min={0}
+                        max={1000}
                         value={selected.charLimit}
-                        onChange={(e) => updateItem(selectedId, { charLimit: e.target.value })}
-                        placeholder="예) 1000"
+                        onChange={(e) => {
+                          const v = e.target.value === "" ? "" : String(Math.min(1000, Math.max(0, Number(e.target.value))));
+                          updateItem(selectedId, { charLimit: v });
+                        }}
+                        placeholder="예) 800"
                         className="glow-input-accent w-24 px-2.5 py-1.5 rounded-lg text-sm text-right"
                         style={{
                           background: "rgba(255,255,255,0.06)",
                           border: `1px solid ${selected.charLimit ? `${ACCENT}50` : "rgba(255,255,255,0.1)"}`,
                           color: selected.charLimit ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.3)",
+                          MozAppearance: "textfield",
+                          appearance: "none" as React.CSSProperties["appearance"],
                         }}
                       />
                       <span className="text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>자</span>
