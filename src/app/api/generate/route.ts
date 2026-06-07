@@ -77,6 +77,10 @@ async function generate(system: string, messages: MsgParam[]) {
   }
 }
 
+export async function GET() {
+  return Response.json({ hasKey: !!process.env.ANTHROPIC_API_KEY, keyPrefix: process.env.ANTHROPIC_API_KEY?.slice(0, 10) ?? "MISSING" });
+}
+
 export async function POST(req: Request) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let body: any;
