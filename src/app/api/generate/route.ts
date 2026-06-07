@@ -78,7 +78,15 @@ async function generate(system: string, messages: MsgParam[]) {
 }
 
 export async function GET() {
-  return Response.json({ hasKey: !!process.env.ANTHROPIC_API_KEY, keyPrefix: process.env.ANTHROPIC_API_KEY?.slice(0, 10) ?? "MISSING" });
+  const raw = process.env.ANTHROPIC_API_KEY ?? "";
+  const trimmed = raw.trim();
+  return Response.json({
+    hasKey: !!raw,
+    length: raw.length,
+    trimmedLength: trimmed.length,
+    hasWhitespace: raw !== trimmed,
+    keyPrefix: trimmed.slice(0, 14) || "MISSING",
+  });
 }
 
 export async function POST(req: Request) {
