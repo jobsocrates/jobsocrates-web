@@ -1230,7 +1230,7 @@ export default function ChatPage() {
                           const v = e.target.value === "" ? "" : String(Math.min(1000, Math.max(0, Number(e.target.value))));
                           updateItem(selectedId, { charLimit: v });
                         }}
-                        placeholder="예) 800"
+                        placeholder="예: 700"
                         className="glow-input-accent w-24 px-2.5 py-1.5 rounded-lg text-sm text-right"
                         style={{
                           background: "rgba(255,255,255,0.06)",
