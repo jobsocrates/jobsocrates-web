@@ -208,7 +208,7 @@ export default function Home() {
                   <a
                     href="/chat"
                     className="text-xs sm:text-sm px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl font-medium transition-all hover:scale-[1.03] active:scale-[0.97] whitespace-nowrap"
-                    style={{ background: ACCENT, color: "#fff" }}
+                    style={{ background: "rgba(201,100,66,0.82)", color: "#fff", boxShadow: "0 2px 12px rgba(201,100,66,0.22)" }}
                   >
                     <span className="sm:hidden">채팅</span>
                     <span className="hidden sm:inline">채팅 시작하기</span>
