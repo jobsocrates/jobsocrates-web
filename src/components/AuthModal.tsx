@@ -115,20 +115,27 @@ export function AuthModal({ tab: initialTab, onClose }: Props) {
   }
 
   async function handleGoogle() {
+    // 인앱 브라우저(카카오톡, 인스타그램 등)에서는 Google OAuth 차단됨
+    const ua = navigator.userAgent;
+    const isInAppBrowser = /KAKAOTALK|Instagram|FBAN|FBAV|Twitter|Line\/|NAVER|Daum|NaverSearch/i.test(ua)
+      || (/Android/i.test(ua) && !/Chrome\//i.test(ua))
+      || /wv\)/i.test(ua);
+    if (isInAppBrowser) {
+      setError("구글 로그인은 인앱 브라우저에서 지원되지 않아요. Chrome 또는 Safari에서 직접 열어주세요.");
+      return;
+    }
+
     setLoading(true);
     setError("");
     const redirectTo = `${window.location.origin}/auth/callback`;
-    console.log("[Auth] Google OAuth 시작, redirectTo:", redirectTo);
-    const { data, error } = await supabase.auth.signInWithOAuth({
+    const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo },
     });
-    console.log("[Auth] signInWithOAuth 결과:", { url: data?.url, error: error?.message });
     if (error) {
       setError(error.message);
       setLoading(false);
     }
-    // 성공 시 브라우저가 Google로 리디렉트됨
   }
 
   async function handleSubmit() {
