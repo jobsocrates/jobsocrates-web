@@ -648,20 +648,23 @@ export default function ChatPage() {
     if (!selected || !selected.question.trim() || !selected.draft.trim()) return;
     const seed = [{ role: "user", content: "초안 진단을 시작해줘." }];
 
-    // ── DB: session 확보 → cover_item 생성 ──
     let itemDbId: string | null = null;
-    const sessionId = await ensureDbSession();
-    if (sessionId) {
-      const orderIndex = items.findIndex(it => it.id === selectedId);
-      const { data } = await supabase.from("cover_items").insert({
-        session_id: sessionId,
-        question: selected.question,
-        draft: selected.draft,
-        char_limit: selected.charLimit ? parseInt(selected.charLimit) : null,
-        status: "chatting",
-        order_index: orderIndex,
-      }).select("id").single();
-      if (data) itemDbId = data.id;
+    try {
+      const sessionId = await ensureDbSession();
+      if (sessionId) {
+        const orderIndex = items.findIndex(it => it.id === selectedId);
+        const { data } = await supabase.from("cover_items").insert({
+          session_id: sessionId,
+          question: selected.question,
+          draft: selected.draft,
+          char_limit: selected.charLimit ? parseInt(selected.charLimit) : null,
+          status: "chatting",
+          order_index: orderIndex,
+        }).select("id").single();
+        if (data) itemDbId = data.id;
+      }
+    } catch {
+      // DB 저장 실패해도 분석은 계속 진행
     }
 
     setItems((prev) =>
@@ -859,7 +862,7 @@ export default function ChatPage() {
 
         {/* ── 헤더 ── */}
         <header
-          className="flex items-center justify-between px-5 flex-shrink-0"
+          className="flex items-center justify-between px-4 flex-shrink-0"
           style={{
             height: "52px",
             background: "rgba(13,13,24,0.85)",
@@ -870,7 +873,7 @@ export default function ChatPage() {
         >
           <Link
             href="/"
-            className="flex items-center gap-1.5 text-xs transition-opacity hover:opacity-70"
+            className="flex items-center gap-1.5 text-xs transition-opacity hover:opacity-70 flex-shrink-0"
             style={{ color: "rgba(255,255,255,0.32)" }}
           >
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -878,13 +881,13 @@ export default function ChatPage() {
             </svg>
             홈
           </Link>
-          <div className="flex items-center gap-2">
-            <div className="w-1.5 h-1.5 rounded-full" style={{ background: ACCENT }} />
-            <span className="text-sm font-semibold" style={{ color: "rgba(255,255,255,0.55)", letterSpacing: "-0.01em" }}>취업소크라테스</span>
+          <div className="flex items-center gap-1.5 min-w-0">
+            <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: ACCENT }} />
+            <span className="text-xs sm:text-sm font-semibold truncate" style={{ color: "rgba(255,255,255,0.55)", letterSpacing: "-0.01em" }}>취업소크라테스</span>
           </div>
           <button
             onClick={async () => { await supabase.auth.signOut(); window.location.href = "/"; }}
-            className="text-xs px-3 py-1.5 rounded-lg transition-all hover:opacity-80"
+            className="text-xs px-2.5 py-1.5 rounded-lg transition-all hover:opacity-80 flex-shrink-0"
             style={{
               background: `rgba(201,100,66,0.12)`,
               border: `1px solid rgba(201,100,66,0.25)`,

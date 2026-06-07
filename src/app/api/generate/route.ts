@@ -22,13 +22,21 @@ function buildCtx(ctx: DiggingContext): string {
 type MsgParam = Anthropic.MessageParam;
 
 async function stream(system: string, messages: MsgParam[]) {
-  const s = await client.messages.stream({
-    model: "claude-sonnet-4-5",
-    max_tokens: 1500,
-    system,
-    messages,
-  });
   const enc = new TextEncoder();
+  let s: ReturnType<typeof client.messages.stream>;
+  try {
+    s = await client.messages.stream({
+      model: "claude-sonnet-4-5",
+      max_tokens: 1500,
+      system,
+      messages,
+    });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "API 연결 오류";
+    return new Response(enc.encode(`오류가 발생했어요. 다시 시도해주세요.\n(${msg})`), {
+      headers: { "Content-Type": "text/plain; charset=utf-8" },
+    });
+  }
   return new Response(
     new ReadableStream({
       async start(ctrl) {
@@ -38,8 +46,9 @@ async function stream(system: string, messages: MsgParam[]) {
               ctrl.enqueue(enc.encode(chunk.delta.text));
             }
           }
-        } catch {
-          // 클라이언트 이탈 등으로 스트림이 중단된 경우 무시
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : "스트리밍 오류";
+          try { ctrl.enqueue(enc.encode(`\n오류가 발생했어요. 다시 시도해주세요.\n(${msg})`)); } catch { /* 무시 */ }
         } finally {
           try { ctrl.close(); } catch { /* 이미 닫힌 경우 무시 */ }
         }

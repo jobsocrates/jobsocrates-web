@@ -10,7 +10,7 @@ export default function AuthCallbackPage() {
     // 방법 1: 이미 세션이 있으면 바로 이동
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) {
-        window.location.href = "/chat";
+        window.location.href = "/";
         return;
       }
     });
@@ -25,7 +25,7 @@ export default function AuthCallbackPage() {
     if (code) {
       supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
         if (error) setError(error.message);
-        else window.location.href = "/chat";
+        else window.location.href = "/";
       });
       return;
     }
@@ -33,7 +33,7 @@ export default function AuthCallbackPage() {
     if (token_hash && type) {
       supabase.auth.verifyOtp({ token_hash, type: type as "signup" | "recovery" | "email" }).then(({ error }) => {
         if (error) setError(error.message);
-        else window.location.href = "/chat";
+        else window.location.href = "/";
       });
       return;
     }
@@ -42,14 +42,14 @@ export default function AuthCallbackPage() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       console.log("[Callback] auth event:", event, !!session);
       if (event === "SIGNED_IN" && session) {
-        window.location.href = "/chat";
+        window.location.href = "/";
       }
     });
 
     // 5초 후에도 로그인 안 되면 홈으로
     const timeout = setTimeout(() => {
       supabase.auth.getSession().then(({ data }) => {
-        if (data.session) window.location.href = "/chat";
+        if (data.session) window.location.href = "/";
         else window.location.href = "/";
       });
     }, 5000);
