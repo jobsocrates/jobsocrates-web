@@ -18,7 +18,8 @@ interface SessionItem {
   id: string;
   job_title: string;
   created_at: string;
-  profiles: { email: string } | null;
+  user_id: string;
+  profiles?: { email: string } | null;
   admin_reviews: { id?: string; rating: string | null; comment: string }[];
 }
 
@@ -127,10 +128,12 @@ export default function AdminPage() {
 
   async function fetchSessions() {
     setSessionsLoading(true);
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("sessions")
-      .select("id, job_title, created_at, profiles(email), admin_reviews(id, rating, comment)")
+      .select("id, job_title, created_at, user_id, admin_reviews(id, rating, comment)")
       .order("created_at", { ascending: false });
+    if (error) console.error("[Admin] fetchSessions error:", error);
+    console.log("[Admin] sessions fetched:", data?.length, data);
     setSessions((data as unknown as SessionItem[]) || []);
     setSessionsLoading(false);
   }
@@ -346,7 +349,7 @@ export default function AdminPage() {
                       </span>
                     </div>
                     <p style={{ fontSize: 11, color: "rgba(255,255,255,0.28)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 2 }}>
-                      {(s.profiles as any)?.email || "이메일 없음"}
+                      {(s.profiles as any)?.email || s.user_id?.slice(0, 8) || "—"}
                     </p>
                     <p style={{ fontSize: 10, color: "rgba(255,255,255,0.2)" }}>
                       {s.created_at.slice(0, 10)}
@@ -371,7 +374,7 @@ export default function AdminPage() {
                     {selectedSession?.job_title || "직무 미입력"}
                   </p>
                   <p style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 2 }}>
-                    {(selectedSession?.profiles as any)?.email} &middot; {selectedSession?.created_at.slice(0, 10)}
+                    {(selectedSession?.profiles as any)?.email || selectedSession?.user_id?.slice(0, 8)} &middot; {selectedSession?.created_at.slice(0, 10)}
                   </p>
                 </div>
 

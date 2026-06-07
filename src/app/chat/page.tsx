@@ -495,8 +495,9 @@ export default function ChatPage() {
   // 로그인 유저 로드 + 환영 메시지
   useEffect(() => {
     supabase.from("page_views").insert({ path: "/chat" });
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session?.user) setCurrentUser({ id: data.session.user.id });
+    // onAuthStateChange: 마운트 즉시 현재 세션을 동기적으로 전달
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setCurrentUser(session?.user ? { id: session.user.id } : null);
     });
     const msg = sessionStorage.getItem("welcome");
     if (msg) {
@@ -504,6 +505,7 @@ export default function ChatPage() {
       sessionStorage.removeItem("welcome");
       setTimeout(() => setWelcome(""), 3000);
     }
+    return () => subscription.unsubscribe();
   }, []);
 
   function updateItem(id: number, patch: Partial<CoverItem>) {
@@ -550,9 +552,10 @@ export default function ChatPage() {
         .eq("id", dbSessionIdRef.current);
       return dbSessionIdRef.current;
     }
-    const { data } = await supabase.from("sessions")
+    const { data, error } = await supabase.from("sessions")
       .insert({ user_id: currentUser.id, job_title: jobTitle, jd_keywords: jdKeywords })
       .select("id").single();
+    if (error) console.error("[DB] sessions insert error:", error);
     if (!data) return null;
     dbSessionIdRef.current = data.id;
     return data.id;
@@ -712,9 +715,10 @@ export default function ChatPage() {
     let itemDbId: string | null = null;
     try {
       const sessionId = await ensureDbSession();
+      console.log("[DB] currentUser:", currentUser, "sessionId:", sessionId);
       if (sessionId) {
         const orderIndex = items.findIndex(it => it.id === selectedId);
-        const { data } = await supabase.from("cover_items").insert({
+        const { data, error } = await supabase.from("cover_items").insert({
           session_id: sessionId,
           question: selected.question,
           draft: selected.draft,
@@ -722,10 +726,11 @@ export default function ChatPage() {
           status: "chatting",
           order_index: orderIndex,
         }).select("id").single();
+        if (error) console.error("[DB] cover_items insert error:", error);
         if (data) itemDbId = data.id;
       }
-    } catch {
-      // DB 저장 실패해도 분석은 계속 진행
+    } catch (e) {
+      console.error("[DB] startAnalysis error:", e);
     }
 
     setItems((prev) =>
