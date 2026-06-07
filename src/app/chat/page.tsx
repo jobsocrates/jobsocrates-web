@@ -492,8 +492,8 @@ export default function ChatPage() {
   // 로그인 유저 로드 + 환영 메시지
   useEffect(() => {
     supabase.from("page_views").insert({ path: "/chat" });
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) setCurrentUser({ id: data.user.id });
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session?.user) setCurrentUser({ id: data.session.user.id });
     });
     const msg = sessionStorage.getItem("welcome");
     if (msg) {
