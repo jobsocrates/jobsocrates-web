@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { AuthModal } from "@/components/AuthModal";
 import { HowSection } from "@/components/HowSection";
 import { supabase } from "@/lib/supabase";
@@ -162,6 +161,14 @@ export default function Home() {
     setAuthOpen(true);
   }
 
+  function handleStartChat() {
+    if (userEmail) {
+      window.location.href = "/chat";
+    } else {
+      openAuth("login");
+    }
+  }
+
   return (
     <>
       <div style={{ background: BG, minHeight: "100vh", color: "rgba(255,255,255,0.88)" }}>
@@ -284,8 +291,8 @@ export default function Home() {
               </p>
 
               <div className="flex flex-col gap-3">
-                <Link
-                  href="/chat"
+                <button
+                  onClick={handleStartChat}
                   className="inline-flex items-center gap-2.5 px-7 py-3.5 rounded-2xl text-sm font-semibold text-white transition-all hover:scale-[1.04] active:scale-[0.97]"
                   style={{ background: ACCENT, boxShadow: `0 4px 20px ${ACCENT}30` }}
                 >
@@ -293,8 +300,8 @@ export default function Home() {
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
                   </svg>
-                </Link>
-                <p className="text-xs" style={{ color: "rgba(255,255,255,0.25)", letterSpacing: "0.01em" }}>가입 없이 바로 시작 · 첫 문항 무료</p>
+                </button>
+                <p className="text-xs" style={{ color: "rgba(255,255,255,0.25)", letterSpacing: "0.01em" }}>로그인 후 바로 시작 · 첫 문항 무료</p>
               </div>
             </div>
 
@@ -448,8 +455,8 @@ export default function Home() {
               준비됐으면,<br />지금 시작하세요.
             </h2>
             <p className="text-base anim anim-delay-1" style={{ color: "rgba(255,255,255,0.38)" }}>첫 문항은 무료입니다.</p>
-            <Link
-              href="/chat"
+            <button
+              onClick={handleStartChat}
               className="inline-flex items-center gap-2.5 px-8 py-4 rounded-2xl text-sm font-semibold text-white transition-all hover:scale-[1.04] active:scale-[0.97]"
               style={{ background: ACCENT, boxShadow: `0 4px 24px ${ACCENT}30` }}
             >
@@ -457,7 +464,7 @@ export default function Home() {
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
               </svg>
-            </Link>
+            </button>
           </div>
         </section>
 
