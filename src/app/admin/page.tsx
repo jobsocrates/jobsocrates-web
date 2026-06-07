@@ -259,8 +259,8 @@ export default function AdminPage() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 20 }}>
             {[
               { label: "가입자", icon: "👤", color: ACCENT, borderColor: "rgba(201,100,66,0.25)", bgColor: "rgba(201,100,66,0.05)", data: stats?.users },
-              { label: "세션",   icon: "💬", color: BLUE,   borderColor: "rgba(107,142,255,0.25)", bgColor: "rgba(107,142,255,0.05)", data: stats?.sessions },
               { label: "방문자", icon: "👁",  color: VIOLET, borderColor: "rgba(167,139,250,0.25)", bgColor: "rgba(167,139,250,0.05)", data: stats?.views },
+              { label: "세션",   icon: "💬", color: BLUE,   borderColor: "rgba(107,142,255,0.25)", bgColor: "rgba(107,142,255,0.05)", data: stats?.sessions },
             ].map(({ label, icon, color, borderColor, bgColor, data }) => (
               <div key={label} style={{ borderRadius: 18, border: `1px solid ${borderColor}`, background: bgColor, overflow: "hidden" }}>
                 {/* Card header */}

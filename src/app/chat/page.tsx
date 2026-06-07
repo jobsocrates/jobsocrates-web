@@ -355,7 +355,7 @@ function InterviewQCard({
                 onChange={(e) => onInputChange(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onSubmit(); } }}
                 disabled={item.isLoadingFeedback}
-                placeholder="답변을 입력해요  (Enter 전송)"
+                placeholder="답변을 입력하세요"
                 rows={2}
                 className="flex-1 focus:outline-none disabled:opacity-30 resize-none placeholder:opacity-35"
                 style={{
@@ -1440,7 +1440,7 @@ export default function ChatPage() {
                           onChange={(e) => setInput(e.target.value)}
                           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
                           disabled={isStreaming}
-                          placeholder="답변을 입력하세요  (Enter 전송 · Shift+Enter 줄바꿈)"
+                          placeholder="답변을 입력하세요"
                           rows={1}
                           className="glow-input flex-1 disabled:opacity-30 resize-none placeholder:opacity-40"
                           style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)", borderRadius: "16px", padding: "11px 18px", fontSize: "14px", lineHeight: "1.5", color: "rgba(255,255,255,0.9)", height: "46px", overflow: "hidden" }}

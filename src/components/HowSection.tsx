@@ -62,9 +62,9 @@ function RevisionMini() {
           <div className="w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: BLUE, color: "#fff", fontSize: "7px", fontWeight: 700 }}>AI</div>
           <span className="text-xs font-semibold" style={{ color: BLUE }}>자소서 완성본</span>
         </div>
-        <div className="px-3 py-2.5 relative overflow-hidden" style={{ maxHeight: "46px" }}>
+        <div className="px-3 pt-3 pb-5 relative overflow-hidden" style={{ maxHeight: "72px" }}>
           <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.78)", wordBreak: "keep-all" }}>'스스로 설명할 수 없으면 모르는 것'이라는 기준으로 일해왔습니다. API 설계부터 QA까지...</p>
-          <div className="absolute bottom-0 left-0 right-0 h-5" style={{ background: `linear-gradient(to bottom, transparent, ${BLUE}06)` }} />
+          <div className="absolute bottom-0 left-0 right-0 h-6" style={{ background: `linear-gradient(to bottom, transparent, ${BLUE}06)` }} />
         </div>
       </div>
       <div className="rounded-xl overflow-hidden" style={{ background: `${GOLD}08`, border: `1px solid ${GOLD}22` }}>

@@ -192,7 +192,7 @@ export default function Home() {
                   {userEmail === "ijhan6403@gmail.com" && (
                     <a
                       href="/admin"
-                      className="hidden sm:block text-xs px-3 py-1.5 rounded-lg transition-colors hover:text-white"
+                      className="text-xs px-3 py-1.5 rounded-lg transition-colors hover:text-white"
                       style={{ color: "rgba(255,255,255,0.25)", border: "1px solid rgba(255,255,255,0.1)" }}
                     >
                       관리자
@@ -200,7 +200,7 @@ export default function Home() {
                   )}
                   <a
                     href="/chat"
-                    className="text-xs sm:text-sm px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl font-semibold transition-all hover:scale-[1.03] active:scale-[0.97] whitespace-nowrap"
+                    className="text-xs sm:text-sm px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl font-medium transition-all hover:scale-[1.03] active:scale-[0.97] whitespace-nowrap"
                     style={{ background: ACCENT, color: "#fff" }}
                   >
                     <span className="sm:hidden">채팅</span>
