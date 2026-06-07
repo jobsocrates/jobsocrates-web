@@ -480,6 +480,7 @@ export default function ChatPage() {
   const [showSummary, setShowSummary] = useState(false);
   const [showDraftPanel, setShowDraftPanel] = useState(false);
   const [toast, setToast] = useState("");
+  const [toastField, setToastField] = useState<"jobTitle" | "question" | "charLimit" | "draft" | "">("");
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fileRef = useRef<HTMLInputElement>(null);
@@ -681,16 +682,29 @@ export default function ChatPage() {
     }
   }
 
-  function showToast(msg: string) {
+  function showToast(msg: string, field: typeof toastField = "") {
     setToast(msg);
+    setToastField(field);
     if (toastTimer.current) clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToast(""), 2500);
+    toastTimer.current = setTimeout(() => { setToast(""); setToastField(""); }, 2500);
   }
 
   async function startAnalysis() {
-    if (!selected || !selected.question.trim() || !selected.draft.trim()) return;
+    if (!selected) return;
+    if (!jobTitle.trim()) {
+      showToast("지원 직무를 먼저 입력해주세요", "jobTitle");
+      return;
+    }
+    if (!selected.question.trim()) {
+      showToast("자소서 문항을 먼저 입력해주세요", "question");
+      return;
+    }
     if (!selected.charLimit.trim()) {
-      showToast("글자수 제한을 먼저 입력해주세요");
+      showToast("글자수 제한을 먼저 입력해주세요", "charLimit");
+      return;
+    }
+    if (!selected.draft.trim()) {
+      showToast("자소서 초안을 먼저 입력해주세요", "draft");
       return;
     }
     const seed = [{ role: "user", content: "초안 진단을 시작해줘." }];
@@ -1000,7 +1014,7 @@ export default function ChatPage() {
 
               {/* 직무 입력 */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium" style={{ color: "rgba(255,255,255,0.32)" }}>지원 직무</label>
+                <label className="text-xs font-medium" style={{ color: toastField === "jobTitle" ? `rgba(201,100,66,0.9)` : "rgba(255,255,255,0.32)" }}>지원 직무</label>
                 <input
                   value={jobTitle}
                   onChange={(e) => setJobTitle(e.target.value)}
@@ -1008,7 +1022,8 @@ export default function ChatPage() {
                   className="glow-input w-full px-3 py-2.5 rounded-xl text-sm"
                   style={{
                     background: "rgba(255,255,255,0.05)",
-                    border: "1px solid rgba(255,255,255,0.1)",
+                    border: `1px solid ${toastField === "jobTitle" ? "rgba(201,100,66,0.5)" : "rgba(255,255,255,0.1)"}`,
+                    boxShadow: toastField === "jobTitle" ? "0 0 0 2px rgba(201,100,66,0.15)" : "none",
                     color: "rgba(255,255,255,0.9)",
                   }}
                 />
@@ -1132,7 +1147,7 @@ export default function ChatPage() {
                       onChange={(e) => setJobTitle(e.target.value)}
                       placeholder="지원 직무 (예: 삼성전자 인프라설계)"
                       className="glow-input flex-1 px-3 py-2.5 rounded-xl text-sm"
-                      style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)", color: "rgba(255,255,255,0.9)" }}
+                      style={{ background: "rgba(255,255,255,0.05)", border: `1px solid ${toastField === "jobTitle" ? "rgba(201,100,66,0.5)" : "rgba(255,255,255,0.09)"}`, boxShadow: toastField === "jobTitle" ? "0 0 0 2px rgba(201,100,66,0.15)" : "none", color: "rgba(255,255,255,0.9)" }}
                     />
                     <div
                       onClick={() => fileRef.current?.click()}
@@ -1193,13 +1208,13 @@ export default function ChatPage() {
 
                   {/* 문항 */}
                   <div className="flex flex-col gap-2">
-                    <label className="text-xs font-semibold tracking-wider uppercase" style={{ color: "rgba(255,255,255,0.28)", letterSpacing: "0.08em" }}>자소서 문항</label>
+                    <label className="text-xs font-semibold tracking-wider uppercase" style={{ color: toastField === "question" ? "rgba(201,100,66,0.9)" : "rgba(255,255,255,0.28)", letterSpacing: "0.08em" }}>자소서 문항</label>
                     <input
                       value={selected.question}
                       onChange={(e) => updateItem(selectedId, { question: e.target.value })}
                       placeholder="예: 성장 과정 및 지원 동기를 작성해주세요."
                       className="glow-input w-full px-4 py-3 rounded-xl text-sm"
-                      style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.9)" }}
+                      style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${toastField === "question" ? "rgba(201,100,66,0.5)" : "rgba(255,255,255,0.08)"}`, boxShadow: toastField === "question" ? "0 0 0 2px rgba(201,100,66,0.15)" : "none", color: "rgba(255,255,255,0.9)" }}
                     />
                   </div>
 
@@ -1250,7 +1265,7 @@ export default function ChatPage() {
                       placeholder="작성한 자소서 초안을 붙여넣어요."
                       rows={13}
                       className="glow-input w-full px-4 py-3.5 rounded-xl text-sm resize-none"
-                      style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.88)", lineHeight: "1.85" }}
+                      style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${toastField === "draft" ? "rgba(201,100,66,0.5)" : "rgba(255,255,255,0.08)"}`, boxShadow: toastField === "draft" ? "0 0 0 2px rgba(201,100,66,0.15)" : "none", color: "rgba(255,255,255,0.88)", lineHeight: "1.85" }}
                     />
                   </div>
 
@@ -1258,7 +1273,7 @@ export default function ChatPage() {
                   <div className="flex flex-col gap-3 pb-4 sm:pb-0">
                     <button
                       onClick={startAnalysis}
-                      disabled={!canStart}
+                      disabled={selected?.status !== "idle"}
                       className="w-full py-4 rounded-2xl text-sm font-semibold text-white transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-20 disabled:cursor-not-allowed"
                       style={{
                         background: canStart ? ACCENT : "rgba(255,255,255,0.08)",
