@@ -175,22 +175,24 @@ export default function Home() {
             borderBottom: scrolled ? "1px solid rgba(255,255,255,0.05)" : "1px solid transparent",
           }}
         >
-          <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-            <span className="font-semibold text-white text-sm tracking-tight">
-              취업소크라테스{" "}
-              <span style={{ color: "rgba(255,255,255,0.2)", fontWeight: 300 }}>·</span>{" "}
-              <span style={{ color: "rgba(255,255,255,0.35)", fontWeight: 400, fontSize: "12px" }}>JobSocrates</span>
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+            <span className="font-semibold text-white text-sm tracking-tight whitespace-nowrap">
+              취업소크라테스
+              <span className="hidden sm:inline">
+                {" "}<span style={{ color: "rgba(255,255,255,0.2)", fontWeight: 300 }}>·</span>{" "}
+                <span style={{ color: "rgba(255,255,255,0.35)", fontWeight: 400, fontSize: "12px" }}>JobSocrates</span>
+              </span>
             </span>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 sm:gap-1.5 flex-shrink-0">
               {userEmail ? (
                 <>
-                  <span className="text-xs mr-2 hidden sm:block" style={{ color: "rgba(255,255,255,0.35)" }}>
+                  <span className="text-xs mr-1 hidden sm:block" style={{ color: "rgba(255,255,255,0.35)" }}>
                     {userEmail.split("@")[0]}님
                   </span>
                   {userEmail === "ijhan6403@gmail.com" && (
                     <a
                       href="/admin"
-                      className="text-xs px-3 py-1.5 rounded-lg transition-colors hover:text-white"
+                      className="hidden sm:block text-xs px-3 py-1.5 rounded-lg transition-colors hover:text-white"
                       style={{ color: "rgba(255,255,255,0.25)", border: "1px solid rgba(255,255,255,0.1)" }}
                     >
                       관리자
@@ -198,35 +200,41 @@ export default function Home() {
                   )}
                   <a
                     href="/chat"
-                    className="text-sm px-4 py-2 rounded-xl font-medium transition-all hover:scale-[1.03] active:scale-[0.97]"
+                    className="text-xs sm:text-sm px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl font-semibold transition-all hover:scale-[1.03] active:scale-[0.97] whitespace-nowrap"
                     style={{ background: ACCENT, color: "#fff" }}
                   >
-                    채팅 시작하기
+                    <span className="sm:hidden">채팅</span>
+                    <span className="hidden sm:inline">채팅 시작하기</span>
                   </a>
                   <button
                     onClick={handleLogout}
-                    className="text-sm px-4 py-2 rounded-xl transition-colors hover:text-white"
+                    className="text-xs sm:text-sm px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl transition-colors hover:text-white whitespace-nowrap"
                     style={{ color: "rgba(255,255,255,0.35)" }}
                   >
-                    로그아웃
+                    <span className="sm:hidden">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+                      </svg>
+                    </span>
+                    <span className="hidden sm:inline">로그아웃</span>
                   </button>
                 </>
               ) : (
                 <>
-              <button
-                onClick={() => openAuth("login")}
-                className="text-sm px-4 py-2 rounded-xl transition-colors hover:text-white"
-                style={{ color: "rgba(255,255,255,0.45)" }}
-              >
-                로그인
-              </button>
-              <button
-                onClick={() => openAuth("signup")}
-                className="text-sm px-4 py-2 rounded-xl font-medium transition-all hover:scale-[1.03] active:scale-[0.97]"
-                style={{ background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.8)", border: "1px solid rgba(255,255,255,0.08)" }}
-              >
-                회원가입
-              </button>
+                  <button
+                    onClick={() => openAuth("login")}
+                    className="text-xs sm:text-sm px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl transition-colors hover:text-white whitespace-nowrap"
+                    style={{ color: "rgba(255,255,255,0.45)" }}
+                  >
+                    로그인
+                  </button>
+                  <button
+                    onClick={() => openAuth("signup")}
+                    className="text-xs sm:text-sm px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl font-medium transition-all hover:scale-[1.03] active:scale-[0.97] whitespace-nowrap"
+                    style={{ background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.8)", border: "1px solid rgba(255,255,255,0.08)" }}
+                  >
+                    회원가입
+                  </button>
                 </>
               )}
             </div>
