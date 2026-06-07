@@ -3,7 +3,9 @@ import { readFileSync } from "fs";
 import { join } from "path";
 import type { DiggingContext } from "@/types";
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+function getClient() {
+  return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+}
 
 function prompt(name: string) {
   return readFileSync(join(process.cwd(), "src", "prompts", `${name}.txt`), "utf-8");
@@ -23,6 +25,7 @@ type MsgParam = Anthropic.MessageParam;
 
 async function stream(system: string, messages: MsgParam[]) {
   const enc = new TextEncoder();
+  const client = getClient();
   let s: ReturnType<typeof client.messages.stream>;
   try {
     s = await client.messages.stream({
@@ -62,6 +65,7 @@ async function stream(system: string, messages: MsgParam[]) {
 }
 
 async function generate(system: string, messages: MsgParam[]) {
+  const client = getClient();
   const res = await client.messages.create({
     model: "claude-sonnet-4-5",
     max_tokens: 2048,
@@ -75,18 +79,6 @@ async function generate(system: string, messages: MsgParam[]) {
   } catch {
     return Response.json({ raw: text });
   }
-}
-
-export async function GET() {
-  const raw = process.env.ANTHROPIC_API_KEY ?? "";
-  const trimmed = raw.trim();
-  return Response.json({
-    hasKey: !!raw,
-    length: raw.length,
-    trimmedLength: trimmed.length,
-    hasWhitespace: raw !== trimmed,
-    keyPrefix: trimmed.slice(0, 14) || "MISSING",
-  });
 }
 
 export async function POST(req: Request) {
