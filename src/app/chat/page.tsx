@@ -35,6 +35,7 @@ interface CoverItem {
   id: number;
   question: string;
   draft: string;
+  charLimit: string;
   status: "idle" | "chatting";
   msgs: ChatMsg[];
   apiHistory: { role: string; content: string }[];
@@ -351,6 +352,7 @@ const initItem: CoverItem = {
   id: uid(),
   question: "",
   draft: "",
+  charLimit: "",
   status: "idle",
   msgs: [],
   apiHistory: [],
@@ -380,7 +382,7 @@ export default function ChatPage() {
   }
 
   function addItem() {
-    const item: CoverItem = { id: uid(), question: "", draft: "", status: "idle", msgs: [], apiHistory: [], interviewQs: [], isLoadingQs: false };
+    const item: CoverItem = { id: uid(), question: "", draft: "", charLimit: "", status: "idle", msgs: [], apiHistory: [], interviewQs: [], isLoadingQs: false };
     setItems((prev) => [...prev, item]);
     setSelectedId(item.id);
   }
@@ -389,7 +391,7 @@ export default function ChatPage() {
     setItems((prev) => {
       const next = prev.filter((it) => it.id !== id);
       if (next.length === 0) {
-        const fresh: CoverItem = { id: uid(), question: "", draft: "", status: "idle", msgs: [], apiHistory: [], interviewQs: [], isLoadingQs: false };
+        const fresh: CoverItem = { id: uid(), question: "", draft: "", charLimit: "", status: "idle", msgs: [], apiHistory: [], interviewQs: [], isLoadingQs: false };
         setSelectedId(fresh.id);
         return [fresh];
       }
@@ -439,7 +441,8 @@ export default function ChatPage() {
     history: { role: string; content: string }[],
     itemId: number,
     draft: string,
-    question: string
+    question: string,
+    charLimit?: string
   ) {
     setIsStreaming(true);
     const msgId = uid();
@@ -457,7 +460,7 @@ export default function ChatPage() {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "analyze", jobTitle, question, jdKeywords, draft, messages: history }),
+        body: JSON.stringify({ type: "analyze", jobTitle, question, jdKeywords, draft, charLimit, messages: history }),
       });
       if (!res.body) throw new Error();
       const reader = res.body.getReader();
@@ -503,7 +506,7 @@ export default function ChatPage() {
         it.id === selectedId ? { ...it, status: "chatting" as const, apiHistory: seed } : it
       )
     );
-    await fetchBotReply(seed, selectedId, selected.draft, selected.question);
+    await fetchBotReply(seed, selectedId, selected.draft, selected.question, selected.charLimit);
   }
 
   async function handleSend() {
@@ -520,7 +523,7 @@ export default function ChatPage() {
       )
     );
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 0);
-    await fetchBotReply(newHistory, selectedId, selected.draft, selected.question);
+    await fetchBotReply(newHistory, selectedId, selected.draft, selected.question, selected.charLimit);
   }
 
   async function handleRevisionRequest() {
@@ -535,7 +538,7 @@ export default function ChatPage() {
       )
     );
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 0);
-    await fetchBotReply(newHistory, selectedId, selected.draft, selected.question);
+    await fetchBotReply(newHistory, selectedId, selected.draft, selected.question, selected.charLimit);
   }
 
   async function fetchInterviewQuestions() {
@@ -657,9 +660,30 @@ export default function ChatPage() {
       <div className="h-dvh flex flex-col" style={{ background: BG, color: "rgba(255,255,255,0.88)" }}>
 
         {/* ── 헤더 ── */}
-        <header className="flex items-center justify-between px-5 py-3 flex-shrink-0 border-b" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
-          <Link href="/" className="text-sm" style={{ color: "rgba(255,255,255,0.28)" }}>← 홈</Link>
-          <span className="text-sm font-medium" style={{ color: "rgba(255,255,255,0.4)" }}>취업소크라테스</span>
+        <header
+          className="flex items-center justify-between px-5 flex-shrink-0"
+          style={{
+            height: "52px",
+            background: "rgba(13,13,24,0.85)",
+            backdropFilter: "blur(12px)",
+            borderBottom: "1px solid rgba(255,255,255,0.06)",
+            boxShadow: "0 1px 0 rgba(107,142,255,0.06)",
+          }}
+        >
+          <Link
+            href="/"
+            className="flex items-center gap-1.5 text-xs transition-opacity hover:opacity-70"
+            style={{ color: "rgba(255,255,255,0.32)" }}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" />
+            </svg>
+            홈
+          </Link>
+          <div className="flex items-center gap-2">
+            <div className="w-1.5 h-1.5 rounded-full" style={{ background: ACCENT }} />
+            <span className="text-sm font-semibold" style={{ color: "rgba(255,255,255,0.55)", letterSpacing: "-0.01em" }}>취업소크라테스</span>
+          </div>
           <div className="w-10" />
         </header>
 
@@ -667,31 +691,33 @@ export default function ChatPage() {
         <div className="flex-1 flex overflow-hidden">
 
           {/* ────────── 왼쪽 패널 ────────── */}
-          <div className="flex-shrink-0 flex flex-col border-r" style={{ width: "272px", borderColor: "rgba(255,255,255,0.06)" }}>
+          <div className="flex-shrink-0 flex flex-col border-r relative overflow-hidden" style={{ width: "272px", borderColor: "rgba(255,255,255,0.06)", background: "rgba(9,9,22,0.6)" }}>
+            {/* 앰비언트 글로우 */}
+            <div style={{ position: "absolute", top: -30, left: "50%", transform: "translateX(-50%)", width: 220, height: 140, background: `radial-gradient(circle, ${BLUE}16 0%, transparent 70%)`, pointerEvents: "none", zIndex: 0 }} />
 
             {/* 지원 정보 */}
             <div
-              className="flex flex-col gap-3 border-b flex-shrink-0"
-              style={{ borderColor: "rgba(255,255,255,0.07)", padding: "16px 14px 18px" }}
+              className="flex flex-col gap-3 border-b flex-shrink-0 relative"
+              style={{ borderColor: "rgba(255,255,255,0.06)", padding: "16px 14px 18px", zIndex: 1 }}
             >
               <div className="flex items-center gap-1.5">
-                <div className="w-1 h-3.5 rounded-full flex-shrink-0" style={{ background: ACCENT }} />
-                <span className="text-xs font-semibold tracking-wide" style={{ color: "rgba(255,255,255,0.45)" }}>
+                <div className="w-1 h-3.5 rounded-full flex-shrink-0" style={{ background: `linear-gradient(to bottom, ${ACCENT}, ${BLUE})` }} />
+                <span className="text-xs font-semibold tracking-wider uppercase" style={{ color: "rgba(255,255,255,0.35)", letterSpacing: "0.1em" }}>
                   지원 정보
                 </span>
               </div>
 
               {/* 직무 입력 */}
-              <div className="flex flex-col gap-1">
-                <label className="text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>지원 직무</label>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium" style={{ color: "rgba(255,255,255,0.32)" }}>지원 직무</label>
                 <input
                   value={jobTitle}
                   onChange={(e) => setJobTitle(e.target.value)}
                   placeholder="예) 삼성전자 인프라설계"
-                  className="w-full px-3 py-2.5 rounded-xl text-sm focus:outline-none"
+                  className="glow-input w-full px-3 py-2.5 rounded-xl text-sm"
                   style={{
-                    background: "rgba(255,255,255,0.07)",
-                    border: "1px solid rgba(255,255,255,0.12)",
+                    background: "rgba(255,255,255,0.05)",
+                    border: "1px solid rgba(255,255,255,0.1)",
                     color: "rgba(255,255,255,0.9)",
                   }}
                 />
@@ -740,8 +766,8 @@ export default function ChatPage() {
             </div>
 
             {/* 항목 목록 */}
-            <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-1.5">
-              <p className="text-xs px-1 pt-0.5 pb-1.5 font-medium" style={{ color: "rgba(255,255,255,0.22)" }}>자소서 항목</p>
+            <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-1.5 relative" style={{ zIndex: 1 }}>
+              <p className="text-xs px-1 pt-0.5 pb-1.5 font-semibold tracking-wider uppercase" style={{ color: "rgba(255,255,255,0.2)", letterSpacing: "0.1em" }}>자소서 항목</p>
 
               {items.map((item, idx) => {
                 const isSel = item.id === selectedId;
@@ -754,8 +780,9 @@ export default function ChatPage() {
                     onKeyDown={(e) => e.key === "Enter" && setSelectedId(item.id)}
                     className="w-full text-left rounded-xl px-3 py-2.5 flex flex-col gap-0.5 transition-all group relative cursor-pointer"
                     style={{
-                      background: isSel ? "rgba(107,142,255,0.1)" : "rgba(255,255,255,0.035)",
-                      border: `1px solid ${isSel ? "rgba(107,142,255,0.26)" : "rgba(255,255,255,0.06)"}`,
+                      background: isSel ? `${BLUE}0E` : "rgba(255,255,255,0.03)",
+                      border: `1px solid ${isSel ? `${BLUE}35` : "rgba(255,255,255,0.06)"}`,
+                      boxShadow: isSel ? `0 0 14px ${BLUE}14, inset 0 0 0 1px ${BLUE}18` : "none",
                     }}
                   >
                     <div className="flex items-center gap-2 pr-6">
@@ -804,46 +831,91 @@ export default function ChatPage() {
 
               /* ── 편집 패널 ── */
               <div className="flex-1 overflow-y-auto">
-                <div className="max-w-2xl mx-auto px-8 py-8 flex flex-col gap-5">
+                <div className="max-w-2xl mx-auto px-8 py-10 flex flex-col gap-6">
+
+                  {/* 문항 */}
                   <div className="flex flex-col gap-2">
-                    <label className="text-xs font-medium" style={{ color: "rgba(255,255,255,0.3)" }}>자소서 문항</label>
+                    <label className="text-xs font-semibold tracking-wider uppercase" style={{ color: "rgba(255,255,255,0.28)", letterSpacing: "0.08em" }}>자소서 문항</label>
                     <input
                       value={selected.question}
                       onChange={(e) => updateItem(selectedId, { question: e.target.value })}
                       placeholder="예: 성장 과정 및 지원 동기를 작성해주세요."
-                      className="w-full px-4 py-3 rounded-xl text-sm focus:outline-none"
-                      style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)", color: "rgba(255,255,255,0.9)" }}
+                      className="glow-input w-full px-4 py-3 rounded-xl text-sm"
+                      style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.9)" }}
                     />
                   </div>
+
+                  {/* 글자 수 제한 */}
+                  <div
+                    className="flex items-center gap-3 px-4 py-3.5 rounded-xl"
+                    style={{
+                      background: selected.charLimit ? `${ACCENT}0E` : "rgba(255,255,255,0.025)",
+                      border: `1px solid ${selected.charLimit ? `${ACCENT}45` : "rgba(255,255,255,0.07)"}`,
+                      transition: "all 0.2s ease",
+                    }}
+                  >
+                    <div className="w-1 h-5 rounded-full flex-shrink-0" style={{ background: selected.charLimit ? ACCENT : "rgba(255,255,255,0.15)", transition: "background 0.2s" }} />
+                    <div className="flex-1">
+                      <p className="text-xs font-semibold" style={{ color: selected.charLimit ? "rgba(255,255,255,0.82)" : "rgba(255,255,255,0.45)" }}>글자 수 제한</p>
+                      <p className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.25)" }}>첨삭 시 이 글자 수에 맞춰드려요</p>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="number"
+                        min={0}
+                        value={selected.charLimit}
+                        onChange={(e) => updateItem(selectedId, { charLimit: e.target.value })}
+                        placeholder="예) 1000"
+                        className="glow-input-accent w-24 px-2.5 py-1.5 rounded-lg text-sm text-right"
+                        style={{
+                          background: "rgba(255,255,255,0.06)",
+                          border: `1px solid ${selected.charLimit ? `${ACCENT}50` : "rgba(255,255,255,0.1)"}`,
+                          color: selected.charLimit ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.3)",
+                        }}
+                      />
+                      <span className="text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>자</span>
+                    </div>
+                  </div>
+
+                  {/* 초안 */}
                   <div className="flex flex-col gap-2">
                     <div className="flex items-center justify-between">
-                      <label className="text-xs font-medium" style={{ color: "rgba(255,255,255,0.3)" }}>내 초안</label>
-                      <span className="text-xs" style={{ color: "rgba(255,255,255,0.18)" }}>{selected.draft.length}자</span>
+                      <label className="text-xs font-semibold tracking-wider uppercase" style={{ color: "rgba(255,255,255,0.28)", letterSpacing: "0.08em" }}>내 초안</label>
+                      <span className="text-xs tabular-nums" style={{ color: selected.charLimit && selected.draft.length > Number(selected.charLimit) ? "#FF6B6B" : "rgba(255,255,255,0.2)" }}>
+                        {selected.draft.length.toLocaleString()}자{selected.charLimit && ` / ${Number(selected.charLimit).toLocaleString()}자`}
+                      </span>
                     </div>
                     <textarea
                       value={selected.draft}
                       onChange={(e) => updateItem(selectedId, { draft: e.target.value })}
                       placeholder="작성한 자소서 초안을 붙여넣어요."
                       rows={13}
-                      className="w-full px-4 py-3 rounded-xl text-sm focus:outline-none resize-none"
-                      style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)", color: "rgba(255,255,255,0.88)", lineHeight: "1.8" }}
+                      className="glow-input w-full px-4 py-3.5 rounded-xl text-sm resize-none"
+                      style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.88)", lineHeight: "1.85" }}
                     />
                   </div>
-                  <div className="flex flex-col gap-2.5">
+
+                  {/* 시작 버튼 */}
+                  <div className="flex flex-col gap-3">
                     <button
                       onClick={startAnalysis}
                       disabled={!canStart}
-                      className="w-full py-4 rounded-2xl text-sm font-semibold text-white transition-all hover:scale-[1.015] active:scale-[0.985] disabled:opacity-25 disabled:cursor-not-allowed"
-                      style={{ background: ACCENT, boxShadow: canStart ? `0 0 28px ${ACCENT}35` : "none" }}
+                      className="w-full py-4 rounded-2xl text-sm font-semibold text-white transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-20 disabled:cursor-not-allowed"
+                      style={{
+                        background: canStart ? ACCENT : "rgba(255,255,255,0.08)",
+                        boxShadow: canStart ? `0 0 32px ${ACCENT}40, 0 4px 24px ${ACCENT}30` : "none",
+                        transition: "all 0.2s ease",
+                      }}
                     >
                       분석 시작하기 →
                     </button>
-                    <p className="text-xs text-center" style={{ color: "rgba(255,255,255,0.2)" }}>
+                    <p className="text-xs text-center" style={{ color: "rgba(255,255,255,0.18)" }}>
                       {canStart
-                        ? "논리 흐름 · 문맥 연결 · 직무 이해도를 먼저 진단하고 질문으로 이어가요"
+                        ? "논리 흐름 · 문맥 연결 · 직무 이해도를 진단하고 질문으로 이어가요"
                         : "문항과 초안을 모두 입력하면 분석을 시작할 수 있어요"}
                     </p>
                   </div>
+
                 </div>
               </div>
 
@@ -994,14 +1066,14 @@ export default function ChatPage() {
                           disabled={isStreaming}
                           placeholder="답변을 입력하세요  (Enter 전송 · Shift+Enter 줄바꿈)"
                           rows={1}
-                          className="flex-1 focus:outline-none disabled:opacity-30 resize-none placeholder:opacity-40"
-                          style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.09)", borderRadius: "20px", padding: "11px 18px", fontSize: "14px", lineHeight: "1.5", color: "rgba(255,255,255,0.9)", height: "46px", overflow: "hidden" }}
+                          className="glow-input flex-1 disabled:opacity-30 resize-none placeholder:opacity-40"
+                          style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)", borderRadius: "16px", padding: "11px 18px", fontSize: "14px", lineHeight: "1.5", color: "rgba(255,255,255,0.9)", height: "46px", overflow: "hidden" }}
                         />
                         <button
                           onClick={handleSend}
                           disabled={isStreaming || !input.trim()}
                           className="flex-shrink-0 flex items-center justify-center rounded-xl transition-all hover:scale-105 active:scale-95 disabled:opacity-25"
-                          style={{ background: ACCENT, width: "46px", height: "46px" }}
+                          style={{ background: ACCENT, width: "46px", height: "46px", boxShadow: input.trim() ? `0 0 16px ${ACCENT}50` : "none", transition: "all 0.2s ease" }}
                         >
                           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                             <line x1="22" y1="2" x2="11" y2="13" />

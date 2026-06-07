@@ -141,7 +141,7 @@ export async function POST(req: Request) {
 
     case "analyze": {
       const sys = prompt("analyze") +
-        `\n\n## 세션 정보\n직무: ${body.jobTitle}\n문항: ${body.question || "미입력"}\nJD 키워드: ${(body.jdKeywords ?? []).join(", ") || "없음"}\n\n## 자소서 초안\n${body.draft}`;
+        `\n\n## 세션 정보\n직무: ${body.jobTitle}\n문항: ${body.question || "미입력"}\nJD 키워드: ${(body.jdKeywords ?? []).join(", ") || "없음"}\n글자 수 제한: ${body.charLimit ? `${body.charLimit}자 (수정본 작성 시 이 글자 수에 맞춰야 함)` : "미입력"}\n\n## 자소서 초안\n${body.draft}`;
       const msgs: MsgParam[] = body.messages?.length > 0
         ? body.messages
         : [{ role: "user", content: "자소서 초안을 분석하고 첫 질문을 시작해줘." }];
