@@ -80,50 +80,85 @@ function parseRevisionMsg(text: string) {
 
 /* ── 진단 카드 (첫 번째 봇 메시지) ── */
 function DiagnosisCard({ text, streaming }: { text: string; streaming: boolean }) {
-  const lines = stripMd(text).split("\n").filter(Boolean);
+  const stripped = stripMd(text);
+  const splitIdx = stripped.indexOf("이 중에서");
+  const mainText = splitIdx !== -1 ? stripped.slice(0, splitIdx).trim() : stripped;
+  const followText = splitIdx !== -1 ? stripped.slice(splitIdx).trim() : null;
+  const lines = mainText.split("\n").filter(Boolean);
+
   return (
-    <div
-      className="w-full rounded-2xl overflow-hidden"
-      style={{ background: `${BLUE}09`, border: `1px solid ${BLUE}1C` }}
-    >
-      <div className="flex items-center gap-2 px-4 py-2.5 border-b" style={{ borderColor: `${BLUE}16` }}>
-        <div
-          className="w-5 h-5 rounded-full flex items-center justify-center font-bold flex-shrink-0"
-          style={{ background: BLUE, color: "#fff", fontSize: "9px" }}
-        >
-          AI
+    <div className="flex flex-col gap-3 w-full">
+      {/* ①②③ 진단 카드 */}
+      <div
+        className="w-full rounded-2xl overflow-hidden"
+        style={{ background: `${BLUE}09`, border: `1px solid ${BLUE}1C` }}
+      >
+        <div className="flex items-center gap-2 px-4 py-2.5 border-b" style={{ borderColor: `${BLUE}16` }}>
+          <div
+            className="w-5 h-5 rounded-full flex items-center justify-center font-bold flex-shrink-0"
+            style={{ background: BLUE, color: "#fff", fontSize: "9px" }}
+          >
+            AI
+          </div>
+          <span className="text-xs font-semibold" style={{ color: BLUE }}>초안 진단</span>
         </div>
-        <span className="text-xs font-semibold" style={{ color: BLUE }}>초안 진단</span>
+        <div className="px-4 py-3.5">
+          {streaming && text === "" ? (
+            <div className="flex gap-1.5 items-center h-5">
+              {DOTS.map(({ delay, color }) => (
+                <span key={delay} className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: color, animationDelay: `${delay}ms` }} />
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col gap-1">
+              {lines.map((line, i) => {
+                const isSection = line.startsWith("①") || line.startsWith("②") || line.startsWith("③");
+                return (
+                  <p
+                    key={i}
+                    className="text-sm leading-relaxed"
+                    style={{
+                      color: isSection ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.62)",
+                      fontWeight: isSection ? 500 : 400,
+                      marginTop: isSection && i !== 0 ? "8px" : undefined,
+                      wordBreak: "keep-all",
+                    }}
+                  >
+                    {line}
+                  </p>
+                );
+              })}
+              {streaming && !followText && lines.length > 0 && (
+                <div className="flex gap-1.5 items-center h-5 mt-2">
+                  {DOTS.map(({ delay, color }) => (
+                    <span key={delay} className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: color, animationDelay: `${delay}ms` }} />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
-      <div className="px-4 py-3.5">
-        {streaming && text === "" ? (
-          <div className="flex gap-1.5 items-center h-5">
-            {DOTS.map(({ delay, color }) => (
-              <span key={delay} className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: color, animationDelay: `${delay}ms` }} />
-            ))}
+
+      {/* "이 중에서 ~" 질문 — 별도 봇 버블 */}
+      {followText && (
+        <div className="flex items-end gap-2.5">
+          <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs flex-shrink-0 mb-0.5 font-bold" style={{ background: BLUE, color: "#fff" }}>AI</div>
+          <div
+            className="max-w-[82%] px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap"
+            style={{ background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.88)", borderRadius: "4px 16px 16px 16px", wordBreak: "keep-all" }}
+          >
+            {followText}
+            {streaming && (
+              <span className="inline-flex gap-1 ml-2 items-center align-middle">
+                {DOTS.map(({ delay, color }) => (
+                  <span key={delay} className="w-1 h-1 rounded-full animate-bounce inline-block" style={{ background: color, animationDelay: `${delay}ms` }} />
+                ))}
+              </span>
+            )}
           </div>
-        ) : (
-          <div className="flex flex-col gap-1">
-            {lines.map((line, i) => {
-              const isSection = line.startsWith("①") || line.startsWith("②") || line.startsWith("③");
-              return (
-                <p
-                  key={i}
-                  className="text-sm leading-relaxed"
-                  style={{
-                    color: isSection ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.62)",
-                    fontWeight: isSection ? 500 : 400,
-                    marginTop: isSection && i !== 0 ? "8px" : undefined,
-                    wordBreak: "keep-all",
-                  }}
-                >
-                  {line}
-                </p>
-              );
-            })}
-          </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1257,29 +1292,34 @@ export default function ChatPage() {
                         </span>
                       );
                     })}
-                    <button
-                      onClick={() => setShowDraftPanel(v => !v)}
-                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all relative"
-                      style={{
-                        background: showDraftPanel ? `${BLUE}1A` : "rgba(255,255,255,0.05)",
-                        border: `1px solid ${showDraftPanel ? `${BLUE}40` : "rgba(255,255,255,0.08)"}`,
-                        color: showDraftPanel ? BLUE : "rgba(255,255,255,0.42)",
-                      }}
-                    >
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
-                      </svg>
-                      <span>초안</span>
-                      {referenceText && !showDraftPanel && (
-                        <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full" style={{ background: ACCENT }} />
-                      )}
-                    </button>
                   </div>
                   </div>
                 </div>
 
                 {/* 메시지 영역 */}
                 <div className="flex-1 overflow-y-auto px-5 py-5">
+                  {/* 초안 보기 — sticky 상단 고정 */}
+                  <div className="sticky top-0 z-10 -mx-5 px-5 pb-3 pt-1 flex justify-end" style={{ background: `linear-gradient(to bottom, ${BG} 60%, transparent)` }}>
+                    <button
+                      onClick={() => setShowDraftPanel(v => !v)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all relative"
+                      style={{
+                        background: showDraftPanel ? `${BLUE}22` : "rgba(255,255,255,0.07)",
+                        border: `1px solid ${showDraftPanel ? `${BLUE}45` : "rgba(255,255,255,0.12)"}`,
+                        color: showDraftPanel ? BLUE : "rgba(255,255,255,0.55)",
+                        backdropFilter: "blur(8px)",
+                        boxShadow: showDraftPanel ? `0 0 12px ${BLUE}18` : "none",
+                      }}
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+                      </svg>
+                      <span>내 초안 보기</span>
+                      {referenceText && !showDraftPanel && (
+                        <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: ACCENT }} />
+                      )}
+                    </button>
+                  </div>
                   <div className="max-w-2xl mx-auto flex flex-col gap-4">
                     {selected.msgs.map((msg, msgIdx) => {
                       const isDiagnosis = msgIdx === 0 && msg.role === "bot";
