@@ -57,29 +57,97 @@ function Divider() {
   );
 }
 
-function Checkbox({ checked, onChange, children }: {
-  checked: boolean; onChange: () => void; children: React.ReactNode;
+const TERMS = {
+  privacy: {
+    label: "(필수) 개인정보 수집 및 이용 동의",
+    content: `■ 수집 항목\n이메일 주소, 자소서 초안, 대화 내용\n\n■ 수집 목적\nAI 자소서 첨삭 서비스 제공, 대화 기록 저장 및 품질 개선\n\n■ 보유 및 이용 기간\n회원 탈퇴 시까지. 단, 관계 법령에 따라 일정 기간 보존될 수 있습니다.\n\n■ 동의 거부 권리\n동의를 거부할 수 있으나, 이 경우 서비스 이용이 제한됩니다.`,
+  },
+  terms: {
+    label: "(필수) 서비스 이용약관 동의",
+    content: `■ 서비스 개요\n취업소크라테스는 AI 기반 자소서 첨삭 서비스입니다.\n\n■ 이용 조건\n- 만 14세 이상 이용 가능\n- 타인의 정보를 도용하거나 허위 정보를 입력할 수 없습니다\n- 서비스를 통해 생성된 컨텐츠의 저작권은 이용자에게 귀속됩니다\n\n■ 금지 사항\n- 서비스의 상업적 재판매 금지\n- 시스템 무결성을 해치는 행위 금지\n\n■ 서비스 변경 및 중단\n운영 정책에 따라 서비스 내용이 변경되거나 중단될 수 있으며, 사전 공지합니다.`,
+  },
+  marketing: {
+    label: "(선택) 마케팅 정보 수신 동의",
+    content: `■ 수신 내용\n서비스 업데이트, 신규 기능 안내, 이벤트 및 프로모션 정보\n\n■ 수신 방법\n이메일\n\n■ 철회 방법\n언제든지 수신 거부를 요청할 수 있으며, 동의하지 않아도 서비스 이용에 지장이 없습니다.`,
+  },
+};
+
+function TermRow({
+  checked,
+  onChange,
+  termKey,
+}: {
+  checked: boolean;
+  onChange: () => void;
+  termKey: keyof typeof TERMS;
 }) {
+  const [open, setOpen] = useState(false);
+  const { label, content } = TERMS[termKey];
+
   return (
-    <label className="flex items-start gap-2.5 cursor-pointer group">
-      <div
-        onClick={onChange}
-        className="mt-0.5 w-4 h-4 rounded flex items-center justify-center flex-shrink-0 transition-all"
-        style={{
-          border: checked ? "none" : "1.5px solid rgba(255,255,255,0.25)",
-          background: checked ? ACCENT : "transparent",
-        }}
-      >
-        {checked && (
-          <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-            <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        )}
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-start gap-2">
+        {/* 체크박스 */}
+        <div
+          onClick={onChange}
+          className="mt-0.5 w-4 h-4 rounded flex items-center justify-center flex-shrink-0 cursor-pointer transition-all"
+          style={{
+            border: checked ? "none" : "1.5px solid rgba(255,255,255,0.25)",
+            background: checked ? ACCENT : "transparent",
+          }}
+        >
+          {checked && (
+            <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+              <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          )}
+        </div>
+        {/* 라벨 + 펼치기 버튼 */}
+        <div className="flex items-start justify-between flex-1 gap-1.5">
+          <span
+            className="text-xs leading-relaxed cursor-pointer"
+            style={{ color: "rgba(255,255,255,0.55)" }}
+            onClick={onChange}
+          >
+            {label}
+          </span>
+          <button
+            onClick={() => setOpen((v) => !v)}
+            className="flex-shrink-0 flex items-center gap-0.5 px-2 py-0.5 rounded-lg text-xs transition-all hover:opacity-80"
+            style={{
+              background: open ? "rgba(201,100,66,0.15)" : "rgba(255,255,255,0.06)",
+              color: open ? ACCENT : "rgba(255,255,255,0.35)",
+              border: `1px solid ${open ? "rgba(201,100,66,0.3)" : "rgba(255,255,255,0.08)"}`,
+              whiteSpace: "nowrap",
+            }}
+          >
+            {open ? "닫기" : "보기"}
+            <svg
+              width="10" height="10" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+              style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}
+            >
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
+        </div>
       </div>
-      <span className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.55)" }}>
-        {children}
-      </span>
-    </label>
+
+      {/* 약관 내용 */}
+      {open && (
+        <div
+          className="ml-6 rounded-xl px-3 py-3"
+          style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}
+        >
+          <p
+            className="text-xs leading-[1.85] whitespace-pre-wrap"
+            style={{ color: "rgba(255,255,255,0.38)" }}
+          >
+            {content}
+          </p>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -97,7 +165,10 @@ export function AuthModal({ tab: initialTab, onClose }: Props) {
   const [successMsg, setSuccessMsg] = useState("");
   const [isInApp, setIsInApp] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [canScrollMore, setCanScrollMore] = useState(false);
+
   const backdropRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const allAgree = agree1 && agree2 && agree3;
   const toggleAll = () => { const v = !allAgree; setAgree1(v); setAgree2(v); setAgree3(v); };
@@ -113,6 +184,20 @@ export function AuthModal({ tab: initialTab, onClose }: Props) {
     return () => { document.body.style.overflow = ""; };
   }, []);
 
+  // 스크롤 인디케이터: 아래로 더 볼 내용이 있는지 감지
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const check = () => {
+      setCanScrollMore(el.scrollTop + el.clientHeight < el.scrollHeight - 8);
+    };
+    check();
+    el.addEventListener("scroll", check, { passive: true });
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    return () => { el.removeEventListener("scroll", check); ro.disconnect(); };
+  }, [tab]);
+
   useEffect(() => {
     setError("");
     setSuccessMsg("");
@@ -126,11 +211,9 @@ export function AuthModal({ tab: initialTab, onClose }: Props) {
     const url = window.location.href;
     const ua = navigator.userAgent;
     if (/Android/i.test(ua)) {
-      // Android: Chrome intent URL로 강제 외부 브라우저 오픈
       const host = url.replace(/^https?:\/\//, "");
       window.location.href = `intent://${host}#Intent;scheme=https;package=com.android.chrome;end`;
     } else {
-      // iOS: 클립보드에 복사 후 안내
       navigator.clipboard.writeText(url).then(() => {
         setCopied(true);
         setTimeout(() => setCopied(false), 2500);
@@ -210,7 +293,7 @@ export function AuthModal({ tab: initialTab, onClose }: Props) {
       style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)" }}
     >
       <div
-        className="w-full max-w-sm rounded-3xl overflow-hidden"
+        className="w-full max-w-sm rounded-3xl overflow-hidden relative"
         style={{ background: "#12121F", border: "1px solid rgba(255,255,255,0.08)" }}
       >
         {/* 탭 */}
@@ -230,7 +313,12 @@ export function AuthModal({ tab: initialTab, onClose }: Props) {
           ))}
         </div>
 
-        <div className="p-6 flex flex-col gap-3 max-h-[80vh] overflow-y-auto">
+        {/* 스크롤 영역 */}
+        <div
+          ref={scrollRef}
+          className="p-6 flex flex-col gap-3 overflow-y-auto"
+          style={{ maxHeight: "78vh" }}
+        >
           {/* 소셜 — 인앱 브라우저면 외부 브라우저 유도 UI */}
           {isInApp ? (
             <div
@@ -296,7 +384,8 @@ export function AuthModal({ tab: initialTab, onClose }: Props) {
           {tab === "signup" && (
             <>
               <Divider />
-              <div className="flex flex-col gap-2.5">
+              <div className="flex flex-col gap-3">
+                {/* 전체 동의 */}
                 <button
                   onClick={toggleAll}
                   className="w-full flex items-center gap-2.5 py-2.5 px-3 rounded-xl transition-colors"
@@ -310,19 +399,31 @@ export function AuthModal({ tab: initialTab, onClose }: Props) {
                   </div>
                   <span className="text-xs font-medium" style={{ color: "rgba(255,255,255,0.75)" }}>전체 동의</span>
                 </button>
-                <Checkbox checked={agree1} onChange={() => setAgree1(p => !p)}>
-                  (필수) 개인정보 수집 및 이용 동의
-                </Checkbox>
-                <Checkbox checked={agree2} onChange={() => setAgree2(p => !p)}>
-                  (필수) 서비스 이용약관 동의
-                </Checkbox>
-                <Checkbox checked={agree3} onChange={() => setAgree3(p => !p)}>
-                  (선택) 마케팅 정보 수신 동의
-                </Checkbox>
+
+                <TermRow checked={agree1} onChange={() => setAgree1(p => !p)} termKey="privacy" />
+                <TermRow checked={agree2} onChange={() => setAgree2(p => !p)} termKey="terms" />
+                <TermRow checked={agree3} onChange={() => setAgree3(p => !p)} termKey="marketing" />
               </div>
+              {/* 하단 여백 */}
+              <div className="h-1" />
             </>
           )}
         </div>
+
+        {/* 스크롤 인디케이터 — 아래 내용이 더 있을 때 */}
+        {canScrollMore && (
+          <div
+            className="absolute bottom-0 left-0 right-0 flex flex-col items-center pb-3 pt-8 pointer-events-none"
+            style={{ background: "linear-gradient(to bottom, transparent, #12121F 60%)" }}
+          >
+            <span className="text-xs animate-bounce" style={{ color: "rgba(255,255,255,0.3)" }}>
+              아래로 스크롤
+            </span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="animate-bounce">
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </div>
+        )}
       </div>
     </div>
   );
