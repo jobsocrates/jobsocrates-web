@@ -479,6 +479,8 @@ export default function ChatPage() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
   const [showDraftPanel, setShowDraftPanel] = useState(false);
+  const [toast, setToast] = useState("");
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fileRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -679,8 +681,18 @@ export default function ChatPage() {
     }
   }
 
+  function showToast(msg: string) {
+    setToast(msg);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(""), 2500);
+  }
+
   async function startAnalysis() {
     if (!selected || !selected.question.trim() || !selected.draft.trim()) return;
+    if (!selected.charLimit.trim()) {
+      showToast("글자수 제한을 먼저 입력해주세요");
+      return;
+    }
     const seed = [{ role: "user", content: "초안 진단을 시작해줘." }];
 
     let itemDbId: string | null = null;
@@ -949,6 +961,23 @@ export default function ChatPage() {
           </div>
         )}
 
+        {/* 알림 토스트 */}
+        {toast && (
+          <div
+            className="fixed top-16 left-1/2 z-50 px-5 py-2.5 rounded-2xl text-sm font-medium shadow-lg"
+            style={{
+              transform: "translateX(-50%)",
+              background: "rgba(201,100,66,0.18)",
+              border: "1px solid rgba(201,100,66,0.45)",
+              color: "rgba(255,255,255,0.92)",
+              backdropFilter: "blur(12px)",
+              whiteSpace: "nowrap",
+            }}
+          >
+            ✏️ {toast}
+          </div>
+        )}
+
         {/* ── 메인 ── */}
         <div className="flex-1 flex overflow-hidden">
 
@@ -1179,13 +1208,14 @@ export default function ChatPage() {
                     className="flex items-center gap-3 px-4 py-3.5 rounded-xl"
                     style={{
                       background: selected.charLimit ? `${ACCENT}0E` : "rgba(255,255,255,0.025)",
-                      border: `1px solid ${selected.charLimit ? `${ACCENT}45` : "rgba(255,255,255,0.07)"}`,
+                      border: `1px solid ${selected.charLimit ? `${ACCENT}45` : toast ? "rgba(201,100,66,0.5)" : "rgba(255,255,255,0.07)"}`,
                       transition: "all 0.2s ease",
+                      boxShadow: toast && !selected.charLimit ? `0 0 0 2px rgba(201,100,66,0.15)` : "none",
                     }}
                   >
-                    <div className="w-1 h-5 rounded-full flex-shrink-0" style={{ background: selected.charLimit ? ACCENT : "rgba(255,255,255,0.15)", transition: "background 0.2s" }} />
+                    <div className="w-1 h-5 rounded-full flex-shrink-0" style={{ background: selected.charLimit ? ACCENT : toast ? `rgba(201,100,66,0.6)` : "rgba(255,255,255,0.15)", transition: "background 0.2s" }} />
                     <div className="flex-1">
-                      <p className="text-xs font-semibold" style={{ color: selected.charLimit ? "rgba(255,255,255,0.82)" : "rgba(255,255,255,0.45)" }}>글자 수 제한</p>
+                      <p className="text-xs font-semibold" style={{ color: selected.charLimit ? "rgba(255,255,255,0.82)" : toast ? `rgba(201,100,66,0.9)` : "rgba(255,255,255,0.45)" }}>글자 수 제한 <span style={{ color: "rgba(201,100,66,0.6)", fontSize: "10px" }}>필수</span></p>
                       <p className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.25)" }}>첨삭 시 이 글자 수에 맞춰드려요</p>
                     </div>
                     <div className="flex items-center gap-1.5">
