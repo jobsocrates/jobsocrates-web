@@ -355,6 +355,11 @@ function InterviewQCard({
                 value={item.inputText}
                 onChange={(e) => onInputChange(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onSubmit(); } }}
+                onInput={(e) => {
+                  const el = e.target as HTMLTextAreaElement;
+                  el.style.height = "auto";
+                  el.style.height = Math.min(el.scrollHeight, 200) + "px";
+                }}
                 disabled={item.isLoadingFeedback}
                 placeholder="답변을 입력하세요"
                 rows={2}
@@ -367,6 +372,8 @@ function InterviewQCard({
                   fontSize: "13px",
                   lineHeight: "1.5",
                   color: "rgba(255,255,255,0.9)",
+                  maxHeight: "200px",
+                  overflowY: "auto",
                 }}
               />
               <button
@@ -487,6 +494,7 @@ export default function ChatPage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const dbSessionIdRef = useRef<string | null>(null);
+  const chatInputRef = useRef<HTMLTextAreaElement>(null);
 
   const [currentUser, setCurrentUser] = useState<{ id: string; email: string } | null>(null);
   const [welcome, setWelcome] = useState("");
@@ -710,6 +718,13 @@ export default function ChatPage() {
       setIsStreaming(false);
     }
   }
+
+  useEffect(() => {
+    const el = chatInputRef.current;
+    if (!el) return;
+    el.style.height = "46px";
+    el.style.height = Math.min(el.scrollHeight, 160) + "px";
+  }, [input]);
 
   function showToast(msg: string, field: typeof toastField = "") {
     setToast(msg);
@@ -1507,6 +1522,7 @@ export default function ChatPage() {
                       /* 일반 입력창 */
                       <div className="flex items-center gap-3">
                         <textarea
+                          ref={chatInputRef}
                           value={input}
                           onChange={(e) => setInput(e.target.value)}
                           onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
@@ -1514,7 +1530,7 @@ export default function ChatPage() {
                           placeholder="답변을 입력하세요"
                           rows={1}
                           className="glow-input flex-1 disabled:opacity-30 resize-none placeholder:opacity-40"
-                          style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)", borderRadius: "16px", padding: "11px 18px", fontSize: "14px", lineHeight: "1.5", color: "rgba(255,255,255,0.9)", height: "46px", overflow: "hidden" }}
+                          style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)", borderRadius: "16px", padding: "11px 18px", fontSize: "14px", lineHeight: "1.5", color: "rgba(255,255,255,0.9)", height: "46px", maxHeight: "160px", overflowY: "auto" }}
                         />
                         <button
                           onClick={handleSend}
