@@ -521,6 +521,7 @@ export default function ChatPage() {
   const [isLoadingResume, setIsLoadingResume] = useState(false);
   const [userCredits, setUserCredits] = useState<number | null>(null);
   const [showInterviewWarning, setShowInterviewWarning] = useState(false);
+  const [showCreditConfirm, setShowCreditConfirm] = useState(false);
 
   const [currentUser, setCurrentUser] = useState<{ id: string; email: string } | null>(null);
   const [welcome, setWelcome] = useState("");
@@ -882,38 +883,31 @@ export default function ChatPage() {
     toastTimer.current = setTimeout(() => { setToast(""); setToastField(""); }, 2500);
   }
 
-  async function startAnalysis() {
+  function handleStartClick() {
     if (!selected) return;
-    if (!jobTitle.trim()) {
-      showToast("지원 직무를 먼저 입력해주세요", "jobTitle");
-      return;
-    }
-    if (!selected.question.trim()) {
-      showToast("자소서 문항을 먼저 입력해주세요", "question");
-      return;
-    }
-    if (!selected.charLimit.trim()) {
-      showToast("글자수 제한을 먼저 입력해주세요", "charLimit");
-      return;
-    }
-    if (!selected.draft.trim()) {
-      showToast("자소서 초안을 먼저 입력해주세요", "draft");
-      return;
-    }
-    if (selected.draft.length > DRAFT_MAX) {
-      showToast(`초안이 너무 길어요. ${DRAFT_MAX}자까지만 가능해요`, "draft");
-      return;
-    }
+    if (!jobTitle.trim()) { showToast("지원 직무를 먼저 입력해주세요", "jobTitle"); return; }
+    if (!selected.question.trim()) { showToast("자소서 문항을 먼저 입력해주세요", "question"); return; }
+    if (!selected.charLimit.trim()) { showToast("글자수 제한을 먼저 입력해주세요", "charLimit"); return; }
+    if (!selected.draft.trim()) { showToast("자소서 초안을 먼저 입력해주세요", "draft"); return; }
+    if (selected.draft.length > DRAFT_MAX) { showToast(`초안이 너무 길어요. ${DRAFT_MAX}자까지만 가능해요`, "draft"); return; }
 
     const isAdmin = currentUser?.email === ADMIN_EMAIL;
     if (!isAdmin && userCredits !== null && userCredits <= 0) {
       showToast("뱃지가 없어요. 관리자에게 문의해주세요", "");
       return;
     }
+    if (isAdmin || userCredits === null) {
+      startAnalysis();
+    } else {
+      setShowCreditConfirm(true);
+    }
+  }
 
+  async function startAnalysis() {
+    if (!selected) return;
+    const isAdmin = currentUser?.email === ADMIN_EMAIL;
     const seed = [{ role: "user", content: "초안 진단을 시작해줘." }];
     let itemDbId: string | null = null;
-    let creditUsed = false;
 
     try {
       const sessionId = await ensureDbSession();
@@ -944,7 +938,6 @@ export default function ChatPage() {
           return;
         }
         if (creditResult === "ok") {
-          creditUsed = true;
           setUserCredits(prev => (prev !== null ? prev - 1 : null));
         }
         // already_charged: 이어서 하기 케이스, 조용히 통과
@@ -958,7 +951,6 @@ export default function ChatPage() {
         it.id === selectedId ? { ...it, status: "chatting" as const, apiHistory: seed, dbId: itemDbId } : it
       )
     );
-    if (creditUsed) showToast("뱃지가 차감됩니다 꼭 마무리까지 화이팅!", "");
     await fetchBotReply(seed, selectedId, selected.draft, selected.question, selected.charLimit, itemDbId);
   }
 
@@ -1525,7 +1517,7 @@ export default function ChatPage() {
                       </div>
                     ) : (
                       <button
-                        onClick={startAnalysis}
+                        onClick={handleStartClick}
                         disabled={selected?.status !== "idle"}
                         className="w-full py-4 rounded-2xl text-sm font-semibold text-white transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-20 disabled:cursor-not-allowed"
                         style={{
@@ -1902,6 +1894,56 @@ export default function ChatPage() {
                 style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.45)", border: "1px solid rgba(255,255,255,0.08)" }}
               >
                 새로 시작
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 크레딧 차감 확인 모달 */}
+      {showCreditConfirm && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-5"
+          style={{ background: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)" }}
+        >
+          <div
+            className="w-full flex flex-col gap-5 rounded-2xl p-6"
+            style={{ maxWidth: "360px", background: "#0D0D18", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 24px 60px rgba(0,0,0,0.7)" }}
+          >
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-2.5">
+                <span style={{ fontSize: 22 }}>🏅</span>
+                <p className="text-sm font-semibold" style={{ color: "rgba(255,255,255,0.88)" }}>분석을 시작할까요?</p>
+              </div>
+              {userCredits !== null && (
+                <div
+                  className="flex items-center gap-2 px-3 py-2 rounded-xl"
+                  style={{ background: "rgba(255,209,102,0.08)", border: "1px solid rgba(255,209,102,0.2)" }}
+                >
+                  <span className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>현재 잔액</span>
+                  <span className="text-xs font-bold" style={{ color: GOLD }}>{userCredits}개</span>
+                  <span className="text-xs" style={{ color: "rgba(255,255,255,0.2)" }}>→ 분석 후</span>
+                  <span className="text-xs font-bold" style={{ color: userCredits - 1 > 0 ? GOLD : "rgba(248,113,113,0.8)" }}>{userCredits - 1}개</span>
+                </div>
+              )}
+              <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.42)" }}>
+                이 문항 분석에 뱃지 1개가 사용돼요. 중간에 나가도 같은 문항은 추가 차감 없이 이어서 할 수 있으니 걱정 마세요!
+              </p>
+            </div>
+            <div className="flex gap-2.5">
+              <button
+                onClick={() => { setShowCreditConfirm(false); startAnalysis(); }}
+                className="flex-1 py-3 rounded-xl text-sm font-semibold text-white transition-all hover:scale-[1.02] active:scale-[0.98]"
+                style={{ background: ACCENT, boxShadow: `0 4px 16px ${ACCENT}30` }}
+              >
+                시작하기
+              </button>
+              <button
+                onClick={() => setShowCreditConfirm(false)}
+                className="flex-1 py-3 rounded-xl text-sm transition-all hover:opacity-70"
+                style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.45)", border: "1px solid rgba(255,255,255,0.08)" }}
+              >
+                취소
               </button>
             </div>
           </div>
