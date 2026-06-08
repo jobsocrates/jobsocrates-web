@@ -22,7 +22,7 @@ const VIOLET = "#A78BFA";
 const GREEN = "rgb(74,222,128)";
 const RED = "rgb(248,113,113)";
 
-type Tab = "dashboard" | "review" | "notes";
+type Tab = "dashboard" | "review" | "notes" | "users";
 type Filter = "all" | "good" | "bad" | "none";
 
 interface SessionItem {
@@ -49,6 +49,7 @@ interface CoverItemFull {
   }[];
 }
 
+interface UserProfile { id: string; email: string; credits: number; }
 interface Breakdown { today: number; week: number; month: number; total: number; }
 interface DashStats {
   users: Breakdown;
@@ -77,6 +78,12 @@ export default function AdminPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
+  // Users
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [creditInputs, setCreditInputs] = useState<Record<string, string>>({});
+  const [grantingId, setGrantingId] = useState<string | null>(null);
+  const [grantedId, setGrantedId] = useState<string | null>(null);
+
   // Notes
   const [goodNotes, setGoodNotes] = useState("");
   const [badNotes, setBadNotes] = useState("");
@@ -91,6 +98,7 @@ export default function AdminPage() {
         fetchDashboard();
         fetchSessions();
         fetchNotes();
+        fetchUsers();
       }
       setLoading(false);
     });
@@ -183,6 +191,28 @@ export default function AdminPage() {
     setTimeout(() => setSaved(false), 2000);
   }
 
+  async function fetchUsers() {
+    const { data } = await supabase
+      .from("profiles")
+      .select("id, email, credits")
+      .order("email");
+    setUsers((data || []) as UserProfile[]);
+  }
+
+  async function grantCredit(userId: string) {
+    const amount = parseInt(creditInputs[userId] || "0");
+    if (!amount || isNaN(amount)) return;
+    setGrantingId(userId);
+    const { error } = await supabase.rpc("grant_credit", { p_user_id: userId, p_amount: amount });
+    if (!error) {
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, credits: u.credits + amount } : u));
+      setCreditInputs(prev => ({ ...prev, [userId]: "" }));
+      setGrantedId(userId);
+      setTimeout(() => setGrantedId(null), 2000);
+    }
+    setGrantingId(null);
+  }
+
   async function fetchNotes() {
     const { data } = await supabase
       .from("prompt_notes")
@@ -265,9 +295,9 @@ export default function AdminPage() {
         <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.4)" }}>Admin</span>
 
         <nav style={{ display: "flex", gap: 2 }}>
-          {(["dashboard", "review", "notes"] as Tab[]).map((t) => (
+          {(["dashboard", "review", "notes", "users"] as Tab[]).map((t) => (
             <button key={t} onClick={() => setTab(t)} style={{ padding: "5px 14px", borderRadius: 8, fontSize: 12, fontWeight: 500, border: "none", cursor: "pointer", transition: "all 0.15s", background: tab === t ? "rgba(255,255,255,0.09)" : "transparent", color: tab === t ? "rgba(255,255,255,0.88)" : "rgba(255,255,255,0.3)" }}>
-              {t === "dashboard" ? "대시보드" : t === "review" ? "대화 리뷰" : "프롬프트 노트"}
+              {t === "dashboard" ? "대시보드" : t === "review" ? "대화 리뷰" : t === "notes" ? "프롬프트 노트" : "유저 관리"}
             </button>
           ))}
         </nav>
@@ -550,6 +580,57 @@ export default function AdminPage() {
               placeholder={"- 추상 경험 → 먼저 공감 후 구체화 유도로 변경\n- 직무 키워드 매칭 강화 → JD 키워드를 프롬프트에 동적 삽입\n- 짧은 초안 감지 → 질문 1개로 제한하는 조건 추가"}
               style={{ width: "100%", minHeight: 140, padding: "14px 16px", fontSize: 12, lineHeight: 1.8, resize: "vertical", background: "transparent", border: "none", color: "rgba(255,255,255,0.8)", outline: "none", boxSizing: "border-box" }}
             />
+          </div>
+        </div>
+      )}
+
+      {/* ─── USERS ─── */}
+      {tab === "users" && (
+        <div style={{ padding: "24px", maxWidth: 800, margin: "0 auto" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+            <div>
+              <p style={{ fontSize: 15, fontWeight: 700, color: "rgba(255,255,255,0.85)", marginBottom: 3 }}>유저 뱃지 관리</p>
+              <p style={{ fontSize: 12, color: "rgba(255,255,255,0.3)" }}>유저별 뱃지 잔액 확인 및 지급</p>
+            </div>
+            <button onClick={fetchUsers} style={{ padding: "6px 14px", borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: "pointer", border: "1px solid rgba(255,255,255,0.1)", background: "transparent", color: "rgba(255,255,255,0.4)" }}>
+              새로고침
+            </button>
+          </div>
+
+          <div style={{ borderRadius: 16, border: "1px solid rgba(255,255,255,0.07)", background: "rgba(255,255,255,0.02)", overflow: "hidden" }}>
+            {/* Header row */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 80px 180px", gap: 0, padding: "10px 18px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.25)", textTransform: "uppercase", letterSpacing: "0.08em" }}>이메일</span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.25)", textTransform: "uppercase", letterSpacing: "0.08em", textAlign: "center" }}>뱃지</span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.25)", textTransform: "uppercase", letterSpacing: "0.08em", textAlign: "right" }}>지급</span>
+            </div>
+
+            {users.length === 0 ? (
+              <p style={{ padding: "24px 18px", fontSize: 12, color: "rgba(255,255,255,0.2)", textAlign: "center" }}>유저 없음</p>
+            ) : users.map(u => (
+              <div key={u.id} style={{ display: "grid", gridTemplateColumns: "1fr 80px 180px", gap: 0, padding: "12px 18px", borderBottom: "1px solid rgba(255,255,255,0.04)", alignItems: "center" }}>
+                <p style={{ fontSize: 13, color: "rgba(255,255,255,0.72)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 12 }}>{u.email}</p>
+                <p style={{ fontSize: 16, fontWeight: 700, color: u.credits > 0 ? "rgba(255,209,102,0.85)" : "rgba(255,255,255,0.25)", textAlign: "center" }}>
+                  🏅 {u.credits}
+                </p>
+                <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
+                  <input
+                    type="number"
+                    value={creditInputs[u.id] || ""}
+                    onChange={e => setCreditInputs(prev => ({ ...prev, [u.id]: e.target.value }))}
+                    placeholder="수량"
+                    style={{ width: 70, padding: "5px 10px", borderRadius: 8, fontSize: 12, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.85)", outline: "none", textAlign: "center" }}
+                  />
+                  <button
+                    onClick={() => grantCredit(u.id)}
+                    disabled={!creditInputs[u.id] || grantingId === u.id}
+                    style={{ padding: "5px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer", border: "none", background: grantedId === u.id ? "rgba(74,222,128,0.2)" : ACCENT, color: grantedId === u.id ? GREEN : "#fff", opacity: (!creditInputs[u.id] || grantingId === u.id) ? 0.4 : 1, transition: "all 0.15s" }}
+                  >
+                    {grantingId === u.id ? "..." : grantedId === u.id ? "지급됨 ✓" : "지급"}
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}

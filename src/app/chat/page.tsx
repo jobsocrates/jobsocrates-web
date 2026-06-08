@@ -11,6 +11,7 @@ const BLUE = "#6B8EFF";
 const GOLD = "#FFD166";
 const VIOLET = "#A78BFA";
 const DRAFT_MAX = 1200;
+const ADMIN_EMAIL = "ijhan6403@gmail.com";
 
 const DOTS = [
   { delay: 0, color: ACCENT },
@@ -518,6 +519,8 @@ export default function ChatPage() {
   const resumeCheckedRef = useRef(false);
   const [resumeSession, setResumeSession] = useState<ResumeSession | null>(null);
   const [isLoadingResume, setIsLoadingResume] = useState(false);
+  const [userCredits, setUserCredits] = useState<number | null>(null);
+  const [showInterviewWarning, setShowInterviewWarning] = useState(false);
 
   const [currentUser, setCurrentUser] = useState<{ id: string; email: string } | null>(null);
   const [welcome, setWelcome] = useState("");
@@ -536,6 +539,7 @@ export default function ChatPage() {
           { onConflict: "id" }
         );
         checkResumeSession(session.user.id);
+        fetchCredits(session.user.id);
       }
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -784,6 +788,15 @@ export default function ChatPage() {
     } catch { /* 무시 */ }
   }
 
+  async function fetchCredits(userId: string) {
+    const { data } = await supabase
+      .from("profiles")
+      .select("credits")
+      .eq("id", userId)
+      .single();
+    if (data) setUserCredits(data.credits ?? 0);
+  }
+
   async function loadResumeSession() {
     if (!resumeSession) return;
     setIsLoadingResume(true);
@@ -891,9 +904,17 @@ export default function ChatPage() {
       showToast(`초안이 너무 길어요. ${DRAFT_MAX}자까지만 가능해요`, "draft");
       return;
     }
-    const seed = [{ role: "user", content: "초안 진단을 시작해줘." }];
 
+    const isAdmin = currentUser?.email === ADMIN_EMAIL;
+    if (!isAdmin && userCredits !== null && userCredits <= 0) {
+      showToast("뱃지가 없어요. 관리자에게 문의해주세요", "");
+      return;
+    }
+
+    const seed = [{ role: "user", content: "초안 진단을 시작해줘." }];
     let itemDbId: string | null = null;
+    let creditUsed = false;
+
     try {
       const sessionId = await ensureDbSession();
       console.log("[DB] currentUser:", currentUser, "sessionId:", sessionId);
@@ -910,6 +931,24 @@ export default function ChatPage() {
         if (error) console.error("[DB] cover_items insert error:", error);
         if (data) itemDbId = data.id;
       }
+
+      if (!isAdmin && itemDbId && currentUser) {
+        const { data: creditResult, error: creditErr } = await supabase.rpc("use_credit", {
+          p_user_id: currentUser.id,
+          p_cover_item_id: itemDbId,
+        });
+        if (creditErr) console.error("[DB] use_credit error:", creditErr);
+        if (creditResult === "insufficient") {
+          await supabase.from("cover_items").delete().eq("id", itemDbId);
+          showToast("뱃지가 없어요. 관리자에게 문의해주세요", "");
+          return;
+        }
+        if (creditResult === "ok") {
+          creditUsed = true;
+          setUserCredits(prev => (prev !== null ? prev - 1 : null));
+        }
+        // already_charged: 이어서 하기 케이스, 조용히 통과
+      }
     } catch (e) {
       console.error("[DB] startAnalysis error:", e);
     }
@@ -919,6 +958,7 @@ export default function ChatPage() {
         it.id === selectedId ? { ...it, status: "chatting" as const, apiHistory: seed, dbId: itemDbId } : it
       )
     );
+    if (creditUsed) showToast("뱃지가 차감됩니다 꼭 마무리까지 화이팅!", "");
     await fetchBotReply(seed, selectedId, selected.draft, selected.question, selected.charLimit, itemDbId);
   }
 
@@ -1134,17 +1174,24 @@ export default function ChatPage() {
             <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: ACCENT }} />
             <span className="text-xs sm:text-sm font-semibold truncate" style={{ color: "rgba(255,255,255,0.55)", letterSpacing: "-0.01em" }}>취업소크라테스</span>
           </div>
-          <button
-            onClick={async () => { await supabase.auth.signOut(); window.location.href = "/"; }}
-            className="text-xs px-2.5 py-1.5 rounded-lg transition-all hover:opacity-80 flex-shrink-0"
-            style={{
-              background: `rgba(201,100,66,0.12)`,
-              border: `1px solid rgba(201,100,66,0.25)`,
-              color: `rgba(201,100,66,0.85)`,
-            }}
-          >
-            로그아웃
-          </button>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {currentUser && userCredits !== null && currentUser.email !== ADMIN_EMAIL && (
+              <Link
+                href="/mypage"
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all hover:opacity-80"
+                style={{ background: "rgba(255,209,102,0.12)", border: "1px solid rgba(255,209,102,0.25)", color: "rgba(255,209,102,0.85)" }}
+              >
+                🏅 {userCredits}
+              </Link>
+            )}
+            <button
+              onClick={async () => { await supabase.auth.signOut(); window.location.href = "/"; }}
+              className="text-xs px-2.5 py-1.5 rounded-lg transition-all hover:opacity-80"
+              style={{ background: `rgba(201,100,66,0.12)`, border: `1px solid rgba(201,100,66,0.25)`, color: `rgba(201,100,66,0.85)` }}
+            >
+              로그아웃
+            </button>
+          </div>
         </header>
 
         {/* 환영 토스트 */}
@@ -1719,7 +1766,10 @@ export default function ChatPage() {
                     {showSummaryButton && (
                       <div className="flex flex-col gap-2">
                         <button
-                          onClick={() => setShowSummary(true)}
+                          onClick={() => {
+                            const allAnswered = interviewQs.every(q => q.msgs.length > 0);
+                            if (!allAnswered) { setShowInterviewWarning(true); } else { setShowSummary(true); }
+                          }}
                           className="w-full py-3 rounded-xl text-sm font-semibold transition-all hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-2"
                           style={{
                             background: `linear-gradient(135deg, ${BLUE}22 0%, ${ACCENT}18 100%)`,
@@ -1852,6 +1902,44 @@ export default function ChatPage() {
                 style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.45)", border: "1px solid rgba(255,255,255,0.08)" }}
               >
                 새로 시작
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 면접 답변 미완 경고 */}
+      {showInterviewWarning && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-5"
+          style={{ background: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)" }}
+        >
+          <div
+            className="w-full flex flex-col gap-5 rounded-2xl p-6"
+            style={{ maxWidth: "360px", background: "#0D0D18", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 24px 60px rgba(0,0,0,0.7)" }}
+          >
+            <div className="flex flex-col gap-2">
+              <p className="text-sm font-semibold" style={{ color: "rgba(255,255,255,0.88)" }}>
+                면접 답변이 작성되지 않았어요!
+              </p>
+              <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.45)" }}>
+                이대로 완료하면 정리본에 면접 Q&A 내용이 나오지 않아요. 그래도 완료하시겠어요?
+              </p>
+            </div>
+            <div className="flex gap-2.5">
+              <button
+                onClick={() => { setShowInterviewWarning(false); setShowSummary(true); }}
+                className="flex-1 py-3 rounded-xl text-sm font-semibold text-white transition-all hover:scale-[1.02] active:scale-[0.98]"
+                style={{ background: ACCENT, boxShadow: `0 4px 16px ${ACCENT}30` }}
+              >
+                그냥 완료
+              </button>
+              <button
+                onClick={() => setShowInterviewWarning(false)}
+                className="flex-1 py-3 rounded-xl text-sm transition-all hover:opacity-70"
+                style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.45)", border: "1px solid rgba(255,255,255,0.08)" }}
+              >
+                돌아가기
               </button>
             </div>
           </div>
