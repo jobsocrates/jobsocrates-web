@@ -22,14 +22,15 @@ function buildCtx(ctx: DiggingContext): string {
 }
 
 type MsgParam = Anthropic.MessageParam;
+type SystemParam = string | Anthropic.Messages.TextBlockParam[];
 
-async function stream(system: string, messages: MsgParam[]) {
+async function stream(system: SystemParam, messages: MsgParam[]) {
   const enc = new TextEncoder();
   const client = getClient();
   let s: ReturnType<typeof client.messages.stream>;
   try {
     s = await client.messages.stream({
-      model: "claude-sonnet-4-5",
+      model: "claude-sonnet-4-6",
       max_tokens: 1500,
       system,
       messages,
@@ -67,7 +68,7 @@ async function stream(system: string, messages: MsgParam[]) {
 async function generate(system: string, messages: MsgParam[]) {
   const client = getClient();
   const res = await client.messages.create({
-    model: "claude-sonnet-4-5",
+    model: "claude-sonnet-4-6",
     max_tokens: 2048,
     system,
     messages,
@@ -153,8 +154,11 @@ export async function POST(req: Request) {
     }
 
     case "analyze": {
-      const sys = prompt("analyze") +
+      const sysText = prompt("analyze") +
         `\n\n## 세션 정보\n직무: ${body.jobTitle}\n문항: ${body.question || "미입력"}\nJD 키워드: ${(body.jdKeywords ?? []).join(", ") || "없음"}\n글자 수 제한: ${body.charLimit ? `${body.charLimit}자 (수정본 작성 시 이 글자 수에 맞춰야 함)` : "미입력"}\n\n## 자소서 초안\n${body.draft}`;
+      const sys: Anthropic.Messages.TextBlockParam[] = [
+        { type: "text", text: sysText, cache_control: { type: "ephemeral" } },
+      ];
       const msgs: MsgParam[] = body.messages?.length > 0
         ? body.messages
         : [{ role: "user", content: "자소서 초안을 분석하고 첫 질문을 시작해줘." }];
