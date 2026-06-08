@@ -56,6 +56,7 @@ function stripMd(t: string) {
     .replace(/\[수정본\][\s\S]*?\[\/수정본\]/g, "")
     .replace(/\[변경사항\][\s\S]*?\[\/변경사항\]/g, "")
     .replace(/\[참조\]([\s\S]*?)\[\/참조\]/g, "$1")
+    .replace(/\[참조\]|\[\/참조\]/g, "")
     .trim();
 }
 
@@ -487,7 +488,7 @@ export default function ChatPage() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const dbSessionIdRef = useRef<string | null>(null);
 
-  const [currentUser, setCurrentUser] = useState<{ id: string } | null>(null);
+  const [currentUser, setCurrentUser] = useState<{ id: string; email: string } | null>(null);
   const [welcome, setWelcome] = useState("");
 
   const selected = items.find((it) => it.id === selectedId) ?? null;
@@ -495,9 +496,26 @@ export default function ChatPage() {
   // 로그인 유저 로드 + 환영 메시지
   useEffect(() => {
     supabase.from("page_views").insert({ path: "/chat" });
-    // onAuthStateChange: 마운트 즉시 현재 세션을 동기적으로 전달
+    // getSession: localStorage 세션을 즉시 읽어 currentUser 확보
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setCurrentUser({ id: session.user.id, email: session.user.email ?? "" });
+        supabase.from("profiles").upsert(
+          { id: session.user.id, email: session.user.email ?? "" },
+          { onConflict: "id" }
+        );
+      }
+    });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setCurrentUser(session?.user ? { id: session.user.id } : null);
+      if (session?.user) {
+        setCurrentUser({ id: session.user.id, email: session.user.email ?? "" });
+        supabase.from("profiles").upsert(
+          { id: session.user.id, email: session.user.email ?? "" },
+          { onConflict: "id" }
+        );
+      } else {
+        setCurrentUser(null);
+      }
     });
     const msg = sessionStorage.getItem("welcome");
     if (msg) {
@@ -546,6 +564,11 @@ export default function ChatPage() {
   // sessions 테이블에 row 확보. 같은 페이지 세션 내에선 재사용.
   async function ensureDbSession(): Promise<string | null> {
     if (!currentUser) return null;
+    // profiles FK 제약 충족: 프로필이 없으면 upsert로 생성
+    const { error: profileErr } = await supabase
+      .from("profiles")
+      .upsert({ id: currentUser.id, email: currentUser.email }, { onConflict: "id" });
+    if (profileErr) console.error("[DB] profile upsert error:", profileErr);
     if (dbSessionIdRef.current) {
       await supabase.from("sessions")
         .update({ job_title: jobTitle, jd_keywords: jdKeywords, updated_at: new Date().toISOString() })
@@ -563,7 +586,8 @@ export default function ChatPage() {
 
   // messages 테이블에 단일 메시지 저장
   async function saveDbMessage(coverItemDbId: string, role: "user" | "assistant", content: string) {
-    await supabase.from("messages").insert({ cover_item_id: coverItemDbId, role, content });
+    const { error } = await supabase.from("messages").insert({ cover_item_id: coverItemDbId, role, content });
+    if (error) console.error("[DB] messages insert error:", error);
   }
 
   // revisions 테이블에 수정본 저장 + cover_item 상태 done으로 갱신
@@ -572,10 +596,12 @@ export default function ChatPage() {
       .split("\n")
       .map(l => l.replace(/^[-·•]\s*/, "").trim())
       .filter(Boolean);
-    await supabase.from("revisions").insert({ cover_item_id: coverItemDbId, content, changes });
-    await supabase.from("cover_items")
+    const { error: revErr } = await supabase.from("revisions").insert({ cover_item_id: coverItemDbId, content, changes });
+    if (revErr) console.error("[DB] revisions insert error:", revErr);
+    const { error: updateErr } = await supabase.from("cover_items")
       .update({ status: "done", updated_at: new Date().toISOString() })
       .eq("id", coverItemDbId);
+    if (updateErr) console.error("[DB] cover_items update error:", updateErr);
   }
 
   // ─────────────────────────────────────────────────────────────────
@@ -805,7 +831,8 @@ export default function ChatPage() {
           question: q,
           order_index: idx,
         }));
-        const { data: savedQs } = await supabase.from("interview_questions").insert(rows).select("id, order_index");
+        const { data: savedQs, error: iqErr } = await supabase.from("interview_questions").insert(rows).select("id, order_index");
+        if (iqErr) console.error("[DB] interview_questions insert error:", iqErr);
         if (savedQs) savedQs.forEach(row => { dbIdByIndex[row.order_index] = row.id; });
       }
 
@@ -869,11 +896,12 @@ export default function ChatPage() {
 
       // ── DB: 면접 답변 + AI 피드백 저장 ──
       if (qItem.dbId) {
-        await supabase.from("interview_answers").insert({
+        const { error: iaErr } = await supabase.from("interview_answers").insert({
           interview_question_id: qItem.dbId,
           user_answer: answer,
           ai_feedback: full,
         });
+        if (iaErr) console.error("[DB] interview_answers insert error:", iaErr);
       }
     } catch {
       setItems((prev) =>

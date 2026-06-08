@@ -4,6 +4,17 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
 const ADMIN_EMAIL = "ijhan6403@gmail.com";
+
+function stripMsg(t: string) {
+  return t
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    .replace(/\*(.*?)\*/g, "$1")
+    .replace(/\[수정본\][\s\S]*?\[\/수정본\]/g, "[수정본 생략]")
+    .replace(/\[변경사항\][\s\S]*?\[\/변경사항\]/g, "")
+    .replace(/\[참조\]([\s\S]*?)\[\/참조\]/g, "$1")
+    .replace(/\[참조\]|\[\/참조\]/g, "")
+    .trim();
+}
 const BG = "#0D0D18";
 const ACCENT = "#C96442";
 const BLUE = "#6B8EFF";
@@ -130,7 +141,7 @@ export default function AdminPage() {
     setSessionsLoading(true);
     const { data, error } = await supabase
       .from("sessions")
-      .select("id, job_title, created_at, user_id, admin_reviews(id, rating, comment)")
+      .select("id, job_title, created_at, user_id, profiles(email), admin_reviews(id, rating, comment)")
       .order("created_at", { ascending: false });
     if (error) console.error("[Admin] fetchSessions error:", error);
     console.log("[Admin] sessions fetched:", data?.length, data);
@@ -237,6 +248,16 @@ export default function AdminPage() {
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
         textarea { font-family: inherit; }
         textarea::placeholder { color: rgba(255,255,255,0.2); }
+        .admin-mobile-back { display: none; }
+        @media (max-width: 640px) {
+          .admin-stat-grid { grid-template-columns: 1fr !important; }
+          .admin-notes-grid { grid-template-columns: 1fr !important; }
+          .admin-review-left { width: 100% !important; min-width: 0 !important; }
+          .has-selection .admin-review-left { display: none !important; }
+          .admin-review-right { width: 100%; }
+          .admin-review-empty { display: none !important; }
+          .admin-mobile-back { display: flex; }
+        }
       `}</style>
 
       {/* Header */}
@@ -259,7 +280,7 @@ export default function AdminPage() {
         <div style={{ padding: "28px 24px", maxWidth: 900, margin: "0 auto" }}>
 
           {/* 3-category cards */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 20 }}>
+          <div className="admin-stat-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 20 }}>
             {[
               { label: "가입자", icon: "👤", color: ACCENT, borderColor: "rgba(201,100,66,0.25)", bgColor: "rgba(201,100,66,0.05)", data: stats?.users },
               { label: "방문자", icon: "👁",  color: VIOLET, borderColor: "rgba(167,139,250,0.25)", bgColor: "rgba(167,139,250,0.05)", data: stats?.views },
@@ -316,9 +337,9 @@ export default function AdminPage() {
 
       {/* ─── REVIEW ─── */}
       {tab === "review" && (
-        <div style={{ display: "flex", height: "calc(100vh - 52px)" }}>
+        <div className={selectedId ? "has-selection" : ""} style={{ display: "flex", height: "calc(100vh - 52px)" }}>
           {/* Left panel: session list */}
-          <div style={{ width: 272, flexShrink: 0, borderRight: "1px solid rgba(255,255,255,0.06)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+          <div className="admin-review-left" style={{ width: 272, flexShrink: 0, borderRight: "1px solid rgba(255,255,255,0.06)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
             {/* Filters */}
             <div style={{ padding: "10px 12px", borderBottom: "1px solid rgba(255,255,255,0.05)", display: "flex", gap: 4, flexWrap: "wrap" }}>
               {(["all", "good", "bad", "none"] as Filter[]).map((f) => (
@@ -361,15 +382,25 @@ export default function AdminPage() {
           </div>
 
           {/* Right panel: detail */}
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
+          <div className="admin-review-right" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
             {!selectedId ? (
-              <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <div className="admin-review-empty" style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <p style={{ fontSize: 13, color: "rgba(255,255,255,0.18)" }}>← 세션을 선택하세요</p>
               </div>
             ) : (
               <>
                 {/* Session header */}
                 <div style={{ padding: "12px 20px", borderBottom: "1px solid rgba(255,255,255,0.06)", flexShrink: 0 }}>
+                  <button
+                    className="admin-mobile-back"
+                    onClick={() => setSelectedId(null)}
+                    style={{ alignItems: "center", gap: 6, marginBottom: 8, fontSize: 12, color: "rgba(255,255,255,0.4)", background: "none", border: "none", cursor: "pointer", padding: 0 }}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+                    </svg>
+                    목록으로
+                  </button>
                   <p style={{ fontSize: 14, fontWeight: 700, color: "rgba(255,255,255,0.85)" }}>
                     {selectedSession?.job_title || "직무 미입력"}
                   </p>
@@ -403,7 +434,7 @@ export default function AdminPage() {
                         .map((msg) => (
                           <div key={msg.id} style={{ display: "flex", justifyContent: msg.role === "user" ? "flex-end" : "flex-start", marginBottom: 8 }}>
                             <div style={{ maxWidth: "78%", padding: "9px 14px", borderRadius: msg.role === "user" ? "14px 4px 14px 14px" : "4px 14px 14px 14px", background: msg.role === "user" ? ACCENT : "rgba(255,255,255,0.07)", fontSize: 12, lineHeight: 1.65, color: "rgba(255,255,255,0.85)", whiteSpace: "pre-wrap" }}>
-                              {msg.content}
+                              {msg.role === "assistant" ? stripMsg(msg.content) : msg.content}
                             </div>
                           </div>
                         ))}
@@ -474,7 +505,7 @@ export default function AdminPage() {
           </div>
 
           {/* Good / Bad 2-column */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+          <div className="admin-notes-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
             {/* Good */}
             <div style={{ borderRadius: 16, border: "1px solid rgba(74,222,128,0.2)", background: "rgba(74,222,128,0.04)", overflow: "hidden" }}>
               <div style={{ padding: "12px 16px", borderBottom: "1px solid rgba(74,222,128,0.12)", display: "flex", alignItems: "center", gap: 8 }}>
