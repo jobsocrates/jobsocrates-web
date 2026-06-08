@@ -10,6 +10,7 @@ const BG = "#0D0D18";
 const BLUE = "#6B8EFF";
 const GOLD = "#FFD166";
 const VIOLET = "#A78BFA";
+const DRAFT_MAX = 1200;
 
 const DOTS = [
   { delay: 0, color: ACCENT },
@@ -751,6 +752,10 @@ export default function ChatPage() {
       showToast("자소서 초안을 먼저 입력해주세요", "draft");
       return;
     }
+    if (selected.draft.length > DRAFT_MAX) {
+      showToast(`초안이 너무 길어요. ${DRAFT_MAX}자까지만 가능해요`, "draft");
+      return;
+    }
     const seed = [{ role: "user", content: "초안 진단을 시작해줘." }];
 
     let itemDbId: string | null = null;
@@ -1296,9 +1301,15 @@ export default function ChatPage() {
                   <div className="flex flex-col gap-2">
                     <div className="flex items-center justify-between">
                       <label className="text-xs font-semibold tracking-wider uppercase" style={{ color: "rgba(255,255,255,0.28)", letterSpacing: "0.08em" }}>내 초안</label>
-                      <span className="text-xs tabular-nums" style={{ color: selected.charLimit && selected.draft.length > Number(selected.charLimit) ? "#FF6B6B" : "rgba(255,255,255,0.2)" }}>
-                        {selected.draft.length.toLocaleString()}자{selected.charLimit && ` / ${Number(selected.charLimit).toLocaleString()}자`}
-                      </span>
+                      {selected.draft.length > DRAFT_MAX ? (
+                        <span className="text-xs tabular-nums font-semibold" style={{ color: "#FF6B6B" }}>
+                          {selected.draft.length.toLocaleString()}자 · 최대 {DRAFT_MAX}자
+                        </span>
+                      ) : selected.charLimit && selected.draft.length > 0 ? (
+                        <span className="text-xs tabular-nums" style={{ color: selected.draft.length > Number(selected.charLimit) ? "#FF6B6B" : "rgba(255,255,255,0.2)" }}>
+                          {selected.draft.length.toLocaleString()}자 / {Number(selected.charLimit).toLocaleString()}자
+                        </span>
+                      ) : null}
                     </div>
                     <textarea
                       value={selected.draft}
@@ -1306,8 +1317,19 @@ export default function ChatPage() {
                       placeholder="작성한 자소서 초안을 붙여넣어요."
                       rows={13}
                       className="glow-input w-full px-4 py-3.5 rounded-xl text-sm resize-none"
-                      style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${toastField === "draft" ? "rgba(201,100,66,0.5)" : "rgba(255,255,255,0.08)"}`, boxShadow: toastField === "draft" ? "0 0 0 2px rgba(201,100,66,0.15)" : "none", color: "rgba(255,255,255,0.88)", lineHeight: "1.85" }}
+                      style={{
+                        background: "rgba(255,255,255,0.04)",
+                        border: `1px solid ${selected.draft.length > DRAFT_MAX ? "rgba(255,107,107,0.5)" : toastField === "draft" ? "rgba(201,100,66,0.5)" : "rgba(255,255,255,0.08)"}`,
+                        boxShadow: selected.draft.length > DRAFT_MAX ? "0 0 0 2px rgba(255,107,107,0.15)" : toastField === "draft" ? "0 0 0 2px rgba(201,100,66,0.15)" : "none",
+                        color: "rgba(255,255,255,0.88)",
+                        lineHeight: "1.85",
+                      }}
                     />
+                    {selected.draft.length > DRAFT_MAX && (
+                      <p className="text-xs" style={{ color: "#FF6B6B" }}>
+                        글자수가 너무 많아요. {DRAFT_MAX}자까지만 입력 가능해요. ({selected.draft.length - DRAFT_MAX}자 초과)
+                      </p>
+                    )}
                   </div>
 
                   {/* 시작 버튼 */}
