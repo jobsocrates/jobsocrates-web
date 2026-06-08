@@ -1334,20 +1334,31 @@ export default function ChatPage() {
 
                   {/* 시작 버튼 */}
                   <div className="flex flex-col gap-3 pb-4 sm:pb-0">
-                    <button
-                      onClick={startAnalysis}
-                      disabled={selected?.status !== "idle"}
-                      className="w-full py-4 rounded-2xl text-sm font-semibold text-white transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-20 disabled:cursor-not-allowed"
-                      style={{
-                        background: canStart ? ACCENT : "rgba(255,255,255,0.08)",
-                        boxShadow: canStart ? `0 4px 20px ${ACCENT}28` : "none",
-                        transition: "all 0.2s ease",
-                      }}
-                    >
-                      분석 시작하기 →
-                    </button>
+                    {selected.draft.length > DRAFT_MAX ? (
+                      <div
+                        className="w-full py-4 rounded-2xl text-sm font-semibold text-center cursor-not-allowed"
+                        style={{ background: "rgba(255,107,107,0.12)", border: "1px solid rgba(255,107,107,0.3)", color: "rgba(255,107,107,0.8)" }}
+                      >
+                        초안을 {DRAFT_MAX}자 이하로 줄여주세요 ({selected.draft.length - DRAFT_MAX}자 초과)
+                      </div>
+                    ) : (
+                      <button
+                        onClick={startAnalysis}
+                        disabled={selected?.status !== "idle"}
+                        className="w-full py-4 rounded-2xl text-sm font-semibold text-white transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-20 disabled:cursor-not-allowed"
+                        style={{
+                          background: canStart ? ACCENT : "rgba(255,255,255,0.08)",
+                          boxShadow: canStart ? `0 4px 20px ${ACCENT}28` : "none",
+                          transition: "all 0.2s ease",
+                        }}
+                      >
+                        분석 시작하기 →
+                      </button>
+                    )}
                     <p className="text-xs text-center" style={{ color: "rgba(255,255,255,0.18)" }}>
-                      {canStart
+                      {selected.draft.length > DRAFT_MAX
+                        ? ""
+                        : canStart
                         ? "논리 흐름 · 문맥 연결 · 직무 이해도를 진단하고 질문으로 이어가요"
                         : "문항과 초안을 모두 입력하면 분석을 시작할 수 있어요"}
                     </p>
