@@ -50,6 +50,21 @@ interface CoverItem {
 let _id = 0;
 const uid = () => ++_id;
 
+interface ResumeSession {
+  session: { id: string; job_title: string; jd_keywords: string[] | null; created_at: string };
+  items: { id: string; question: string; draft: string; char_limit: number | null; status: string; order_index: number }[];
+}
+
+function formatRelativeTime(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  const days = Math.floor(hours / 24);
+  if (days >= 1) return `${days}일 전`;
+  if (hours >= 1) return `${hours}시간 전`;
+  const mins = Math.floor(diff / (1000 * 60));
+  return mins > 0 ? `${mins}분 전` : "방금 전";
+}
+
 function stripMd(t: string) {
   return t
     .replace(/\*\*(.*?)\*\*/g, "$1")
@@ -500,6 +515,9 @@ export default function ChatPage() {
   const idleLogoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [idleWarning, setIdleWarning] = useState(false);
   const [idleCountdown, setIdleCountdown] = useState(300);
+  const resumeCheckedRef = useRef(false);
+  const [resumeSession, setResumeSession] = useState<ResumeSession | null>(null);
+  const [isLoadingResume, setIsLoadingResume] = useState(false);
 
   const [currentUser, setCurrentUser] = useState<{ id: string; email: string } | null>(null);
   const [welcome, setWelcome] = useState("");
@@ -517,6 +535,7 @@ export default function ChatPage() {
           { id: session.user.id, email: session.user.email ?? "" },
           { onConflict: "id" }
         );
+        checkResumeSession(session.user.id);
       }
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -730,6 +749,93 @@ export default function ChatPage() {
     el.style.height = "46px";
     el.style.height = Math.min(el.scrollHeight, 160) + "px";
   }, [input]);
+
+  async function checkResumeSession(userId: string) {
+    if (resumeCheckedRef.current) return;
+    resumeCheckedRef.current = true;
+    try {
+      const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const { data: sessions } = await supabase
+        .from("sessions")
+        .select("id, job_title, jd_keywords, created_at")
+        .eq("user_id", userId)
+        .gte("created_at", since)
+        .order("created_at", { ascending: false })
+        .limit(5);
+      if (!sessions?.length) return;
+
+      const { data: unfinished } = await supabase
+        .from("cover_items")
+        .select("id, session_id, question, draft, char_limit, status, order_index")
+        .in("session_id", sessions.map(s => s.id))
+        .eq("status", "chatting")
+        .order("order_index")
+        .limit(1);
+      if (!unfinished?.length) return;
+
+      const parentSession = sessions.find(s => s.id === unfinished[0].session_id);
+      if (!parentSession) return;
+
+      const { data: allItems } = await supabase
+        .from("cover_items")
+        .select("id, question, draft, char_limit, status, order_index")
+        .eq("session_id", parentSession.id)
+        .order("order_index");
+
+      setResumeSession({ session: parentSession, items: allItems || [] });
+    } catch { /* 무시 */ }
+  }
+
+  async function loadResumeSession() {
+    if (!resumeSession) return;
+    setIsLoadingResume(true);
+    try {
+      setJobTitle(resumeSession.session.job_title || "");
+      setJdKeywords(Array.isArray(resumeSession.session.jd_keywords) ? resumeSession.session.jd_keywords : []);
+      dbSessionIdRef.current = resumeSession.session.id;
+
+      const newItems: CoverItem[] = await Promise.all(
+        resumeSession.items.map(async (ci) => {
+          const { data: messages } = await supabase
+            .from("messages")
+            .select("role, content, created_at")
+            .eq("cover_item_id", ci.id)
+            .order("created_at");
+
+          const msgs: ChatMsg[] = (messages || []).map(m => ({
+            id: uid(),
+            role: (m.role === "user" ? "user" : "bot") as "user" | "bot",
+            text: m.content,
+          }));
+          const apiHistory = (messages || []).map(m => ({
+            role: m.role === "user" ? "user" : "assistant",
+            content: m.content,
+          }));
+
+          return {
+            id: uid(),
+            dbId: ci.id,
+            question: ci.question || "",
+            draft: ci.draft || "",
+            charLimit: ci.char_limit ? String(ci.char_limit) : "",
+            status: (msgs.length > 0 ? "chatting" : "idle") as "idle" | "chatting",
+            msgs,
+            apiHistory,
+            interviewQs: [],
+            isLoadingQs: false,
+          };
+        })
+      );
+
+      if (newItems.length > 0) {
+        setItems(newItems);
+        setSelectedId(newItems[0].id);
+        setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 200);
+      }
+    } catch { /* 무시 */ }
+    setIsLoadingResume(false);
+    setResumeSession(null);
+  }
 
   const extendSession = useCallback(() => {
     if (idleWarnRef.current) clearTimeout(idleWarnRef.current);
@@ -1691,6 +1797,68 @@ export default function ChatPage() {
           </div>
         </div>
       </div>
+
+      {/* 세션 복원 모달 */}
+      {resumeSession && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-5"
+          style={{ background: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)" }}
+        >
+          <div
+            className="w-full flex flex-col gap-5 rounded-2xl p-6"
+            style={{
+              maxWidth: "360px",
+              background: "#0D0D18",
+              border: "1px solid rgba(255,255,255,0.1)",
+              boxShadow: "0 24px 60px rgba(0,0,0,0.7)",
+            }}
+          >
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full" style={{ background: ACCENT }} />
+                <p className="text-sm font-semibold text-white">이어서 진행할까요?</p>
+              </div>
+              <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.45)", paddingLeft: "16px" }}>
+                {formatRelativeTime(resumeSession.session.created_at)} 작업하던
+                {resumeSession.session.job_title ? ` "${resumeSession.session.job_title}"` : ""} 자소서가 있어요.
+              </p>
+              {resumeSession.items.length > 0 && (
+                <div className="mt-2 flex flex-col gap-1.5 pl-4">
+                  {resumeSession.items.slice(0, 3).map((item, i) => (
+                    <div key={item.id} className="flex items-start gap-2">
+                      <span className="text-xs font-bold flex-shrink-0 mt-px" style={{ color: `${BLUE}80` }}>{String(i + 1).padStart(2, "0")}</span>
+                      <p className="text-xs truncate" style={{ color: "rgba(255,255,255,0.5)", wordBreak: "keep-all" }}>
+                        {item.question || "문항 미입력"}
+                      </p>
+                    </div>
+                  ))}
+                  {resumeSession.items.length > 3 && (
+                    <p className="text-xs pl-5" style={{ color: "rgba(255,255,255,0.25)" }}>외 {resumeSession.items.length - 3}개 항목</p>
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="flex gap-2.5">
+              <button
+                onClick={loadResumeSession}
+                disabled={isLoadingResume}
+                className="flex-1 py-3 rounded-xl text-sm font-semibold text-white transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+                style={{ background: ACCENT, boxShadow: `0 4px 16px ${ACCENT}30` }}
+              >
+                {isLoadingResume ? "불러오는 중..." : "이어서 하기"}
+              </button>
+              <button
+                onClick={() => setResumeSession(null)}
+                disabled={isLoadingResume}
+                className="flex-1 py-3 rounded-xl text-sm transition-all hover:opacity-70"
+                style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.45)", border: "1px solid rgba(255,255,255,0.08)" }}
+              >
+                새로 시작
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 자동 로그아웃 경고 */}
       {idleWarning && (
