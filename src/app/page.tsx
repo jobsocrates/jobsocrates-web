@@ -285,7 +285,7 @@ export default function Home() {
               </div>
 
               <p className="text-base sm:text-[17px] leading-[1.75] max-w-md" style={{ color: "rgba(255,255,255,0.48)" }}>
-                합격 사례를 베껴도, GPT에 맡겨도<br className="hidden sm:block" />
+                합격 사례를 베껴도, GPT에 맡겨도<br />
                 내 이야기가 되지 않는 자소서.<br />
                 직접 고민할 때, 비로소 진짜 내 무기가 됩니다.
               </p>
