@@ -754,14 +754,12 @@ export default function ChatPage() {
     if (resumeCheckedRef.current) return;
     resumeCheckedRef.current = true;
     try {
-      const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
       const { data: sessions } = await supabase
         .from("sessions")
         .select("id, job_title, jd_keywords, created_at")
         .eq("user_id", userId)
-        .gte("created_at", since)
         .order("created_at", { ascending: false })
-        .limit(5);
+        .limit(10);
       if (!sessions?.length) return;
 
       const { data: unfinished } = await supabase
