@@ -229,25 +229,39 @@ export default function Home() {
           </div>
 
           <div className="max-w-[1300px] mx-auto px-6 sm:px-8 py-20 w-full flex flex-col lg:flex-row items-center gap-14 lg:gap-20 relative">
-            <div className="flex-1 flex flex-col items-start gap-8 anim">
-              <div className="inline-flex items-center gap-2.5 rounded-full px-4 py-2 text-sm font-semibold" style={{ background: `${NAV_BTN}18`, color: NAV_BTN, border: `1px solid ${NAV_BTN}38` }}>
-                <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: NAV_BTN }} />
-                첫 문항 무료 · 지금 바로 시작
+            <div className="flex-1 flex flex-col items-start gap-7 anim">
+
+              {/* 브랜드명 */}
+              <div className="flex flex-col gap-1">
+                <span
+                  className="font-black leading-none"
+                  style={{ fontSize: "clamp(2.2rem, 5vw, 3.6rem)", color: NAV_BTN, letterSpacing: "-0.03em" }}
+                >
+                  취업소크라테스
+                </span>
+                <span
+                  className="font-bold tracking-[0.22em] uppercase"
+                  style={{ fontSize: "clamp(0.7rem, 1.2vw, 0.9rem)", color: "rgba(255,255,255,0.28)" }}
+                >
+                  JobSocrates
+                </span>
               </div>
 
+              <div style={{ width: "36px", height: "2px", background: NAV_BTN, borderRadius: "2px" }} />
+
               <div className="flex flex-col gap-1">
-                <h1 className="text-[3.5rem] sm:text-[4.5rem] lg:text-[5.5rem] xl:text-[6.5rem] font-black leading-[1.05] tracking-tight text-white" style={{ letterSpacing: "-0.03em" }}>
+                <h1 className="text-[2.8rem] sm:text-[3.8rem] lg:text-[4.8rem] xl:text-[5.5rem] font-black leading-[1.05] tracking-tight text-white" style={{ letterSpacing: "-0.03em" }}>
                   베끼는<br className="sm:hidden" /> 자소서는
                 </h1>
                 <h1
-                  className="text-[3.5rem] sm:text-[4.5rem] lg:text-[5.5rem] xl:text-[6.5rem] font-black leading-[1.05] tracking-tight"
+                  className="text-[2.8rem] sm:text-[3.8rem] lg:text-[4.8rem] xl:text-[5.5rem] font-black leading-[1.05] tracking-tight"
                   style={{ background: `linear-gradient(135deg, #fff 10%, ${NAV_BTN} 80%)`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", letterSpacing: "-0.03em" }}
                 >
                   끝났습니다.
                 </h1>
               </div>
 
-              <p className="text-lg sm:text-xl lg:text-2xl leading-[1.7] max-w-xl" style={{ color: "rgba(255,255,255,0.58)" }}>
+              <p className="text-lg sm:text-xl leading-[1.7] max-w-xl" style={{ color: "rgba(255,255,255,0.52)" }}>
                 합격 사례를 베껴도, GPT에 맡겨도<br />
                 내 이야기가 되지 않는 자소서.<br />
                 <span style={{ color: "rgba(255,255,255,0.82)", fontWeight: 500 }}>직접 고민할 때, 비로소 진짜 내 무기</span>가 됩니다.
