@@ -237,9 +237,15 @@ export default function Home() {
 
         {/* ── 히어로 ── */}
         <section className="min-h-screen flex items-center pt-16 overflow-hidden relative">
-          <div className="absolute inset-0 pointer-events-none">
-            <div style={{ position: "absolute", top: "-5%", left: "-10%", width: "900px", height: "900px", background: `radial-gradient(circle, ${ACCENT}0C 0%, transparent 55%)` }} />
-            <div style={{ position: "absolute", top: "15%", right: "-8%", width: "700px", height: "700px", background: `radial-gradient(circle, ${BLUE}10 0%, transparent 55%)` }} />
+          <style>{`
+            @keyframes af1 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(50px,-40px) scale(1.12)} }
+            @keyframes af2 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(-40px,50px) scale(1.1)} }
+            @keyframes af3 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(30px,30px) scale(1.06)} }
+          `}</style>
+          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+            <div style={{ position:"absolute", top:"5%", left:"-8%", width:"700px", height:"620px", borderRadius:"50%", background:"#F06428", filter:"blur(130px)", opacity:0.13, animation:"af1 14s ease-in-out infinite" }} />
+            <div style={{ position:"absolute", top:"-12%", right:"2%", width:"620px", height:"540px", borderRadius:"50%", background:"#6B8EFF", filter:"blur(110px)", opacity:0.10, animation:"af2 17s ease-in-out infinite" }} />
+            <div style={{ position:"absolute", bottom:"5%", left:"28%", width:"520px", height:"420px", borderRadius:"50%", background:"#A78BFA", filter:"blur(120px)", opacity:0.07, animation:"af3 20s ease-in-out infinite" }} />
           </div>
 
           <div className="max-w-[1300px] mx-auto px-6 sm:px-8 py-20 w-full flex flex-col lg:flex-row items-center gap-14 lg:gap-20 relative">
@@ -270,8 +276,8 @@ export default function Home() {
               <div className="flex flex-col gap-3">
                 <button
                   onClick={handleStartChat}
-                  className="inline-flex items-center gap-3 px-9 py-5 rounded-2xl font-black text-white transition-all hover:scale-[1.04] active:scale-[0.97]"
-                  style={{ background: NAV_BTN, boxShadow: `0 8px 36px ${NAV_BTN}50`, fontSize: "18px", letterSpacing: "-0.01em" }}
+                  className="inline-flex items-center gap-2.5 px-7 py-4 rounded-2xl font-black text-white transition-all hover:scale-[1.04] active:scale-[0.97]"
+                  style={{ background: NAV_BTN, boxShadow: `0 8px 36px ${NAV_BTN}50`, fontSize: "17px", letterSpacing: "-0.01em" }}
                 >
                   시작하기
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
@@ -343,7 +349,7 @@ export default function Home() {
                 딱 하나만 요청드려요.
               </h2>
               <p className="mt-4 text-lg" style={{ color: "rgba(255,255,255,0.38)", wordBreak: "keep-all" }}>
-                이것만 지키면, 나머지는 저희가 합니다.
+                이것만 지키면, 취업소크라테스가 합니다.
               </p>
             </div>
 
