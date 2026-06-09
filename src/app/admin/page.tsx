@@ -225,10 +225,26 @@ export default function AdminPage() {
 
   async function handleDeleteUser(userId: string) {
     setDeletingUserId(userId);
-    await supabase.from("profiles").delete().eq("id", userId);
-    setUsers(prev => prev.filter(u => u.id !== userId));
-    setDeleteTarget(null);
-    setDeletingUserId(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch("/api/admin/delete-user", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session?.access_token ?? ""}`,
+        },
+        body: JSON.stringify({ userId }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        console.error("[handleDeleteUser]", err);
+      } else {
+        setUsers(prev => prev.filter(u => u.id !== userId));
+      }
+    } finally {
+      setDeleteTarget(null);
+      setDeletingUserId(null);
+    }
   }
 
   async function fetchNotes() {
