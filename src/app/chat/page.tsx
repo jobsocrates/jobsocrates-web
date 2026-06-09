@@ -514,6 +514,8 @@ export default function ChatPage() {
   const [idleWarning, setIdleWarning] = useState(false);
   const [idleCountdown, setIdleCountdown] = useState(300);
   const resumeCheckedRef = useRef(false);
+  const tutorialCheckedRef = useRef(false);
+  const creditsFetchedRef = useRef(false);
   const [resumeSession, setResumeSession] = useState<ResumeSession | null>(null);
   const [isLoadingResume, setIsLoadingResume] = useState(false);
   const [userCredits, setUserCredits] = useState<number | null>(null);
@@ -540,6 +542,7 @@ export default function ChatPage() {
         );
         checkResumeSession(session.user.id);
         fetchCredits(session.user.id);
+        checkTutorial(session.user.id);
       }
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -549,6 +552,9 @@ export default function ChatPage() {
           { id: session.user.id, email: session.user.email ?? "" },
           { onConflict: "id" }
         );
+        // getSession이 세션을 못 잡은 경우를 대비해 여기서도 체크
+        fetchCredits(session.user.id);
+        checkTutorial(session.user.id);
       } else {
         setCurrentUser(null);
       }
@@ -792,28 +798,36 @@ export default function ChatPage() {
   }
 
   async function fetchCredits(userId: string) {
-    // credits 조회 (항상 존재하는 컬럼 — 분리해서 안정성 확보)
-    const { data: creditData } = await supabase
+    if (creditsFetchedRef.current) return;
+    creditsFetchedRef.current = true;
+    const { data } = await supabase
       .from("profiles")
       .select("credits")
       .eq("id", userId)
       .single();
-    if (creditData) setUserCredits(creditData.credits ?? 0);
+    if (data) setUserCredits(data.credits ?? 0);
+  }
 
-    // 튜토리얼 표시 여부 결정
-    const forced = sessionStorage.getItem("showTutorial") === "1";
-    if (forced) {
+  async function checkTutorial(userId: string) {
+    // ref 가드: getSession + onAuthStateChange 양쪽에서 호출돼도 한 번만 실행
+    if (tutorialCheckedRef.current) return;
+    tutorialCheckedRef.current = true;
+
+    // 마이페이지 "사용법 다시 보기" 강제 플래그
+    if (sessionStorage.getItem("showTutorial") === "1") {
       sessionStorage.removeItem("showTutorial");
       setShowTutorial(true);
       return;
     }
-    // tutorial_seen 컬럼이 없으면 data가 null → !null?.tutorial_seen = true → 튜토리얼 표시
-    const { data: tutData } = await supabase
+
+    // tutorial_seen 조회 — 컬럼 없으면 data null → !undefined = true → 표시
+    const { data } = await supabase
       .from("profiles")
       .select("tutorial_seen")
       .eq("id", userId)
       .single();
-    if (!(tutData as Record<string, unknown> | null)?.tutorial_seen) {
+
+    if (!(data as Record<string, unknown> | null)?.tutorial_seen) {
       setShowTutorial(true);
     }
   }
