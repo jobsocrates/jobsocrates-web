@@ -514,7 +514,6 @@ export default function ChatPage() {
   const [idleWarning, setIdleWarning] = useState(false);
   const [idleCountdown, setIdleCountdown] = useState(300);
   const resumeCheckedRef = useRef(false);
-  const tutorialCheckedRef = useRef(false);
   const creditsFetchedRef = useRef(false);
   const [resumeSession, setResumeSession] = useState<ResumeSession | null>(null);
   const [isLoadingResume, setIsLoadingResume] = useState(false);
@@ -529,6 +528,18 @@ export default function ChatPage() {
 
   const selected = items.find((it) => it.id === selectedId) ?? null;
 
+  // 튜토리얼 표시 여부 — localStorage 즉시 체크 (비동기 없음)
+  useEffect(() => {
+    const forced = sessionStorage.getItem("showTutorial") === "1";
+    if (forced) {
+      sessionStorage.removeItem("showTutorial");
+      localStorage.removeItem("tutorialSeen");
+      setShowTutorial(true);
+    } else if (localStorage.getItem("tutorialSeen") !== "true") {
+      setShowTutorial(true);
+    }
+  }, []);
+
   // 로그인 유저 로드 + 환영 메시지
   useEffect(() => {
     supabase.from("page_views").insert({ path: "/chat" });
@@ -542,7 +553,6 @@ export default function ChatPage() {
         );
         checkResumeSession(session.user.id);
         fetchCredits(session.user.id);
-        checkTutorial(session.user.id);
       }
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -552,9 +562,7 @@ export default function ChatPage() {
           { id: session.user.id, email: session.user.email ?? "" },
           { onConflict: "id" }
         );
-        // getSession이 세션을 못 잡은 경우를 대비해 여기서도 체크
         fetchCredits(session.user.id);
-        checkTutorial(session.user.id);
       } else {
         setCurrentUser(null);
       }
@@ -808,29 +816,6 @@ export default function ChatPage() {
     if (data) setUserCredits(data.credits ?? 0);
   }
 
-  async function checkTutorial(userId: string) {
-    // ref 가드: getSession + onAuthStateChange 양쪽에서 호출돼도 한 번만 실행
-    if (tutorialCheckedRef.current) return;
-    tutorialCheckedRef.current = true;
-
-    // 마이페이지 "사용법 다시 보기" 강제 플래그
-    if (sessionStorage.getItem("showTutorial") === "1") {
-      sessionStorage.removeItem("showTutorial");
-      setShowTutorial(true);
-      return;
-    }
-
-    // tutorial_seen 조회 — 컬럼 없으면 data null → !undefined = true → 표시
-    const { data } = await supabase
-      .from("profiles")
-      .select("tutorial_seen")
-      .eq("id", userId)
-      .single();
-
-    if (!(data as Record<string, unknown> | null)?.tutorial_seen) {
-      setShowTutorial(true);
-    }
-  }
 
   async function loadResumeSession() {
     if (!resumeSession) return;

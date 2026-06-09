@@ -80,11 +80,16 @@ export function TutorialModal({ userId, onClose }: Props) {
   const isLast = pageIdx === pages.length - 1;
 
   async function close() {
-    if (dontShow && userId) {
-      await supabase
-        .from("profiles")
-        .update({ tutorial_seen: true } as Record<string, unknown>)
-        .eq("id", userId);
+    if (dontShow) {
+      // localStorage: 즉시 저장 (다음 방문부터 적용)
+      localStorage.setItem("tutorialSeen", "true");
+      // DB: 크로스 디바이스 동기화 (컬럼 없으면 조용히 실패)
+      if (userId) {
+        supabase
+          .from("profiles")
+          .update({ tutorial_seen: true } as Record<string, unknown>)
+          .eq("id", userId);
+      }
     }
     onClose();
   }
