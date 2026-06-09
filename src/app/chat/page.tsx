@@ -1511,25 +1511,8 @@ export default function ChatPage() {
                     )}
                   </div>
 
-                  {/* 뱃지 잔액 표시 */}
-                  {currentUser && userCredits !== null && currentUser.email !== ADMIN_EMAIL && (
-                    <div
-                      className="flex items-center justify-between px-4 py-3 rounded-xl"
-                      style={{ background: userCredits > 0 ? "rgba(255,209,102,0.07)" : "rgba(248,113,113,0.07)", border: `1px solid ${userCredits > 0 ? "rgba(255,209,102,0.2)" : "rgba(248,113,113,0.2)"}` }}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span style={{ fontSize: 16 }}>🏅</span>
-                        <span className="text-xs font-medium" style={{ color: userCredits > 0 ? "rgba(255,209,102,0.75)" : "rgba(248,113,113,0.75)" }}>현재 보유 뱃지</span>
-                      </div>
-                      <div className="flex items-baseline gap-1">
-                        <span className="text-lg font-bold" style={{ color: userCredits > 0 ? "#FFD166" : "rgba(248,113,113,0.9)" }}>{userCredits}</span>
-                        <span className="text-xs" style={{ color: userCredits > 0 ? "rgba(255,209,102,0.5)" : "rgba(248,113,113,0.5)" }}>개</span>
-                      </div>
-                    </div>
-                  )}
-
                   {/* 시작 버튼 */}
-                  <div className="flex flex-col gap-3 pb-4 sm:pb-0">
+                  <div className="flex flex-col gap-2.5 pb-4 sm:pb-0">
                     {selected.draft.length > DRAFT_MAX ? (
                       <div
                         className="w-full py-4 rounded-2xl text-sm font-semibold text-center cursor-not-allowed"
@@ -1551,6 +1534,29 @@ export default function ChatPage() {
                         분석 시작하기 →
                       </button>
                     )}
+
+                    {/* 뱃지 잔액 — 버튼 바로 아래 */}
+                    {currentUser && userCredits !== null && currentUser.email !== ADMIN_EMAIL && (
+                      userCredits > 0 ? (
+                        <div className="flex items-center justify-center gap-2">
+                          <span style={{ fontSize: 13 }}>🏅</span>
+                          <span className="text-xs" style={{ color: "rgba(255,209,102,0.7)" }}>
+                            보유 뱃지 <span style={{ fontWeight: 700, color: "#FFD166" }}>{userCredits}개</span>
+                          </span>
+                        </div>
+                      ) : (
+                        <div
+                          className="flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl"
+                          style={{ background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.28)" }}
+                        >
+                          <span style={{ fontSize: 14 }}>🏅</span>
+                          <span className="text-xs font-semibold" style={{ color: "rgba(248,113,113,0.9)" }}>
+                            보유 뱃지 0개 — 관리자에게 문의해주세요
+                          </span>
+                        </div>
+                      )
+                    )}
+
                     <p className="text-xs text-center" style={{ color: "rgba(255,255,255,0.18)" }}>
                       {selected.draft.length > DRAFT_MAX
                         ? ""
