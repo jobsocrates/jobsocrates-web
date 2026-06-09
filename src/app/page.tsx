@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { AuthModal } from "@/components/AuthModal";
 import { HowSection } from "@/components/HowSection";
 import { supabase } from "@/lib/supabase";
