@@ -57,6 +57,8 @@ export default function MyPage() {
   // 회원탈퇴
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deletePw, setDeletePw] = useState("");
+  const [deletePwError, setDeletePwError] = useState("");
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
@@ -231,8 +233,15 @@ export default function MyPage() {
   }
 
   async function handleDeleteAccount() {
+    if (!deletePw.trim()) { setDeletePwError("비밀번호를 입력해주세요."); return; }
     setDeleteLoading(true);
-    // profiles 삭제 (cascade로 연결 데이터도 정리됨)
+    setDeletePwError("");
+    const { error } = await supabase.auth.signInWithPassword({ email: user!.email, password: deletePw });
+    if (error) {
+      setDeleteLoading(false);
+      setDeletePwError("비밀번호가 맞지 않아요.");
+      return;
+    }
     if (user) await supabase.from("profiles").delete().eq("id", user.id);
     await supabase.auth.signOut();
     window.location.href = "/";
@@ -458,15 +467,26 @@ export default function MyPage() {
       {/* 회원탈퇴 확인 모달 */}
       {showDeleteConfirm && (
         <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)" }}
-          onClick={() => !deleteLoading && setShowDeleteConfirm(false)}>
+          onClick={() => { if (!deleteLoading) { setShowDeleteConfirm(false); setDeletePw(""); setDeletePwError(""); } }}>
           <div style={{ background: "#18182A", border: "1px solid rgba(248,113,113,0.3)", borderRadius: 20, padding: "28px 24px", maxWidth: 320, width: "100%", textAlign: "center" }}
             onClick={e => e.stopPropagation()}>
             <p style={{ fontSize: 20 }}>⚠️</p>
             <p style={{ fontSize: 16, fontWeight: 700, color: "rgba(255,255,255,0.9)", marginTop: 12, marginBottom: 8 }}>정말 탈퇴하시겠어요?</p>
-            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", marginBottom: 24, wordBreak: "keep-all" }}>계정과 모든 분석 기록이 영구 삭제되며 복구할 수 없어요.</p>
+            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", marginBottom: 20, wordBreak: "keep-all" }}>계정과 모든 분석 기록이 영구 삭제되며 복구할 수 없어요.</p>
+            <input
+              type="password"
+              placeholder="비밀번호 확인"
+              value={deletePw}
+              onChange={e => { setDeletePw(e.target.value); setDeletePwError(""); }}
+              onKeyDown={e => e.key === "Enter" && handleDeleteAccount()}
+              style={{ width: "100%", background: "rgba(255,255,255,0.05)", border: `1px solid ${deletePwError ? "rgba(248,113,113,0.5)" : "rgba(255,255,255,0.12)"}`, borderRadius: 10, padding: "10px 14px", fontSize: 14, color: "rgba(255,255,255,0.85)", outline: "none", boxSizing: "border-box", marginBottom: deletePwError ? 8 : 16, textAlign: "left" }}
+            />
+            {deletePwError && (
+              <p style={{ fontSize: 13, color: "rgb(248,113,113)", marginBottom: 16, textAlign: "left" }}>{deletePwError}</p>
+            )}
             <div style={{ display: "flex", gap: 10 }}>
               <button
-                onClick={() => setShowDeleteConfirm(false)}
+                onClick={() => { setShowDeleteConfirm(false); setDeletePw(""); setDeletePwError(""); }}
                 disabled={deleteLoading}
                 style={{ flex: 1, padding: "11px 0", borderRadius: 12, background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.65)", fontSize: 14, fontWeight: 600, cursor: "pointer" }}
               >
@@ -477,7 +497,7 @@ export default function MyPage() {
                 disabled={deleteLoading}
                 style={{ flex: 1, padding: "11px 0", borderRadius: 12, background: "rgba(248,113,113,0.15)", border: "1px solid rgba(248,113,113,0.35)", color: "rgb(248,113,113)", fontSize: 14, fontWeight: 700, cursor: deleteLoading ? "default" : "pointer", opacity: deleteLoading ? 0.6 : 1 }}
               >
-                {deleteLoading ? "처리 중..." : "탈퇴 확인"}
+                {deleteLoading ? "확인 중..." : "탈퇴 확인"}
               </button>
             </div>
           </div>
