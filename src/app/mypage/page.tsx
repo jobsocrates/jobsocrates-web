@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { buildPrintHtml, stripMd, parseRevisionMsg, type SummaryMsg } from "@/components/CoverLetterSummary";
 
@@ -38,6 +39,7 @@ function formatDate(dateStr: string) {
 }
 
 export default function MyPage() {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<{ id: string; email: string } | null>(null);
   const [credits, setCredits] = useState<number>(0);
@@ -208,7 +210,15 @@ export default function MyPage() {
           채팅으로
         </Link>
         <span style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.55)" }}>마이페이지</span>
-        <Link href="/" style={{ fontSize: 12, color: "rgba(255,255,255,0.25)", textDecoration: "none" }}>홈</Link>
+        <button
+          onClick={() => {
+            sessionStorage.setItem("showTutorial", "1");
+            router.push("/chat");
+          }}
+          style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", background: "none", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline", textUnderlineOffset: 3 }}
+        >
+          사용법
+        </button>
       </header>
 
       <div style={{ maxWidth: 640, margin: "0 auto", padding: "24px 20px" }}>

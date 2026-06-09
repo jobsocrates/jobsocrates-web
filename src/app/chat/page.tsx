@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { CoverLetterSummary } from "@/components/CoverLetterSummary";
+import { TutorialModal } from "@/components/TutorialModal";
 import { supabase } from "@/lib/supabase";
 
 const ACCENT = "#C96442";
@@ -522,6 +523,7 @@ export default function ChatPage() {
 
   const [currentUser, setCurrentUser] = useState<{ id: string; email: string } | null>(null);
   const [welcome, setWelcome] = useState("");
+  const [showTutorial, setShowTutorial] = useState(false);
 
   const selected = items.find((it) => it.id === selectedId) ?? null;
 
@@ -792,10 +794,20 @@ export default function ChatPage() {
   async function fetchCredits(userId: string) {
     const { data } = await supabase
       .from("profiles")
-      .select("credits")
+      .select("credits, tutorial_seen")
       .eq("id", userId)
       .single();
-    if (data) setUserCredits(data.credits ?? 0);
+    if (data) {
+      setUserCredits(data.credits ?? 0);
+      // sessionStorage 강제 표시 플래그 (마이페이지 "사용법 다시 보기")
+      const forced = sessionStorage.getItem("showTutorial") === "1";
+      if (forced) {
+        sessionStorage.removeItem("showTutorial");
+        setShowTutorial(true);
+      } else if (!(data as Record<string, unknown>).tutorial_seen) {
+        setShowTutorial(true);
+      }
+    }
   }
 
   async function loadResumeSession() {
@@ -2142,6 +2154,14 @@ export default function ChatPage() {
           msgs={selected.msgs}
           onClose={() => setShowSummary(false)}
           onNextItem={() => { setShowSummary(false); addItem(); }}
+        />
+      )}
+
+      {/* 튜토리얼 모달 */}
+      {showTutorial && (
+        <TutorialModal
+          userId={currentUser?.id ?? null}
+          onClose={() => setShowTutorial(false)}
         />
       )}
     </>
