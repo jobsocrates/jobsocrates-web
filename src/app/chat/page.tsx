@@ -1201,27 +1201,27 @@ export default function ChatPage() {
   const showInterviewButton = hasAnyRevision && interviewQs.length === 0 && !isLoadingQs;
   const showSummaryButton = hasAnyRevision && interviewQs.length > 0;
 
-  // 가장 최근 봇 메시지의 [참조] — 현재 포커스 (밝은 하이라이트)
+  // 가장 최근 봇 메시지의 마지막 [참조] — 현재 포커스 (밝은 하이라이트)
   const currentReference: string | null = (() => {
     if (!selected) return null;
     for (let i = selected.msgs.length - 1; i >= 0; i--) {
       const msg = selected.msgs[i];
       if (msg.role === "bot") {
-        const match = msg.text.match(/\[참조\]([\s\S]*?)\[\/참조\]/);
-        return match ? match[1].trim() : null; // 최신 봇 메시지에서만, 없으면 null
+        const matches = [...msg.text.matchAll(/\[참조\]([\s\S]*?)\[\/참조\]/g)];
+        if (matches.length > 0) return matches[matches.length - 1][1].trim();
+        return null;
       }
     }
     return null;
   })();
 
-  // 전체 봇 메시지에서 수집한 [참조] 목록 — 연한 하이라이트
+  // 전체 봇 메시지에서 수집한 모든 [참조] — 연한 하이라이트 (첫 진단의 ①②③ 포함)
   const allReferences: string[] = (() => {
     if (!selected) return [];
     const seen = new Set<string>();
     selected.msgs.forEach(msg => {
       if (msg.role === "bot") {
-        const match = msg.text.match(/\[참조\]([\s\S]*?)\[\/참조\]/);
-        if (match) seen.add(match[1].trim());
+        [...msg.text.matchAll(/\[참조\]([\s\S]*?)\[\/참조\]/g)].forEach(m => seen.add(m[1].trim()));
       }
     });
     return Array.from(seen);
