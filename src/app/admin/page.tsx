@@ -87,6 +87,10 @@ export default function AdminPage() {
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; email: string } | null>(null);
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
 
+  // Review — 세션 삭제
+  const [deleteSessionTarget, setDeleteSessionTarget] = useState<{ id: string; jobTitle: string } | null>(null);
+  const [deletingSessionId, setDeletingSessionId] = useState<string | null>(null);
+
   // Notes
   const [goodNotes, setGoodNotes] = useState("");
   const [badNotes, setBadNotes] = useState("");
@@ -244,6 +248,37 @@ export default function AdminPage() {
     } finally {
       setDeleteTarget(null);
       setDeletingUserId(null);
+    }
+  }
+
+  async function handleDeleteSession(sessionId: string) {
+    setDeletingSessionId(sessionId);
+    try {
+      const { data: items } = await supabase.from("cover_items").select("id").eq("session_id", sessionId);
+      if (items && items.length > 0) {
+        const itemIds = items.map((c) => c.id);
+        const { data: iqs } = await supabase.from("interview_questions").select("id").in("cover_item_id", itemIds);
+        if (iqs && iqs.length > 0) {
+          await supabase.from("interview_answers").delete().in("interview_question_id", iqs.map((q) => q.id));
+          await supabase.from("interview_questions").delete().in("cover_item_id", itemIds);
+        }
+        await supabase.from("messages").delete().in("cover_item_id", itemIds);
+        await supabase.from("revisions").delete().in("cover_item_id", itemIds);
+        await supabase.from("cover_items").delete().eq("session_id", sessionId);
+      }
+      await supabase.from("admin_reviews").delete().eq("session_id", sessionId);
+      const { error } = await supabase.from("sessions").delete().eq("id", sessionId);
+      if (!error) {
+        setSessions((prev) => prev.filter((s) => s.id !== sessionId));
+        if (selectedId === sessionId) { setSelectedId(null); setCoverItems([]); }
+      } else {
+        console.error("[handleDeleteSession]", error);
+      }
+    } catch (e) {
+      console.error("[handleDeleteSession]", e);
+    } finally {
+      setDeleteSessionTarget(null);
+      setDeletingSessionId(null);
     }
   }
 
@@ -430,20 +465,31 @@ export default function AdminPage() {
                 const rev = s.admin_reviews?.[0];
                 const isSelected = s.id === selectedId;
                 return (
-                  <div key={s.id} onClick={() => selectSession(s.id)} style={{ padding: "11px 14px", cursor: "pointer", borderBottom: "1px solid rgba(255,255,255,0.04)", background: isSelected ? "rgba(255,255,255,0.07)" : "transparent", transition: "background 0.12s" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 3 }}>
-                      {rev?.rating === "good" && <span style={{ fontSize: 10, lineHeight: 1 }}>👍</span>}
-                      {rev?.rating === "bad" && <span style={{ fontSize: 10, lineHeight: 1 }}>👎</span>}
-                      <span style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.82)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {s.job_title || "직무 미입력"}
-                      </span>
+                  <div key={s.id} style={{ position: "relative", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                    <div onClick={() => selectSession(s.id)} style={{ padding: "11px 14px", paddingRight: 34, cursor: "pointer", background: isSelected ? "rgba(255,255,255,0.07)" : "transparent", transition: "background 0.12s" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 3 }}>
+                        {rev?.rating === "good" && <span style={{ fontSize: 10, lineHeight: 1 }}>👍</span>}
+                        {rev?.rating === "bad" && <span style={{ fontSize: 10, lineHeight: 1 }}>👎</span>}
+                        <span style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.82)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {s.job_title || "직무 미입력"}
+                        </span>
+                      </div>
+                      <p style={{ fontSize: 11, color: "rgba(255,255,255,0.28)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 2 }}>
+                        {(s.profiles as any)?.email || s.user_id?.slice(0, 8) || "—"}
+                      </p>
+                      <p style={{ fontSize: 10, color: "rgba(255,255,255,0.2)" }}>
+                        {s.created_at.slice(0, 10)}
+                      </p>
                     </div>
-                    <p style={{ fontSize: 11, color: "rgba(255,255,255,0.28)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 2 }}>
-                      {(s.profiles as any)?.email || s.user_id?.slice(0, 8) || "—"}
-                    </p>
-                    <p style={{ fontSize: 10, color: "rgba(255,255,255,0.2)" }}>
-                      {s.created_at.slice(0, 10)}
-                    </p>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setDeleteSessionTarget({ id: s.id, jobTitle: s.job_title || "직무 미입력" }); }}
+                      title="세션 삭제"
+                      style={{ position: "absolute", top: 10, right: 8, width: 22, height: 22, borderRadius: 6, border: "1px solid rgba(248,113,113,0.2)", background: "transparent", color: "rgba(248,113,113,0.4)", fontSize: 11, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.15s" }}
+                      onMouseEnter={(e) => { (e.currentTarget).style.background = "rgba(248,113,113,0.12)"; (e.currentTarget).style.color = "rgba(248,113,113,0.85)"; }}
+                      onMouseLeave={(e) => { (e.currentTarget).style.background = "transparent"; (e.currentTarget).style.color = "rgba(248,113,113,0.4)"; }}
+                    >
+                      🗑
+                    </button>
                   </div>
                 );
               })}
@@ -459,23 +505,33 @@ export default function AdminPage() {
             ) : (
               <>
                 {/* Session header */}
-                <div style={{ padding: "12px 20px", borderBottom: "1px solid rgba(255,255,255,0.06)", flexShrink: 0 }}>
+                <div style={{ padding: "12px 20px", borderBottom: "1px solid rgba(255,255,255,0.06)", flexShrink: 0, display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+                  <div style={{ minWidth: 0 }}>
+                    <button
+                      className="admin-mobile-back"
+                      onClick={() => setSelectedId(null)}
+                      style={{ alignItems: "center", gap: 6, marginBottom: 8, fontSize: 12, color: "rgba(255,255,255,0.4)", background: "none", border: "none", cursor: "pointer", padding: 0 }}
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+                      </svg>
+                      목록으로
+                    </button>
+                    <p style={{ fontSize: 14, fontWeight: 700, color: "rgba(255,255,255,0.85)" }}>
+                      {selectedSession?.job_title || "직무 미입력"}
+                    </p>
+                    <p style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 2 }}>
+                      {(selectedSession?.profiles as any)?.email || selectedSession?.user_id?.slice(0, 8)} &middot; {selectedSession?.created_at.slice(0, 10)}
+                    </p>
+                  </div>
                   <button
-                    className="admin-mobile-back"
-                    onClick={() => setSelectedId(null)}
-                    style={{ alignItems: "center", gap: 6, marginBottom: 8, fontSize: 12, color: "rgba(255,255,255,0.4)", background: "none", border: "none", cursor: "pointer", padding: 0 }}
+                    onClick={() => setDeleteSessionTarget({ id: selectedId!, jobTitle: selectedSession?.job_title || "직무 미입력" })}
+                    style={{ flexShrink: 0, marginTop: 2, padding: "5px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer", border: "1px solid rgba(248,113,113,0.3)", background: "rgba(248,113,113,0.07)", color: "rgba(248,113,113,0.7)", transition: "all 0.15s" }}
+                    onMouseEnter={(e) => { (e.currentTarget).style.background = "rgba(248,113,113,0.16)"; (e.currentTarget).style.color = "rgba(248,113,113,1)"; }}
+                    onMouseLeave={(e) => { (e.currentTarget).style.background = "rgba(248,113,113,0.07)"; (e.currentTarget).style.color = "rgba(248,113,113,0.7)"; }}
                   >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
-                    </svg>
-                    목록으로
+                    삭제
                   </button>
-                  <p style={{ fontSize: 14, fontWeight: 700, color: "rgba(255,255,255,0.85)" }}>
-                    {selectedSession?.job_title || "직무 미입력"}
-                  </p>
-                  <p style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginTop: 2 }}>
-                    {(selectedSession?.profiles as any)?.email || selectedSession?.user_id?.slice(0, 8)} &middot; {selectedSession?.created_at.slice(0, 10)}
-                  </p>
                 </div>
 
                 {/* Conversation scroll area */}
@@ -706,6 +762,36 @@ export default function AdminPage() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* 세션 삭제 확인 모달 */}
+      {deleteSessionTarget && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, background: "rgba(0,0,0,0.75)", backdropFilter: "blur(4px)" }}
+          onClick={() => !deletingSessionId && setDeleteSessionTarget(null)}>
+          <div style={{ background: "#18182A", border: "1px solid rgba(248,113,113,0.3)", borderRadius: 20, padding: "28px 24px", maxWidth: 340, width: "100%", textAlign: "center" }}
+            onClick={(e) => e.stopPropagation()}>
+            <p style={{ fontSize: 20 }}>🗑️</p>
+            <p style={{ fontSize: 16, fontWeight: 700, color: "rgba(255,255,255,0.9)", marginTop: 12, marginBottom: 8 }}>이 세션을 삭제할까요?</p>
+            <p style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.6)", marginBottom: 6 }}>{deleteSessionTarget.jobTitle}</p>
+            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginBottom: 24, wordBreak: "keep-all" }}>대화 기록, 수정본, 면접 Q&A가 모두 삭제되며 복구할 수 없어요.</p>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                onClick={() => setDeleteSessionTarget(null)}
+                disabled={!!deletingSessionId}
+                style={{ flex: 1, padding: "11px 0", borderRadius: 12, background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.7)", fontSize: 14, fontWeight: 600, cursor: "pointer" }}
+              >
+                취소
+              </button>
+              <button
+                onClick={() => handleDeleteSession(deleteSessionTarget.id)}
+                disabled={!!deletingSessionId}
+                style={{ flex: 1, padding: "11px 0", borderRadius: 12, background: "rgba(248,113,113,0.15)", border: "1px solid rgba(248,113,113,0.4)", color: "rgb(248,113,113)", fontSize: 14, fontWeight: 700, cursor: deletingSessionId ? "default" : "pointer", opacity: deletingSessionId ? 0.6 : 1 }}
+              >
+                {deletingSessionId ? "삭제 중..." : "삭제 확인"}
+              </button>
+            </div>
           </div>
         </div>
       )}
