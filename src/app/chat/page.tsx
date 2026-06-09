@@ -1194,7 +1194,7 @@ export default function ChatPage() {
         {/* 환영 토스트 */}
         {welcome && (
           <div
-            className="fixed top-16 left-1/2 z-50 px-5 py-2.5 rounded-2xl text-sm font-medium shadow-lg"
+            className="fixed top-16 left-1/2 lg:left-[calc(136px+50vw)] z-50 px-5 py-2.5 rounded-2xl text-sm font-medium shadow-lg"
             style={{
               transform: "translateX(-50%)",
               background: "rgba(255,107,53,0.15)",
@@ -1210,7 +1210,7 @@ export default function ChatPage() {
         {/* 알림 토스트 */}
         {toast && (
           <div
-            className="fixed bottom-6 left-1/2 z-50 px-5 py-2.5 rounded-2xl text-sm font-medium shadow-lg"
+            className="fixed bottom-6 left-1/2 lg:left-[calc(136px+50vw)] z-50 px-5 py-2.5 rounded-2xl text-sm font-medium shadow-lg"
             style={{
               transform: "translateX(-50%)",
               background: "rgba(201,100,66,0.18)",
