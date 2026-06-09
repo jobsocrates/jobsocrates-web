@@ -522,6 +522,7 @@ export default function ChatPage() {
   const [userCredits, setUserCredits] = useState<number | null>(null);
   const [showInterviewWarning, setShowInterviewWarning] = useState(false);
   const [showCreditConfirm, setShowCreditConfirm] = useState(false);
+  const [discardConfirmMode, setDiscardConfirmMode] = useState(false);
 
   const [currentUser, setCurrentUser] = useState<{ id: string; email: string } | null>(null);
   const [welcome, setWelcome] = useState("");
@@ -779,6 +780,9 @@ export default function ChatPage() {
       const parentSession = sessions.find(s => s.id === unfinished[0].session_id);
       if (!parentSession) return;
 
+      // 이미 이 세션을 dismiss한 경우 다시 표시하지 않음
+      if (sessionStorage.getItem("lastDismissedSessionId") === parentSession.id) return;
+
       const { data: allItems } = await supabase
         .from("cover_items")
         .select("id, question, draft, char_limit, status, order_index")
@@ -846,6 +850,7 @@ export default function ChatPage() {
       }
     } catch { /* 무시 */ }
     setIsLoadingResume(false);
+    setDiscardConfirmMode(false);
     setResumeSession(null);
   }
 
@@ -1846,56 +1851,108 @@ export default function ChatPage() {
         >
           <div
             className="w-full flex flex-col gap-5 rounded-2xl p-6"
-            style={{
-              maxWidth: "360px",
-              background: "#0D0D18",
-              border: "1px solid rgba(255,255,255,0.1)",
-              boxShadow: "0 24px 60px rgba(0,0,0,0.7)",
-            }}
+            style={{ maxWidth: "360px", background: "#0D0D18", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 24px 60px rgba(0,0,0,0.7)" }}
           >
-            <div className="flex flex-col gap-1.5">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full" style={{ background: ACCENT }} />
-                <p className="text-sm font-semibold text-white">이어서 진행할까요?</p>
-              </div>
-              <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.45)", paddingLeft: "16px" }}>
-                {formatRelativeTime(resumeSession.session.created_at)} 작업하던
-                {resumeSession.session.job_title ? ` "${resumeSession.session.job_title}"` : ""} 자소서가 있어요.
-              </p>
-              {resumeSession.items.length > 0 && (
-                <div className="mt-2 flex flex-col gap-1.5 pl-4">
-                  {resumeSession.items.slice(0, 3).map((item, i) => (
-                    <div key={item.id} className="flex items-start gap-2">
-                      <span className="text-xs font-bold flex-shrink-0 mt-px" style={{ color: `${BLUE}80` }}>{String(i + 1).padStart(2, "0")}</span>
-                      <p className="text-xs truncate" style={{ color: "rgba(255,255,255,0.5)", wordBreak: "keep-all" }}>
-                        {item.question || "문항 미입력"}
-                      </p>
+            {!discardConfirmMode ? (
+              /* ── 이어서하기 ── */
+              <>
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full" style={{ background: ACCENT }} />
+                    <p className="text-sm font-semibold text-white">이어서 진행할까요?</p>
+                  </div>
+                  <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.45)", paddingLeft: "16px" }}>
+                    {formatRelativeTime(resumeSession.session.created_at)} 작업하던
+                    {resumeSession.session.job_title ? ` "${resumeSession.session.job_title}"` : ""} 자소서가 있어요.
+                  </p>
+                  {resumeSession.items.length > 0 && (
+                    <div className="mt-2 flex flex-col gap-1.5 pl-4">
+                      {resumeSession.items.slice(0, 3).map((item, i) => (
+                        <div key={item.id} className="flex items-start gap-2">
+                          <span className="text-xs font-bold flex-shrink-0 mt-px" style={{ color: `${BLUE}80` }}>{String(i + 1).padStart(2, "0")}</span>
+                          <p className="text-xs truncate" style={{ color: "rgba(255,255,255,0.5)", wordBreak: "keep-all" }}>
+                            {item.question || "문항 미입력"}
+                          </p>
+                        </div>
+                      ))}
+                      {resumeSession.items.length > 3 && (
+                        <p className="text-xs pl-5" style={{ color: "rgba(255,255,255,0.25)" }}>외 {resumeSession.items.length - 3}개 항목</p>
+                      )}
                     </div>
-                  ))}
-                  {resumeSession.items.length > 3 && (
-                    <p className="text-xs pl-5" style={{ color: "rgba(255,255,255,0.25)" }}>외 {resumeSession.items.length - 3}개 항목</p>
                   )}
                 </div>
-              )}
-            </div>
-            <div className="flex gap-2.5">
-              <button
-                onClick={loadResumeSession}
-                disabled={isLoadingResume}
-                className="flex-1 py-3 rounded-xl text-sm font-semibold text-white transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
-                style={{ background: ACCENT, boxShadow: `0 4px 16px ${ACCENT}30` }}
-              >
-                {isLoadingResume ? "불러오는 중..." : "이어서 하기"}
-              </button>
-              <button
-                onClick={() => setResumeSession(null)}
-                disabled={isLoadingResume}
-                className="flex-1 py-3 rounded-xl text-sm transition-all hover:opacity-70"
-                style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.45)", border: "1px solid rgba(255,255,255,0.08)" }}
-              >
-                새로 시작
-              </button>
-            </div>
+                <div className="flex gap-2.5">
+                  <button
+                    onClick={loadResumeSession}
+                    disabled={isLoadingResume}
+                    className="flex-1 py-3 rounded-xl text-sm font-semibold text-white transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+                    style={{ background: ACCENT, boxShadow: `0 4px 16px ${ACCENT}30` }}
+                  >
+                    {isLoadingResume ? "불러오는 중..." : "이어서 하기"}
+                  </button>
+                  <button
+                    onClick={() => setDiscardConfirmMode(true)}
+                    disabled={isLoadingResume}
+                    className="flex-1 py-3 rounded-xl text-sm transition-all hover:opacity-70"
+                    style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.45)", border: "1px solid rgba(255,255,255,0.08)" }}
+                  >
+                    새로 시작
+                  </button>
+                </div>
+              </>
+            ) : (
+              /* ── 새로 시작 확인 ── */
+              <>
+                <div className="flex flex-col gap-3">
+                  {resumeSession.items.some(i => i.status === "chatting") ? (
+                    <>
+                      <div className="flex items-center gap-2.5">
+                        <span style={{ fontSize: 20 }}>🏅</span>
+                        <p className="text-sm font-semibold" style={{ color: "rgba(255,255,255,0.88)" }}>뱃지가 사용된 문항이 있어요</p>
+                      </div>
+                      <div className="px-3 py-2.5 rounded-xl" style={{ background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.2)" }}>
+                        <p className="text-xs leading-relaxed" style={{ color: "rgba(248,113,113,0.82)" }}>
+                          분석이 시작된 문항은 새로 시작해도 차감된 뱃지가 돌아오지 않아요.
+                        </p>
+                      </div>
+                      <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.38)" }}>
+                        그래도 새로 시작하면 이전 작업은 더 이상 불러오지 않아요.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full" style={{ background: "rgba(255,255,255,0.25)" }} />
+                        <p className="text-sm font-semibold" style={{ color: "rgba(255,255,255,0.88)" }}>새로 시작할까요?</p>
+                      </div>
+                      <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.4)" }}>
+                        분석을 시작하지 않은 문항은 뱃지가 차감되지 않았어요. 이전 작업 내용은 더 이상 불러오지 않아요.
+                      </p>
+                    </>
+                  )}
+                </div>
+                <div className="flex gap-2.5">
+                  <button
+                    onClick={() => setDiscardConfirmMode(false)}
+                    className="flex-1 py-3 rounded-xl text-sm font-semibold text-white transition-all hover:scale-[1.02] active:scale-[0.98]"
+                    style={{ background: ACCENT, boxShadow: `0 4px 16px ${ACCENT}30` }}
+                  >
+                    돌아가기
+                  </button>
+                  <button
+                    onClick={() => {
+                      sessionStorage.setItem("lastDismissedSessionId", resumeSession.session.id);
+                      setDiscardConfirmMode(false);
+                      setResumeSession(null);
+                    }}
+                    className="flex-1 py-3 rounded-xl text-sm transition-all hover:opacity-70"
+                    style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.45)", border: "1px solid rgba(255,255,255,0.08)" }}
+                  >
+                    새로 시작
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
