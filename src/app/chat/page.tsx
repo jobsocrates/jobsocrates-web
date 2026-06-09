@@ -409,27 +409,60 @@ function InterviewQCard({
   );
 }
 
-/* ── 초안 뷰어 (하이라이팅 포함) ── */
-function DraftViewer({ draft, referenceText, onClose }: { draft: string; referenceText: string | null; onClose: () => void }) {
+/* ── 초안 하이라이트 세그먼트 빌더 ── */
+type HighlightLevel = "none" | "faint" | "bright";
+function buildDraftSegments(
+  draft: string,
+  faintTexts: string[],
+  brightText: string | null
+): { text: string; level: HighlightLevel }[] {
+  const tags: HighlightLevel[] = new Array(draft.length).fill("none");
+  for (const ft of faintTexts) {
+    if (!ft) continue;
+    let s = draft.indexOf(ft);
+    while (s !== -1) {
+      for (let i = s; i < s + ft.length; i++) tags[i] = "faint";
+      s = draft.indexOf(ft, s + 1);
+    }
+  }
+  if (brightText) {
+    const s = draft.indexOf(brightText);
+    if (s !== -1) for (let i = s; i < s + brightText.length; i++) tags[i] = "bright";
+  }
+  const segs: { text: string; level: HighlightLevel }[] = [];
+  let i = 0;
+  while (i < draft.length) {
+    const lv = tags[i];
+    let j = i;
+    while (j < draft.length && tags[j] === lv) j++;
+    segs.push({ text: draft.slice(i, j), level: lv });
+    i = j;
+  }
+  return segs;
+}
+
+/* ── 초안 뷰어 (다중 하이라이팅) ── */
+function DraftViewer({
+  draft,
+  currentRef,
+  allRefs,
+  onClose,
+}: {
+  draft: string;
+  currentRef: string | null;
+  allRefs: string[];
+  onClose: () => void;
+}) {
   const markRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    if (referenceText && markRef.current) {
+    if (currentRef && markRef.current) {
       markRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
     }
-  }, [referenceText]);
+  }, [currentRef]);
 
-  const segments: { text: string; highlighted: boolean }[] = (() => {
-    if (!referenceText || !draft.includes(referenceText)) {
-      return [{ text: draft, highlighted: false }];
-    }
-    const idx = draft.indexOf(referenceText);
-    return [
-      { text: draft.slice(0, idx), highlighted: false },
-      { text: referenceText, highlighted: true },
-      { text: draft.slice(idx + referenceText.length), highlighted: false },
-    ].filter(s => s.text.length > 0);
-  })();
+  const faintTexts = allRefs.filter(r => r !== currentRef);
+  const segments = buildDraftSegments(draft, faintTexts, currentRef);
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -437,7 +470,7 @@ function DraftViewer({ draft, referenceText, onClose }: { draft: string; referen
         <div className="flex items-center gap-2">
           <div className="w-1 h-3 rounded-full" style={{ background: BLUE }} />
           <span className="text-xs font-semibold tracking-wider uppercase" style={{ color: "rgba(255,255,255,0.35)", letterSpacing: "0.08em" }}>내 초안</span>
-          {referenceText && (
+          {currentRef && (
             <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: `${ACCENT}18`, color: ACCENT, fontSize: "10px" }}>참조 중</span>
           )}
         </div>
@@ -448,28 +481,47 @@ function DraftViewer({ draft, referenceText, onClose }: { draft: string; referen
         >✕</button>
       </div>
       <div className="flex-1 overflow-y-auto px-4 py-4">
-        <p className="text-sm leading-[1.9] whitespace-pre-wrap" style={{ color: "rgba(255,255,255,0.5)", wordBreak: "keep-all" }}>
-          {segments.map((seg, i) =>
-            seg.highlighted ? (
-              <mark
-                key={i}
-                ref={markRef as React.RefObject<HTMLElement>}
-                style={{
-                  background: `${ACCENT}28`,
-                  color: "rgba(255,255,255,0.92)",
-                  borderRadius: "3px",
-                  padding: "2px 4px",
-                  border: `1px solid ${ACCENT}45`,
-                  boxShadow: `0 0 10px ${ACCENT}20`,
-                  display: "inline",
-                }}
-              >
-                {seg.text}
-              </mark>
-            ) : (
-              <span key={i}>{seg.text}</span>
-            )
-          )}
+        <p className="text-sm leading-[1.9] whitespace-pre-wrap" style={{ color: "rgba(255,255,255,0.48)", wordBreak: "keep-all" }}>
+          {segments.map((seg, i) => {
+            if (seg.level === "bright") {
+              return (
+                <mark
+                  key={i}
+                  ref={markRef as React.RefObject<HTMLElement>}
+                  style={{
+                    background: `${ACCENT}30`,
+                    color: "rgba(255,255,255,0.96)",
+                    borderRadius: "3px",
+                    padding: "2px 4px",
+                    border: `1px solid ${ACCENT}55`,
+                    boxShadow: `0 0 12px ${ACCENT}28`,
+                    display: "inline",
+                    transition: "all 0.3s ease",
+                  }}
+                >
+                  {seg.text}
+                </mark>
+              );
+            }
+            if (seg.level === "faint") {
+              return (
+                <mark
+                  key={i}
+                  style={{
+                    background: `${BLUE}18`,
+                    color: "rgba(255,255,255,0.72)",
+                    borderRadius: "2px",
+                    padding: "1px 2px",
+                    border: `1px solid ${BLUE}22`,
+                    display: "inline",
+                  }}
+                >
+                  {seg.text}
+                </mark>
+              );
+            }
+            return <span key={i}>{seg.text}</span>;
+          })}
         </p>
       </div>
     </div>
@@ -1149,16 +1201,30 @@ export default function ChatPage() {
   const showInterviewButton = hasAnyRevision && interviewQs.length === 0 && !isLoadingQs;
   const showSummaryButton = hasAnyRevision && interviewQs.length > 0;
 
-  const referenceText: string | null = (() => {
+  // 가장 최근 봇 메시지의 [참조] — 현재 포커스 (밝은 하이라이트)
+  const currentReference: string | null = (() => {
     if (!selected) return null;
     for (let i = selected.msgs.length - 1; i >= 0; i--) {
       const msg = selected.msgs[i];
       if (msg.role === "bot") {
         const match = msg.text.match(/\[참조\]([\s\S]*?)\[\/참조\]/);
-        if (match) return match[1].trim();
+        return match ? match[1].trim() : null; // 최신 봇 메시지에서만, 없으면 null
       }
     }
     return null;
+  })();
+
+  // 전체 봇 메시지에서 수집한 [참조] 목록 — 연한 하이라이트
+  const allReferences: string[] = (() => {
+    if (!selected) return [];
+    const seen = new Set<string>();
+    selected.msgs.forEach(msg => {
+      if (msg.role === "bot") {
+        const match = msg.text.match(/\[참조\]([\s\S]*?)\[\/참조\]/);
+        if (match) seen.add(match[1].trim());
+      }
+    });
+    return Array.from(seen);
   })();
 
   return (
@@ -1644,8 +1710,8 @@ export default function ChatPage() {
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
                       </svg>
                       <span>내 초안 보기</span>
-                      {referenceText && !showDraftPanel && (
-                        <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: ACCENT }} />
+                      {(currentReference || allReferences.length > 0) && !showDraftPanel && (
+                        <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: currentReference ? ACCENT : BLUE }} />
                       )}
                     </button>
                   </div>
@@ -1841,7 +1907,8 @@ export default function ChatPage() {
                 >
                   <DraftViewer
                     draft={selected.draft}
-                    referenceText={referenceText}
+                    currentRef={currentReference}
+                    allRefs={allReferences}
                     onClose={() => setShowDraftPanel(false)}
                   />
                 </div>
@@ -1864,7 +1931,8 @@ export default function ChatPage() {
                     </div>
                     <DraftViewer
                       draft={selected.draft}
-                      referenceText={referenceText}
+                      currentRef={currentReference}
+                      allRefs={allReferences}
                       onClose={() => setShowDraftPanel(false)}
                     />
                   </div>
