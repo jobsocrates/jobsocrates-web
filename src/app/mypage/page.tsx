@@ -283,7 +283,7 @@ export default function MyPage() {
       <div style={{ maxWidth: 640, margin: "0 auto", padding: "24px 20px" }}>
 
         {/* 뱃지 카드 */}
-        <div style={{ borderRadius: 20, border: `1px solid ${credits > 0 ? "rgba(255,209,102,0.3)" : "rgba(248,113,113,0.25)"}`, background: credits > 0 ? "rgba(255,209,102,0.06)" : "rgba(248,113,113,0.05)", padding: "24px 24px 20px", marginBottom: 16 }}>
+        <div className="card-depth" style={{ borderRadius: 20, border: `1px solid ${credits > 0 ? "rgba(255,209,102,0.3)" : "rgba(248,113,113,0.25)"}`, background: credits > 0 ? "rgba(255,209,102,0.06)" : "rgba(248,113,113,0.05)", padding: "24px 24px 20px", marginBottom: 16 }}>
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
             <div>
               <p style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginBottom: 8 }}>{user.email}</p>
@@ -311,7 +311,7 @@ export default function MyPage() {
 
         {/* 뱃지 내역 */}
         {transactions.length > 0 && (
-          <div style={{ borderRadius: 16, border: "1px solid rgba(255,255,255,0.07)", background: "rgba(255,255,255,0.02)", overflow: "hidden", marginBottom: 16 }}>
+          <div className="card-depth-sm" style={{ borderRadius: 16, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.025)", overflow: "hidden", marginBottom: 16 }}>
             <div style={{ padding: "12px 18px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
               <p style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.4)" }}>뱃지 내역</p>
             </div>
@@ -331,7 +331,7 @@ export default function MyPage() {
 
         {/* 이전 세션 기록 */}
         {sessions.length > 0 && (
-          <div style={{ borderRadius: 16, border: "1px solid rgba(255,255,255,0.07)", background: "rgba(255,255,255,0.02)", overflow: "hidden" }}>
+          <div className="card-depth-sm" style={{ borderRadius: 16, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.025)", overflow: "hidden" }}>
             <div style={{ padding: "12px 18px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
               <p style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.4)" }}>이전 기록</p>
             </div>
@@ -422,6 +422,7 @@ export default function MyPage() {
               placeholder="새 비밀번호 (6자 이상)"
               value={pwNew}
               onChange={e => setPwNew(e.target.value)}
+              className="glow-input"
               style={{ width: "100%", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 10, padding: "10px 14px", fontSize: 14, color: "rgba(255,255,255,0.85)", outline: "none", boxSizing: "border-box" }}
             />
             <input
@@ -430,6 +431,7 @@ export default function MyPage() {
               value={pwConfirm}
               onChange={e => setPwConfirm(e.target.value)}
               onKeyDown={e => e.key === "Enter" && handleChangePassword()}
+              className="glow-input"
               style={{ width: "100%", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 10, padding: "10px 14px", fontSize: 14, color: "rgba(255,255,255,0.85)", outline: "none", boxSizing: "border-box" }}
             />
             {pwMsg && (
@@ -479,6 +481,7 @@ export default function MyPage() {
               value={deletePw}
               onChange={e => { setDeletePw(e.target.value); setDeletePwError(""); }}
               onKeyDown={e => e.key === "Enter" && handleDeleteAccount()}
+              className="glow-input"
               style={{ width: "100%", background: "rgba(255,255,255,0.05)", border: `1px solid ${deletePwError ? "rgba(248,113,113,0.5)" : "rgba(255,255,255,0.12)"}`, borderRadius: 10, padding: "10px 14px", fontSize: 14, color: "rgba(255,255,255,0.85)", outline: "none", boxSizing: "border-box", marginBottom: deletePwError ? 8 : 16, textAlign: "left" }}
             />
             {deletePwError && (

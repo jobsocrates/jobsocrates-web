@@ -46,7 +46,7 @@ function Input({ type = "text", placeholder, value, onChange, disabled, onEnter 
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={(e) => { if (e.key === "Enter" && onEnter) onEnter(); }}
         disabled={disabled}
-        className="w-full px-4 py-3 rounded-xl text-sm focus:outline-none transition-colors disabled:opacity-50"
+        className="glow-input w-full px-4 py-3 rounded-xl text-sm focus:outline-none transition-colors disabled:opacity-50"
         style={{
           background: "rgba(255,255,255,0.06)",
           border: "1px solid rgba(255,255,255,0.1)",

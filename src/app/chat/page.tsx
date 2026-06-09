@@ -526,6 +526,7 @@ export default function ChatPage() {
   const [currentUser, setCurrentUser] = useState<{ id: string; email: string } | null>(null);
   const [welcome, setWelcome] = useState("");
   const [showTutorial, setShowTutorial] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const selected = items.find((it) => it.id === selectedId) ?? null;
 
@@ -1177,13 +1178,13 @@ export default function ChatPage() {
         >
           <Link
             href="/"
-            className="flex items-center gap-1.5 text-xs lg:text-[15px] transition-opacity hover:opacity-70 flex-shrink-0"
-            style={{ color: "rgba(255,255,255,0.62)" }}
+            className="flex items-center gap-1.5 text-xs lg:text-sm font-bold transition-opacity hover:opacity-80 flex-shrink-0"
+            style={{ color: "#C96442", background: "rgba(201,100,66,0.12)", border: "1px solid rgba(201,100,66,0.35)", padding: "5px 11px", borderRadius: 9 }}
           >
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" />
             </svg>
-            홈
+            홈으로
           </Link>
           <button
             className="flex items-center gap-1.5 min-w-0 hover:opacity-75 transition-opacity"
@@ -1205,9 +1206,9 @@ export default function ChatPage() {
               </div>
             )}
             <button
-              onClick={async () => { await supabase.auth.signOut(); window.location.href = "/"; }}
-              className="text-xs lg:text-[15px] px-2.5 py-1.5 rounded-lg transition-all hover:opacity-80"
-              style={{ background: `rgba(201,100,66,0.12)`, border: `1px solid rgba(201,100,66,0.28)`, color: `rgba(201,100,66,0.92)` }}
+              onClick={() => setShowLogoutConfirm(true)}
+              className="text-xs lg:text-sm px-2.5 py-1.5 rounded-lg transition-all hover:opacity-80"
+              style={{ background: `rgba(255,255,255,0.06)`, border: `1px solid rgba(255,255,255,0.12)`, color: `rgba(255,255,255,0.5)` }}
             >
               로그아웃
             </button>
@@ -2197,6 +2198,28 @@ export default function ChatPage() {
           onClose={() => setShowSummary(false)}
           onNextItem={() => { setShowSummary(false); addItem(); }}
         />
+      )}
+
+      {/* 로그아웃 확인 모달 */}
+      {showLogoutConfirm && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(6px)" }}
+          onClick={() => setShowLogoutConfirm(false)}>
+          <div style={{ background: "#18182A", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 20, padding: "28px 24px", maxWidth: 300, width: "100%", textAlign: "center", boxShadow: "0 24px 80px rgba(0,0,0,0.6)" }}
+            onClick={e => e.stopPropagation()}>
+            <p style={{ fontSize: 15, fontWeight: 700, color: "rgba(255,255,255,0.9)", marginBottom: 8 }}>로그아웃 하시겠어요?</p>
+            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.38)", marginBottom: 22, wordBreak: "keep-all" }}>대화 내용은 자동 저장돼 있어요.</p>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => setShowLogoutConfirm(false)}
+                style={{ flex: 1, padding: "11px 0", borderRadius: 12, background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.65)", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
+                취소
+              </button>
+              <button onClick={async () => { await supabase.auth.signOut(); window.location.href = "/"; }}
+                style={{ flex: 1, padding: "11px 0", borderRadius: 12, background: "rgba(201,100,66,0.15)", border: "1px solid rgba(201,100,66,0.4)", color: "#C96442", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
+                로그아웃
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* 튜토리얼 모달 */}

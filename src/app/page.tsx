@@ -310,8 +310,8 @@ export default function Home() {
               {WHY_CARDS.map((c, i) => (
                 <div
                   key={c.num}
-                  className={`anim anim-delay-${i + 1} rounded-2xl p-7 flex flex-col gap-5`}
-                  style={{ background: "rgba(255,255,255,0.03)", border: `1px solid rgba(255,255,255,0.07)`, borderLeft: `3px solid ${c.color}60` }}
+                  className={`card-depth anim anim-delay-${i + 1} rounded-2xl p-7 flex flex-col gap-5`}
+                  style={{ background: "rgba(255,255,255,0.035)", border: `1px solid rgba(255,255,255,0.09)`, borderLeft: `3px solid ${c.color}70` }}
                 >
                   <div className="flex items-start justify-between">
                     <div className="p-2.5 rounded-xl" style={{ background: `${c.color}12` }}>
@@ -366,8 +366,8 @@ export default function Home() {
               ].map(({ num, color, title, desc }) => (
                 <div
                   key={num}
-                  className="relative rounded-2xl p-7 flex flex-col gap-4 overflow-hidden"
-                  style={{ background: "rgba(255,255,255,0.03)", border: `1px solid rgba(255,255,255,0.07)` }}
+                  className="card-depth relative rounded-2xl p-7 flex flex-col gap-4 overflow-hidden"
+                  style={{ background: "rgba(255,255,255,0.035)", border: `1px solid rgba(255,255,255,0.09)` }}
                 >
                   <span
                     className="absolute right-5 top-4 font-black tabular-nums select-none pointer-events-none"
