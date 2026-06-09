@@ -34,6 +34,11 @@ function Input({ type = "text", placeholder, value, onChange, disabled, onEnter 
 
   return (
     <div style={{ position: "relative" }}>
+      <style>{`
+        input[type="password"]::-ms-reveal,
+        input[type="password"]::-ms-clear { display: none; }
+        input::-webkit-credentials-auto-fill-button { display: none; }
+      `}</style>
       <input
         type={isPw ? (showPw ? "text" : "password") : type}
         placeholder={placeholder}
