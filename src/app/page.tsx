@@ -6,19 +6,19 @@ import { HowSection } from "@/components/HowSection";
 import { supabase } from "@/lib/supabase";
 
 const ACCENT = "#C96442";
-const NAV_BTN = "#F06428";   // 네비 버튼 전용 — 밝고 선명한 오렌지
+const NAV_BTN = "#F06428";
 const BLUE = "#6B8EFF";
 const BG = "#0D0D18";
+const ADMIN_EMAIL = "ijhan6403@gmail.com";
 const DOTS = [{ c: "#C96442", d: 0 }, { c: "#6B8EFF", d: 150 }, { c: "#FFD166", d: 300 }];
 
-/* ── WHY 카드 데이터 ── */
+/* ── WHY 카드 ── */
 const WHY_CARDS = [
   {
-    num: "01",
-    color: "#FF7A5C",
+    num: "01", color: "#FF7A5C",
     text: "합격 자소서를 봐도 내 경험엔 적용이 안 됨",
     icon: (
-      <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+      <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
         <rect x="4" y="4" width="18" height="24" rx="3" stroke="#FF7A5C" strokeWidth="2"/>
         <rect x="10" y="8" width="18" height="24" rx="3" fill="#FF7A5C18" stroke="#FF7A5C" strokeWidth="2"/>
         <line x1="14" y1="16" x2="24" y2="16" stroke="#FF7A5C" strokeWidth="2" strokeLinecap="round"/>
@@ -28,11 +28,10 @@ const WHY_CARDS = [
     ),
   },
   {
-    num: "02",
-    color: "#6B8EFF",
+    num: "02", color: "#6B8EFF",
     text: "GPT가 써준 자소서 어딘가 어색하고 내 말투가 아님",
     icon: (
-      <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+      <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
         <rect x="3" y="6" width="22" height="16" rx="4" stroke="#6B8EFF" strokeWidth="2"/>
         <path d="M10 26L14 22H25" stroke="#6B8EFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
         <circle cx="10" cy="14" r="2" fill="#6B8EFF"/>
@@ -42,11 +41,10 @@ const WHY_CARDS = [
     ),
   },
   {
-    num: "03",
-    color: "#FFD166",
+    num: "03", color: "#FFD166",
     text: "현직자 단어를 넣어도 내 이야기 같지 않음",
     icon: (
-      <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+      <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
         <circle cx="14" cy="14" r="9" stroke="#FFD166" strokeWidth="2"/>
         <line x1="21" y1="21" x2="28" y2="28" stroke="#FFD166" strokeWidth="2.5" strokeLinecap="round"/>
         <line x1="10" y1="14" x2="18" y2="14" stroke="#FFD166" strokeWidth="2" strokeLinecap="round"/>
@@ -55,21 +53,19 @@ const WHY_CARDS = [
     ),
   },
   {
-    num: "04",
-    color: "#A78BFA",
+    num: "04", color: "#A78BFA",
     text: "경험은 있는데 어떻게 풀어야 할지 모르겠음",
     icon: (
-      <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+      <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
         <path d="M16 4C11.6 4 8 7.6 8 12c0 3 1.6 5.6 4 7.1V22h8v-2.9c2.4-1.5 4-4.1 4-7.1 0-4.4-3.6-8-8-8z" stroke="#A78BFA" strokeWidth="2" strokeLinejoin="round"/>
         <line x1="12" y1="26" x2="20" y2="26" stroke="#A78BFA" strokeWidth="2" strokeLinecap="round"/>
         <line x1="13" y1="29" x2="19" y2="29" stroke="#A78BFA" strokeWidth="2" strokeLinecap="round"/>
-        <line x1="16" y1="10" x2="16" y2="18" stroke="#A78BFA" strokeWidth="2" strokeLinecap="round"/>
       </svg>
     ),
   },
 ];
 
-/* ── 채팅 미리보기 카드 ── */
+/* ── 채팅 미리보기 ── */
 function ChatPreviewCard() {
   return (
     <div
@@ -81,7 +77,6 @@ function ChatPreviewCard() {
         maxWidth: "480px",
       }}
     >
-      {/* 헤더 */}
       <div className="flex items-center px-5 py-3.5 border-b" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
         <div className="flex gap-1.5 flex-shrink-0">
           {["#FF5F57", "#FEBC2E", "#28C840"].map((c) => (
@@ -89,10 +84,8 @@ function ChatPreviewCard() {
           ))}
         </div>
         <span className="flex-1 text-center text-sm font-medium" style={{ color: "rgba(255,255,255,0.35)" }}>취업소크라테스</span>
-        <div className="flex-shrink-0" style={{ width: "42px" }} />
+        <div style={{ width: "42px" }} />
       </div>
-
-      {/* 스텝 바 */}
       <div className="flex items-center px-4 py-3 border-b overflow-x-auto" style={{ borderColor: "rgba(255,255,255,0.05)", gap: "4px" }}>
         {([["진단", BLUE], ["논리 보강", "#FFD166"], ["자소서 완성", ACCENT], ["예상 질문", "#A78BFA"]] as [string, string][]).map(([label, color], i) => (
           <div key={label} className="flex items-center flex-shrink-0">
@@ -108,8 +101,6 @@ function ChatPreviewCard() {
           </div>
         ))}
       </div>
-
-      {/* 메시지 */}
       <div className="p-5 flex flex-col gap-4">
         <div className="rounded-xl overflow-hidden" style={{ background: `${BLUE}09`, border: `1px solid ${BLUE}22` }}>
           <div className="flex items-center gap-2 px-4 py-2.5 border-b" style={{ borderColor: `${BLUE}14` }}>
@@ -152,17 +143,32 @@ function ChatPreviewCard() {
   );
 }
 
-/* ── 메인 페이지 ── */
+/* ── 메인 ── */
 export default function Home() {
   const [authOpen, setAuthOpen] = useState(false);
   const [authTab, setAuthTab] = useState<"login" | "signup">("login");
   const [scrolled, setScrolled] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [badgeCount, setBadgeCount] = useState<number | null>(null);
+
+  async function fetchBadge(uid: string) {
+    const { data } = await supabase.from("profiles").select("credits").eq("id", uid).single();
+    if (data) setBadgeCount(data.credits ?? 0);
+  }
 
   useEffect(() => {
     supabase.from("page_views").insert({ path: "/" });
-    supabase.auth.getSession().then(({ data }) => setUserEmail(data.session?.user?.email ?? null));
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, s) => setUserEmail(s?.user?.email ?? null));
+    supabase.auth.getSession().then(({ data }) => {
+      const u = data.session?.user;
+      setUserEmail(u?.email ?? null);
+      if (u?.id) fetchBadge(u.id);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, s) => {
+      const u = s?.user;
+      setUserEmail(u?.email ?? null);
+      if (u?.id) fetchBadge(u.id);
+      else setBadgeCount(null);
+    });
     return () => subscription.unsubscribe();
   }, []);
 
@@ -178,7 +184,6 @@ export default function Home() {
   }, []);
 
   function openAuth(tab: "login" | "signup") { setAuthTab(tab); setAuthOpen(true); }
-
   function handleStartChat() {
     if (userEmail) window.location.href = "/chat";
     else openAuth("login");
@@ -198,18 +203,26 @@ export default function Home() {
             <div className="flex items-center gap-2">
               {userEmail ? (
                 <>
-                  <span className="text-sm hidden sm:block" style={{ color: "rgba(255,255,255,0.5)" }}>{userEmail.split("@")[0]}님</span>
-                  {userEmail === "ijhan6403@gmail.com" && (
+                  {/* 뱃지 카운트 */}
+                  {badgeCount !== null && userEmail !== ADMIN_EMAIL && (
+                    <Link
+                      href="/mypage"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold transition-all hover:opacity-80"
+                      style={{ background: "rgba(255,209,102,0.12)", border: "1px solid rgba(255,209,102,0.25)", color: "rgba(255,209,102,0.9)" }}
+                    >
+                      🏅 {badgeCount}
+                    </Link>
+                  )}
+                  {userEmail === ADMIN_EMAIL && (
                     <a href="/admin" className="hidden sm:flex items-center gap-1.5 text-sm px-3.5 py-2 rounded-xl transition-colors hover:text-white" style={{ color: "rgba(255,255,255,0.65)", border: "1px solid rgba(255,255,255,0.18)" }}>
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
                       관리자
                     </a>
                   )}
                   <a href="/chat" className="text-sm px-4 py-2 rounded-xl font-bold transition-all hover:scale-[1.04] active:scale-[0.97]" style={{ background: NAV_BTN, color: "#fff", boxShadow: `0 2px 18px ${NAV_BTN}50` }}>
-                    <span className="sm:hidden">채팅</span>
-                    <span className="hidden sm:inline">채팅 시작하기</span>
+                    시작하기
                   </a>
-                  <button onClick={() => supabase.auth.signOut().then(() => setUserEmail(null))} className="hidden sm:block text-sm px-3 py-2 rounded-xl transition-colors hover:text-white" style={{ color: "rgba(255,255,255,0.5)" }}>로그아웃</button>
+                  <button onClick={() => supabase.auth.signOut().then(() => { setUserEmail(null); setBadgeCount(null); })} className="hidden sm:block text-sm px-3 py-2 rounded-xl transition-colors hover:text-white" style={{ color: "rgba(255,255,255,0.5)" }}>로그아웃</button>
                 </>
               ) : (
                 <>
@@ -229,39 +242,25 @@ export default function Home() {
           </div>
 
           <div className="max-w-[1300px] mx-auto px-6 sm:px-8 py-20 w-full flex flex-col lg:flex-row items-center gap-14 lg:gap-20 relative">
-            <div className="flex-1 flex flex-col items-start gap-7 anim">
-
-              {/* 브랜드명 */}
-              <div className="flex flex-col gap-1">
-                <span
-                  className="font-black leading-none"
-                  style={{ fontSize: "clamp(2.2rem, 5vw, 3.6rem)", color: NAV_BTN, letterSpacing: "-0.03em" }}
-                >
-                  취업소크라테스
-                </span>
-                <span
-                  className="font-bold tracking-[0.22em] uppercase"
-                  style={{ fontSize: "clamp(0.7rem, 1.2vw, 0.9rem)", color: "rgba(255,255,255,0.28)" }}
-                >
-                  JobSocrates
-                </span>
+            <div className="flex-1 flex flex-col items-start gap-8 anim">
+              <div className="inline-flex items-center gap-2.5 rounded-full px-4 py-2 text-sm font-semibold" style={{ background: `${NAV_BTN}18`, color: NAV_BTN, border: `1px solid ${NAV_BTN}38` }}>
+                <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: NAV_BTN }} />
+                첫 문항 무료 · 지금 바로 시작
               </div>
 
-              <div style={{ width: "36px", height: "2px", background: NAV_BTN, borderRadius: "2px" }} />
-
               <div className="flex flex-col gap-1">
-                <h1 className="text-[2.8rem] sm:text-[3.8rem] lg:text-[4.8rem] xl:text-[5.5rem] font-black leading-[1.05] tracking-tight text-white" style={{ letterSpacing: "-0.03em" }}>
-                  베끼는<br className="sm:hidden" /> 자소서는
+                <h1 className="text-[3.5rem] sm:text-[4.5rem] lg:text-[5.5rem] xl:text-[6.5rem] font-black leading-[1.05] tracking-tight text-white" style={{ letterSpacing: "-0.03em" }}>
+                  베끼는 자소서는
                 </h1>
                 <h1
-                  className="text-[2.8rem] sm:text-[3.8rem] lg:text-[4.8rem] xl:text-[5.5rem] font-black leading-[1.05] tracking-tight"
+                  className="text-[3.5rem] sm:text-[4.5rem] lg:text-[5.5rem] xl:text-[6.5rem] font-black leading-[1.05] tracking-tight"
                   style={{ background: `linear-gradient(135deg, #fff 10%, ${NAV_BTN} 80%)`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", letterSpacing: "-0.03em" }}
                 >
                   끝났습니다.
                 </h1>
               </div>
 
-              <p className="text-lg sm:text-xl leading-[1.7] max-w-xl" style={{ color: "rgba(255,255,255,0.52)" }}>
+              <p className="text-lg sm:text-xl lg:text-2xl leading-[1.7] max-w-xl" style={{ color: "rgba(255,255,255,0.52)" }}>
                 합격 사례를 베껴도, GPT에 맡겨도<br />
                 내 이야기가 되지 않는 자소서.<br />
                 <span style={{ color: "rgba(255,255,255,0.82)", fontWeight: 500 }}>직접 고민할 때, 비로소 진짜 내 무기</span>가 됩니다.
@@ -273,7 +272,7 @@ export default function Home() {
                   className="inline-flex items-center gap-3 px-9 py-5 rounded-2xl font-black text-white transition-all hover:scale-[1.04] active:scale-[0.97]"
                   style={{ background: NAV_BTN, boxShadow: `0 8px 36px ${NAV_BTN}50`, fontSize: "18px", letterSpacing: "-0.01em" }}
                 >
-                  무료로 시작하기
+                  시작하기
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
                 </button>
                 <p className="text-sm" style={{ color: "rgba(255,255,255,0.3)" }}>로그인 후 바로 시작 · 첫 문항 무료</p>
@@ -286,14 +285,16 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ── WHY ── */}
+        {/* ── WHY (2×2 그리드, 가운데 정렬) ── */}
         <section className="py-32 px-6 sm:px-8" style={{ background: "#0B0C1C" }}>
-          <div className="max-w-[1300px] mx-auto">
-            <div className="mb-16 anim">
+          <div className="max-w-[900px] mx-auto">
+            <div className="mb-16 text-center anim">
               <p className="text-sm font-bold tracking-[0.22em] uppercase mb-4" style={{ color: NAV_BTN }}>WHY</p>
-              <h2 className="text-4xl sm:text-5xl lg:text-6xl font-black text-white" style={{ letterSpacing: "-0.03em", lineHeight: 1.1 }}>이런 경험<br className="sm:hidden" /> 있으신가요?</h2>
+              <h2 className="text-4xl sm:text-5xl lg:text-6xl font-black text-white" style={{ letterSpacing: "-0.03em", lineHeight: 1.1 }}>
+                이런 경험<br className="sm:hidden" /> 있으신가요?
+              </h2>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {WHY_CARDS.map((c, i) => (
                 <div
                   key={c.num}
@@ -332,65 +333,80 @@ export default function Home() {
         {/* ── HOW ── */}
         <HowSection />
 
-        {/* ── 사용 철학 ── */}
-        <section className="py-32 px-6 sm:px-8" style={{ background: "#090A1B" }}>
-          <div className="max-w-[900px] mx-auto anim flex flex-col gap-14">
-            <div className="flex flex-col gap-5">
-              <p className="text-base" style={{ color: "rgba(255,255,255,0.4)" }}>단, 이것만큼은 지켜야 진짜가 됩니다.</p>
-              <h2 className="text-4xl sm:text-5xl font-black text-white" style={{ letterSpacing: "-0.03em", lineHeight: 1.1, wordBreak: "keep-all" }}>
-                진짜 고민하며 쓴 자소서와<br />대충 쓴 자소서는 결과가 다릅니다.
+        {/* ── 원칙 (MZ 3열 카드) ── */}
+        <section className="py-28 px-6 sm:px-8" style={{ background: "#0A0B1C" }}>
+          <div className="max-w-[1100px] mx-auto anim">
+            <div className="text-center mb-16">
+              <p className="text-xs font-bold tracking-[0.22em] uppercase mb-4" style={{ color: "rgba(255,255,255,0.28)" }}>PRINCIPLE</p>
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white" style={{ letterSpacing: "-0.03em", lineHeight: 1.1, wordBreak: "keep-all" }}>
+                딱 하나만 요청드려요.
               </h2>
+              <p className="mt-4 text-lg" style={{ color: "rgba(255,255,255,0.38)", wordBreak: "keep-all" }}>
+                이것만 지키면, 나머지는 저희가 합니다.
+              </p>
             </div>
 
-            <div className="flex flex-col">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {[
-                { num: "01", color: BLUE, title: "본인의 언어로, 본인의 단어로 대화하세요.", desc: "이곳에서 나누는 대화가 자소서의 재료가 됩니다." },
+                { num: "01", color: BLUE, title: "본인의 언어로 대화하세요.", desc: "이곳에서 나누는 대화가 자소서의 재료가 됩니다." },
                 { num: "02", color: NAV_BTN, title: "대화 중엔 AI를 쓰지 마세요.", desc: "이 시간만큼은 온전히 당신의 생각이어야 합니다." },
-                { num: "03", color: "#FFD166", title: "깊이 고민할수록, 완성이 달라집니다.", desc: "그 차이는 생각보다 훨씬 큽니다." },
+                { num: "03", color: "#FFD166", title: "깊이 고민할수록 달라집니다.", desc: "그 차이는 생각보다 훨씬 큽니다." },
               ].map(({ num, color, title, desc }) => (
-                <div key={num} className="flex items-start gap-8 py-8 border-t" style={{ borderColor: "rgba(255,255,255,0.07)" }}>
-                  <span className="flex-shrink-0 text-base font-black tabular-nums mt-1" style={{ color, letterSpacing: "0.06em" }}>{num}</span>
-                  <div className="flex flex-col gap-2">
-                    <p className="text-xl font-bold text-white" style={{ wordBreak: "keep-all" }}>{title}</p>
-                    <p className="text-base leading-relaxed" style={{ color: "rgba(255,255,255,0.48)", wordBreak: "keep-all" }}>{desc}</p>
-                  </div>
+                <div
+                  key={num}
+                  className="relative rounded-2xl p-7 flex flex-col gap-4 overflow-hidden"
+                  style={{ background: "rgba(255,255,255,0.03)", border: `1px solid rgba(255,255,255,0.07)` }}
+                >
+                  <span
+                    className="absolute right-5 top-4 font-black tabular-nums select-none pointer-events-none"
+                    style={{ fontSize: "4.5rem", lineHeight: 1, color: `${color}0C`, letterSpacing: "-0.05em" }}
+                  >
+                    {num}
+                  </span>
+                  <span className="text-xs font-black tracking-[0.18em] uppercase" style={{ color }}>{num}</span>
+                  <p className="text-xl font-bold text-white leading-snug" style={{ wordBreak: "keep-all", letterSpacing: "-0.01em" }}>{title}</p>
+                  <p className="text-base leading-relaxed" style={{ color: "rgba(255,255,255,0.45)", wordBreak: "keep-all" }}>{desc}</p>
                 </div>
               ))}
-              <div className="border-t" style={{ borderColor: "rgba(255,255,255,0.07)" }} />
             </div>
           </div>
         </section>
 
-        {/* ── 브릿지 하단 ── */}
-        <section className="py-32 px-6 sm:px-8 anim" style={{ background: "#080919" }}>
-          <div className="max-w-[900px] mx-auto flex flex-col gap-5">
-            <p className="text-lg sm:text-xl" style={{ color: "rgba(255,255,255,0.4)", wordBreak: "keep-all" }}>
+        {/* ── 클로징 브릿지 ── */}
+        <section className="py-32 px-6 sm:px-8" style={{ background: "#07081A" }}>
+          <div className="max-w-[800px] mx-auto text-center anim flex flex-col items-center gap-6">
+            <p className="text-lg" style={{ color: "rgba(255,255,255,0.35)", wordBreak: "keep-all" }}>
               질문에 자세하게 답할수록, 더 좋은 질문이 돌아옵니다.
             </p>
-            <p className="text-4xl sm:text-5xl font-black leading-[1.15]" style={{ color: "rgba(255,255,255,0.92)", wordBreak: "keep-all", letterSpacing: "-0.03em" }}>
-              그 대화가 쌓이면서,<br />당신만의 자소서가<br className="sm:hidden" /> 완성됩니다.
-            </p>
+            <h2
+              className="text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.15] text-white"
+              style={{ letterSpacing: "-0.03em", wordBreak: "keep-all" }}
+            >
+              그 대화가 쌓이면서,<br />
+              당신만의 자소서가<br />
+              완성됩니다.
+            </h2>
+            <div style={{ width: "48px", height: "2px", background: `${NAV_BTN}60`, borderRadius: "2px" }} />
           </div>
         </section>
 
         {/* ── CTA ── */}
         <section className="py-36 px-6 sm:px-8 relative overflow-hidden" style={{ background: "#070818" }}>
           <div className="absolute inset-0 pointer-events-none">
-            <div style={{ position: "absolute", inset: 0, background: `radial-gradient(ellipse at 30% 50%, ${NAV_BTN}14 0%, transparent 60%)` }} />
-            <div style={{ position: "absolute", inset: 0, background: `radial-gradient(ellipse at 70% 50%, ${BLUE}0A 0%, transparent 60%)` }} />
+            <div style={{ position: "absolute", inset: 0, background: `radial-gradient(ellipse at 50% 60%, ${NAV_BTN}10 0%, transparent 60%)` }} />
           </div>
-          <div className="max-w-[900px] mx-auto flex flex-col gap-8 relative">
+          <div className="max-w-[800px] mx-auto flex flex-col items-center text-center gap-8 relative">
             <h2 className="text-5xl sm:text-6xl lg:text-7xl font-black text-white anim" style={{ letterSpacing: "-0.03em", lineHeight: 1.05, wordBreak: "keep-all" }}>
               준비됐으면,<br />지금 시작하세요.
             </h2>
-            <p className="text-xl anim anim-delay-1" style={{ color: "rgba(255,255,255,0.45)" }}>첫 문항은 무료입니다.</p>
+            <p className="text-xl anim anim-delay-1" style={{ color: "rgba(255,255,255,0.4)" }}>첫 문항은 무료입니다.</p>
             <div className="anim anim-delay-2">
               <button
                 onClick={handleStartChat}
                 className="inline-flex items-center gap-3 px-10 py-5 rounded-2xl font-black text-white transition-all hover:scale-[1.04] active:scale-[0.97]"
                 style={{ background: NAV_BTN, boxShadow: `0 10px 40px ${NAV_BTN}50`, fontSize: "20px", letterSpacing: "-0.01em" }}
               >
-                무료로 시작하기
+                시작하기
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
               </button>
             </div>
