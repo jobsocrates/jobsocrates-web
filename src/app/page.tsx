@@ -182,8 +182,8 @@ export default function Home() {
             borderBottom: scrolled ? "1px solid rgba(255,255,255,0.05)" : "1px solid transparent",
           }}
         >
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-            <span className="font-semibold text-white text-sm tracking-tight whitespace-nowrap">
+          <div className="max-w-[1300px] mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+            <span className="font-semibold text-white text-sm lg:text-[15px] tracking-tight whitespace-nowrap">
               취업소크라테스
               <span className="hidden sm:inline">
                 {" "}<span style={{ color: "rgba(255,255,255,0.2)", fontWeight: 300 }}>·</span>{" "}
@@ -193,21 +193,24 @@ export default function Home() {
             <div className="flex items-center gap-1 sm:gap-1.5 flex-shrink-0">
               {userEmail ? (
                 <>
-                  <span className="text-xs mr-1 hidden sm:block" style={{ color: "rgba(255,255,255,0.35)" }}>
+                  <span className="text-xs lg:text-[15px] mr-1 hidden sm:block" style={{ color: "rgba(255,255,255,0.5)" }}>
                     {userEmail.split("@")[0]}님
                   </span>
                   {userEmail === "ijhan6403@gmail.com" && (
                     <a
                       href="/admin"
-                      className="text-xs px-3 py-1.5 rounded-lg transition-colors hover:text-white"
-                      style={{ color: "rgba(255,255,255,0.25)", border: "1px solid rgba(255,255,255,0.1)" }}
+                      className="hidden sm:flex items-center gap-1.5 text-xs lg:text-[15px] px-3 py-1.5 rounded-lg transition-colors hover:text-white"
+                      style={{ color: "rgba(255,255,255,0.65)", border: "1px solid rgba(255,255,255,0.2)" }}
                     >
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                      </svg>
                       관리자
                     </a>
                   )}
                   <a
                     href="/chat"
-                    className="text-xs sm:text-sm px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl font-medium transition-all hover:scale-[1.03] active:scale-[0.97] whitespace-nowrap"
+                    className="text-xs sm:text-sm lg:text-[15px] px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl font-medium transition-all hover:scale-[1.03] active:scale-[0.97] whitespace-nowrap"
                     style={{ background: "rgba(201,100,66,0.82)", color: "#fff", boxShadow: "0 2px 12px rgba(201,100,66,0.22)" }}
                   >
                     <span className="sm:hidden">채팅</span>
@@ -215,8 +218,8 @@ export default function Home() {
                   </a>
                   <button
                     onClick={handleLogout}
-                    className="text-xs sm:text-sm px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl transition-colors hover:text-white whitespace-nowrap"
-                    style={{ color: "rgba(255,255,255,0.35)" }}
+                    className="hidden sm:flex items-center gap-1.5 text-xs sm:text-sm lg:text-[15px] px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl transition-colors hover:text-white whitespace-nowrap"
+                    style={{ color: "rgba(255,255,255,0.62)" }}
                   >
                     <span className="sm:hidden">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -230,15 +233,15 @@ export default function Home() {
                 <>
                   <button
                     onClick={() => openAuth("login")}
-                    className="text-xs sm:text-sm px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl transition-colors hover:text-white whitespace-nowrap"
-                    style={{ color: "rgba(255,255,255,0.45)" }}
+                    className="text-xs sm:text-sm lg:text-[15px] px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl transition-colors hover:text-white whitespace-nowrap"
+                    style={{ color: "rgba(255,255,255,0.68)" }}
                   >
                     로그인
                   </button>
                   <button
                     onClick={() => openAuth("signup")}
-                    className="text-xs sm:text-sm px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl font-medium transition-all hover:scale-[1.03] active:scale-[0.97] whitespace-nowrap"
-                    style={{ background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.8)", border: "1px solid rgba(255,255,255,0.08)" }}
+                    className="text-xs sm:text-sm lg:text-[15px] px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl font-medium transition-all hover:scale-[1.03] active:scale-[0.97] whitespace-nowrap"
+                    style={{ background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.92)", border: "1px solid rgba(255,255,255,0.18)" }}
                   >
                     회원가입
                   </button>
@@ -256,7 +259,7 @@ export default function Home() {
             <div style={{ position: "absolute", top: "5%", right: "-10%", width: "600px", height: "600px", background: `radial-gradient(circle, ${BLUE}0C 0%, transparent 60%)` }} />
           </div>
 
-          <div className="max-w-6xl mx-auto px-6 py-20 w-full flex flex-col lg:flex-row items-center gap-12 lg:gap-16 relative">
+          <div className="max-w-[1300px] mx-auto px-6 py-20 w-full flex flex-col lg:flex-row items-center gap-12 lg:gap-16 relative">
             {/* 텍스트 */}
             <div className="flex-1 flex flex-col items-start gap-7 anim">
               <div
@@ -314,12 +317,12 @@ export default function Home() {
 
         {/* ── WHY ── */}
         <section className="py-24 px-6" style={{ background: "#0B0C1C" }}>
-          <div className="max-w-3xl mx-auto">
+          <div className="max-w-[1300px] mx-auto">
             <div className="text-center mb-12 anim">
               <p className="text-xs font-semibold tracking-[0.18em] uppercase mb-3" style={{ color: ACCENT }}>WHY</p>
               <h2 className="text-3xl sm:text-4xl font-bold text-white" style={{ letterSpacing: "-0.01em" }}>이런 경험 있으신가요?</h2>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               {WHY_CARDS.map((c, i) => (
                 <div
                   key={c.num}
@@ -334,7 +337,7 @@ export default function Home() {
                   }}
                 >
                   <span className="text-xs font-bold tabular-nums flex-shrink-0 mt-0.5 tracking-wider" style={{ color: `${c.color}70` }}>{c.num}</span>
-                  <p className="text-sm leading-relaxed" style={{ color: "rgba(255,255,255,0.7)", wordBreak: "keep-all" }}>{c.text}</p>
+                  <p className="text-sm lg:text-base leading-relaxed" style={{ color: "rgba(255,255,255,0.7)", wordBreak: "keep-all" }}>{c.text}</p>
                 </div>
               ))}
             </div>
@@ -416,8 +419,8 @@ export default function Home() {
                     {num}
                   </span>
                   <div className="flex flex-col gap-1">
-                    <p className="text-sm font-semibold text-white" style={{ wordBreak: "keep-all" }}>{title}</p>
-                    <p className="text-sm leading-relaxed" style={{ color: "rgba(255,255,255,0.42)", wordBreak: "keep-all" }}>{desc}</p>
+                    <p className="text-sm lg:text-base font-semibold text-white" style={{ wordBreak: "keep-all" }}>{title}</p>
+                    <p className="text-sm lg:text-base leading-relaxed" style={{ color: "rgba(255,255,255,0.42)", wordBreak: "keep-all" }}>{desc}</p>
                   </div>
                 </div>
               ))}
@@ -470,7 +473,7 @@ export default function Home() {
 
         {/* ── 푸터 ── */}
         <footer className="py-8 px-6" style={{ borderTop: "1px solid rgba(255,255,255,0.05)", background: "#07091A" }}>
-          <div className="max-w-6xl mx-auto flex flex-col items-center gap-2">
+          <div className="max-w-[1300px] mx-auto flex flex-col items-center gap-2">
             <span className="text-sm" style={{ color: "rgba(255,255,255,0.35)" }}>
               취업소크라테스 <span style={{ color: "rgba(255,255,255,0.15)" }}>·</span> <span style={{ color: "rgba(255,255,255,0.2)" }}>JobSocrates</span>
             </span>

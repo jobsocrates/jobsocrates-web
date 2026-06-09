@@ -139,12 +139,12 @@ function MomentCard({ num, color, tag, title, desc, visual, delay }: MomentProps
             <span className="text-xs font-bold tabular-nums tracking-wider" style={{ color: `${color}60` }}>{num}</span>
             <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: `${color}14`, color, letterSpacing: "0.02em" }}>{tag}</span>
           </div>
-          <h3 className="text-lg font-bold text-white leading-snug" style={{ wordBreak: "keep-all", letterSpacing: "-0.01em" }}>{title}</h3>
-          <p className="text-sm leading-relaxed" style={{ color: "rgba(255,255,255,0.45)", wordBreak: "keep-all" }}>{desc}</p>
+          <h3 className="text-lg lg:text-xl font-bold text-white leading-snug" style={{ wordBreak: "keep-all", letterSpacing: "-0.01em" }}>{title}</h3>
+          <p className="text-sm lg:text-base leading-relaxed" style={{ color: "rgba(255,255,255,0.45)", wordBreak: "keep-all" }}>{desc}</p>
         </div>
         {/* 비주얼 */}
         <div
-          className="sm:w-[240px] flex-shrink-0 p-4 border-t sm:border-t-0 sm:border-l flex flex-col justify-center"
+          className="sm:w-[240px] lg:w-[300px] flex-shrink-0 p-4 border-t sm:border-t-0 sm:border-l flex flex-col justify-center"
           style={{ borderColor: "rgba(255,255,255,0.05)", background: "rgba(0,0,0,0.12)" }}
         >
           {visual}
@@ -192,7 +192,7 @@ export function HowSection() {
 
   return (
     <section style={{ background: "#0F1023" }}>
-      <div className="max-w-3xl mx-auto px-6 pt-28 pb-28">
+      <div className="max-w-3xl lg:max-w-5xl mx-auto px-6 pt-28 pb-28">
         <div className="text-center mb-12 anim">
           <p className="text-xs font-semibold tracking-[0.18em] uppercase mb-3" style={{ color: BLUE }}>HOW IT WORKS</p>
           <h2 className="text-3xl sm:text-4xl font-bold leading-tight" style={{ wordBreak: "keep-all", letterSpacing: "-0.01em" }}>
