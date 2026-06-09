@@ -7,9 +7,6 @@ const ACCENT = "#C96442";
 const BLUE = "#6B8EFF";
 const GOLD = "#FFD166";
 
-/* ═══════════════════════════════════════════════════════════════
-   튜토리얼 내용 — 이 객체만 수정하면 됩니다
-═══════════════════════════════════════════════════════════════ */
 export const TUTORIAL_CONTENT = {
   header: "이용 전 꼭 확인해주세요",
 
@@ -61,9 +58,6 @@ export const TUTORIAL_CONTENT = {
 
 type Page = (typeof TUTORIAL_CONTENT.pages)[number];
 
-/* ═══════════════════════════════════════════════════════════════
-   컴포넌트
-═══════════════════════════════════════════════════════════════ */
 interface Props {
   userId: string | null;
   onClose: () => void;
@@ -81,9 +75,7 @@ export function TutorialModal({ userId, onClose }: Props) {
 
   async function close() {
     if (dontShow) {
-      // localStorage: 즉시 저장 (다음 방문부터 적용)
       localStorage.setItem("tutorialSeen", "true");
-      // DB: 크로스 디바이스 동기화 (컬럼 없으면 조용히 실패)
       if (userId) {
         supabase
           .from("profiles")
@@ -102,47 +94,47 @@ export function TutorialModal({ userId, onClose }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center p-5"
-      style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(8px)" }}
+      className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-6"
+      style={{ background: "rgba(0,0,0,0.78)", backdropFilter: "blur(10px)" }}
     >
       <style>{`
         @keyframes tutIn {
-          from { opacity: 0; transform: translateY(18px) scale(0.98); }
-          to   { opacity: 1; transform: translateY(0)   scale(1);    }
+          from { opacity: 0; transform: translateY(20px) scale(0.97); }
+          to   { opacity: 1; transform: translateY(0) scale(1); }
         }
         @keyframes pageIn {
-          from { opacity: 0; transform: translateY(8px); }
-          to   { opacity: 1; transform: translateY(0);   }
+          from { opacity: 0; transform: translateY(10px); }
+          to   { opacity: 1; transform: translateY(0); }
         }
       `}</style>
 
       <div
         className="w-full flex flex-col rounded-2xl overflow-hidden"
         style={{
-          maxWidth: 400,
+          maxWidth: "min(92vw, 680px)",
+          maxHeight: "90vh",
           background: "#0D0D18",
           border: "1px solid rgba(255,255,255,0.1)",
-          boxShadow: "0 32px 80px rgba(0,0,0,0.65)",
+          boxShadow: "0 40px 100px rgba(0,0,0,0.7)",
           animation: "tutIn 0.35s cubic-bezier(0.16,1,0.3,1) forwards",
         }}
       >
-        {/* ── 상단 헤더 ── */}
-        <div className="flex items-center justify-between px-5 pt-5 pb-0">
+        {/* ── 헤더 ── */}
+        <div className="flex items-center justify-between px-7 pt-6 pb-0 flex-shrink-0">
           <span
-            className="text-xs font-semibold px-2.5 py-1 rounded-full"
-            style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.35)", border: "1px solid rgba(255,255,255,0.08)" }}
+            className="text-sm font-semibold px-3 py-1.5 rounded-full"
+            style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.38)", border: "1px solid rgba(255,255,255,0.08)" }}
           >
             {TUTORIAL_CONTENT.header}
           </span>
-          {/* 진행 도트 */}
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-2">
             {pages.map((_, i) => (
               <div
                 key={i}
                 style={{
-                  width: i === pageIdx ? "18px" : "6px",
-                  height: "6px",
-                  borderRadius: "3px",
+                  width: i === pageIdx ? "22px" : "8px",
+                  height: "8px",
+                  borderRadius: "4px",
                   background: i === pageIdx ? ACCENT : i < pageIdx ? `${ACCENT}40` : "rgba(255,255,255,0.1)",
                   transition: "all 0.3s ease",
                 }}
@@ -152,49 +144,50 @@ export function TutorialModal({ userId, onClose }: Props) {
         </div>
 
         {/* ── 챕터 + 제목 ── */}
-        <div className="px-6 pt-4 pb-1">
-          <div className="flex items-center gap-2 mb-2.5">
+        <div className="px-7 pt-5 pb-0 flex-shrink-0">
+          <div className="flex items-center gap-2.5 mb-3">
             <span
-              className="text-xs font-bold px-2.5 py-0.5 rounded-full"
+              className="text-sm font-bold px-3 py-1 rounded-full"
               style={{ background: `${ACCENT}18`, color: ACCENT, border: `1px solid ${ACCENT}30` }}
             >
               {current.chapter}
             </span>
-            <span className="text-base leading-none">{current.icon}</span>
+            <span className="text-xl leading-none">{current.icon}</span>
           </div>
           <h2
-            className="text-lg font-bold leading-snug"
-            style={{ color: "rgba(255,255,255,0.92)", letterSpacing: "-0.02em" }}
+            className="text-2xl sm:text-3xl font-bold leading-snug"
+            style={{ color: "rgba(255,255,255,0.95)", letterSpacing: "-0.02em" }}
           >
             {current.title}
           </h2>
         </div>
 
-        {/* ── 본문 (페이지별, 전환 애니메이션) ── */}
+        {/* ── 본문 ── */}
         <div
           key={animKey}
-          className="px-6 pb-2 pt-4 flex flex-col gap-3"
+          className="px-7 pb-2 pt-5 flex flex-col gap-4 overflow-y-auto flex-1"
           style={{ animation: "pageIn 0.28s ease forwards" }}
         >
+
           {/* 1장 — 뱃지 */}
           {current.id === "badge" && (
             <>
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-4">
                 {current.items.map((item, i) => (
-                  <div key={i} className="flex items-start gap-3">
-                    <span className="text-base flex-shrink-0 mt-0.5 leading-none">{item.icon}</span>
-                    <p className="text-sm leading-relaxed" style={{ color: "rgba(255,255,255,0.7)", wordBreak: "keep-all" }}>
+                  <div key={i} className="flex items-start gap-4">
+                    <span className="text-xl flex-shrink-0 mt-0.5 leading-none">{item.icon}</span>
+                    <p className="text-base leading-relaxed" style={{ color: "rgba(255,255,255,0.75)", wordBreak: "keep-all" }}>
                       {item.text}
                     </p>
                   </div>
                 ))}
               </div>
               <div
-                className="flex items-start gap-2.5 px-4 py-3 rounded-xl"
+                className="flex items-start gap-3 px-5 py-4 rounded-xl"
                 style={{ background: "rgba(255,209,102,0.08)", border: "1px solid rgba(255,209,102,0.28)" }}
               >
-                <span className="text-base leading-none flex-shrink-0 mt-0.5">⚠️</span>
-                <p className="text-sm leading-relaxed font-medium" style={{ color: "rgba(255,209,102,0.9)", wordBreak: "keep-all" }}>
+                <span className="text-xl leading-none flex-shrink-0 mt-0.5">⚠️</span>
+                <p className="text-base leading-relaxed font-medium" style={{ color: "rgba(255,209,102,0.9)", wordBreak: "keep-all" }}>
                   {current.warning}
                 </p>
               </div>
@@ -203,24 +196,24 @@ export function TutorialModal({ userId, onClose }: Props) {
 
           {/* 2장 — 진행 흐름 */}
           {current.id === "flow" && (
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-1.5">
               {current.steps.map((step, i) => (
                 <div
                   key={i}
-                  className="flex items-start gap-3 px-3 py-2.5 rounded-xl"
+                  className="flex items-start gap-4 px-4 py-3.5 rounded-xl"
                   style={{ background: i % 2 === 0 ? "rgba(255,255,255,0.03)" : "transparent" }}
                 >
                   <span
-                    className="text-sm font-bold flex-shrink-0 w-5 text-center mt-px"
+                    className="text-base font-bold flex-shrink-0 w-6 text-center mt-px"
                     style={{ color: BLUE }}
                   >
                     {step.num}
                   </span>
-                  <div className="flex flex-wrap items-baseline gap-1">
-                    <span className="text-sm font-semibold" style={{ color: "rgba(255,255,255,0.88)" }}>
+                  <div className="flex flex-wrap items-baseline gap-2">
+                    <span className="text-base font-semibold" style={{ color: "rgba(255,255,255,0.92)" }}>
                       {step.label}
                     </span>
-                    <span className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.42)", wordBreak: "keep-all" }}>
+                    <span className="text-sm leading-relaxed" style={{ color: "rgba(255,255,255,0.45)", wordBreak: "keep-all" }}>
                       — {step.desc}
                     </span>
                   </div>
@@ -232,65 +225,45 @@ export function TutorialModal({ userId, onClose }: Props) {
           {/* 3장 — 답변 방법 */}
           {current.id === "answer" && (
             <>
-              <p className="text-sm leading-relaxed" style={{ color: "rgba(255,255,255,0.58)", wordBreak: "keep-all" }}>
+              <p className="text-base leading-relaxed" style={{ color: "rgba(255,255,255,0.58)", wordBreak: "keep-all" }}>
                 {current.intro}
               </p>
 
-              {/* ⭕ 좋은 예 */}
               <div
                 className="rounded-xl overflow-hidden"
                 style={{ border: "1px solid rgba(74,222,128,0.28)", background: "rgba(74,222,128,0.07)" }}
               >
-                <div
-                  className="flex items-center gap-2 px-4 py-2 border-b"
-                  style={{ borderColor: "rgba(74,222,128,0.15)" }}
-                >
-                  <span className="text-sm leading-none">⭕</span>
-                  <span className="text-xs font-semibold" style={{ color: "rgb(74,222,128)" }}>
+                <div className="flex items-center gap-2 px-5 py-3 border-b" style={{ borderColor: "rgba(74,222,128,0.15)" }}>
+                  <span className="text-base leading-none">⭕</span>
+                  <span className="text-sm font-semibold" style={{ color: "rgb(74,222,128)" }}>
                     {current.good.label}
                   </span>
                 </div>
-                <div className="px-4 py-3">
-                  <p
-                    className="text-sm leading-relaxed"
-                    style={{ color: "rgba(255,255,255,0.78)", wordBreak: "keep-all", fontStyle: "italic" }}
-                  >
+                <div className="px-5 py-4">
+                  <p className="text-base leading-relaxed" style={{ color: "rgba(255,255,255,0.82)", wordBreak: "keep-all", fontStyle: "italic" }}>
                     {current.good.text}
                   </p>
-                  <p
-                    className="text-xs mt-2 font-semibold"
-                    style={{ color: "rgba(74,222,128,0.8)" }}
-                  >
+                  <p className="text-sm mt-2.5 font-semibold" style={{ color: "rgba(74,222,128,0.85)" }}>
                     → {current.good.reason}
                   </p>
                 </div>
               </div>
 
-              {/* ❌ 아쉬운 예 */}
               <div
                 className="rounded-xl overflow-hidden"
                 style={{ border: "1px solid rgba(248,113,113,0.25)", background: "rgba(248,113,113,0.06)" }}
               >
-                <div
-                  className="flex items-center gap-2 px-4 py-2 border-b"
-                  style={{ borderColor: "rgba(248,113,113,0.15)" }}
-                >
-                  <span className="text-sm leading-none">❌</span>
-                  <span className="text-xs font-semibold" style={{ color: "rgb(248,113,113)" }}>
+                <div className="flex items-center gap-2 px-5 py-3 border-b" style={{ borderColor: "rgba(248,113,113,0.15)" }}>
+                  <span className="text-base leading-none">❌</span>
+                  <span className="text-sm font-semibold" style={{ color: "rgb(248,113,113)" }}>
                     {current.bad.label}
                   </span>
                 </div>
-                <div className="px-4 py-3">
-                  <p
-                    className="text-sm leading-relaxed"
-                    style={{ color: "rgba(255,255,255,0.52)", wordBreak: "keep-all", fontStyle: "italic" }}
-                  >
+                <div className="px-5 py-4">
+                  <p className="text-base leading-relaxed" style={{ color: "rgba(255,255,255,0.55)", wordBreak: "keep-all", fontStyle: "italic" }}>
                     {current.bad.text}
                   </p>
-                  <p
-                    className="text-xs mt-2 font-semibold"
-                    style={{ color: "rgba(248,113,113,0.8)" }}
-                  >
+                  <p className="text-sm mt-2.5 font-semibold" style={{ color: "rgba(248,113,113,0.85)" }}>
                     → {current.bad.reason}
                   </p>
                 </div>
@@ -298,41 +271,40 @@ export function TutorialModal({ userId, onClose }: Props) {
             </>
           )}
 
-          {/* 마지막 장: 다시 안 보기 */}
+          {/* 마지막 장: 다시 안보기 */}
           {isLast && (
-            <label className="flex items-center gap-2.5 cursor-pointer select-none pt-1 pb-1">
+            <label className="flex items-center gap-3 cursor-pointer select-none pt-2 pb-1">
               <input
                 type="checkbox"
                 checked={dontShow}
                 onChange={e => setDontShow(e.target.checked)}
-                style={{ accentColor: ACCENT, width: 14, height: 14, cursor: "pointer" }}
+                style={{ accentColor: ACCENT, width: 16, height: 16, cursor: "pointer" }}
               />
-              <span className="text-xs" style={{ color: "rgba(255,255,255,0.28)" }}>
+              <span className="text-sm" style={{ color: "rgba(255,255,255,0.32)" }}>
                 다시 안 보기
               </span>
             </label>
           )}
         </div>
 
-        {/* ── 하단 버튼 ── */}
+        {/* ── 버튼 ── */}
         <div
-          className="px-6 pt-4 pb-6 flex flex-col gap-2"
+          className="px-7 pt-4 pb-7 flex flex-col gap-2.5 flex-shrink-0"
           style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
         >
           <button
             onClick={goNext}
-            className="w-full py-3 rounded-xl text-sm font-semibold text-white transition-all hover:scale-[1.01] active:scale-[0.99]"
-            style={{ background: ACCENT, boxShadow: `0 4px 16px ${ACCENT}28` }}
+            className="w-full py-4 rounded-xl text-base font-bold text-white transition-all hover:scale-[1.01] active:scale-[0.99]"
+            style={{ background: ACCENT, boxShadow: `0 4px 20px ${ACCENT}30`, letterSpacing: "-0.01em" }}
           >
             {isLast ? "시작하기" : "다음"}
           </button>
 
-          {/* 1장엔 건너뛰기 없음, 마지막 장엔 건너뛰기 없음 */}
           {!isFirst && !isLast && (
             <button
               onClick={close}
-              className="w-full py-1.5 text-xs transition-all hover:opacity-60"
-              style={{ color: "rgba(255,255,255,0.2)" }}
+              className="w-full py-2 text-sm transition-all hover:opacity-60"
+              style={{ color: "rgba(255,255,255,0.22)" }}
             >
               건너뛰기
             </button>
