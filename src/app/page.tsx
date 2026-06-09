@@ -325,7 +325,7 @@ export default function Home() {
         <section className="px-6 sm:px-8" style={{ background: "#0D0E1F" }}>
           <div className="max-w-[900px] mx-auto py-28 anim flex flex-col gap-10">
             <p className="text-base font-medium" style={{ color: "rgba(255,255,255,0.4)" }}>이 네 가지, 공통점이 하나 있어요.</p>
-            <h2 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.5]" style={{ wordBreak: "keep-all", letterSpacing: "-0.03em" }}>
+            <h2 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.85]" style={{ wordBreak: "keep-all", letterSpacing: "-0.03em" }}>
               <span className="text-white">할 말이 없는 게 아니라</span><br />
               <span style={{ background: "linear-gradient(120deg, #818CF8 0%, #38BDF8 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>어떻게 꺼내야 할지</span><br />
               <span className="text-white">모르는 거예요.</span>
@@ -386,7 +386,7 @@ export default function Home() {
               질문에 자세하게 답할수록, 더 좋은 질문이 돌아옵니다.
             </p>
             <h2
-              className="text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.5]"
+              className="text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.85]"
               style={{ letterSpacing: "-0.03em", wordBreak: "keep-all" }}
             >
               <span className="text-white">그 대화가 쌓이면서</span><br />
