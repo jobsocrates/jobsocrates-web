@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { buildPrintHtml, stripMd, parseRevisionMsg, type SummaryMsg } from "@/components/CoverLetterSummary";
+import { buildPrintHtml, stripMd, parseRevisionMsg, type SummaryMsg, type SummaryInterviewQ } from "@/components/CoverLetterSummary";
 
 const BG = "#0D0D18";
 const ACCENT = "#C96442";
@@ -48,6 +48,16 @@ export default function MyPage() {
   const [pdfLoadingId, setPdfLoadingId] = useState<string | null>(null);
   const [viewLoadingId, setViewLoadingId] = useState<string | null>(null);
 
+  // 비밀번호 변경
+  const [pwNew, setPwNew] = useState("");
+  const [pwConfirm, setPwConfirm] = useState("");
+  const [pwLoading, setPwLoading] = useState(false);
+  const [pwMsg, setPwMsg] = useState<{ text: string; ok: boolean } | null>(null);
+
+  // 회원탈퇴
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
       if (!data.user) { setLoading(false); return; }
@@ -77,7 +87,7 @@ export default function MyPage() {
   async function handleDownloadPdf(jobTitle: string, item: CoverItemRecord) {
     setPdfLoadingId(item.id);
     try {
-      const [{ data: msgRows }, { data: revRows }] = await Promise.all([
+      const [{ data: msgRows }, { data: revRows }, { data: iqRows }] = await Promise.all([
         supabase.from("messages")
           .select("id, role, content, created_at")
           .eq("cover_item_id", item.id)
@@ -87,6 +97,10 @@ export default function MyPage() {
           .eq("cover_item_id", item.id)
           .limit(1)
           .maybeSingle(),
+        supabase.from("interview_questions")
+          .select("question, order_index, interview_answers(user_answer, ai_feedback)")
+          .eq("cover_item_id", item.id)
+          .order("order_index", { ascending: true }),
       ]);
 
       const msgs: SummaryMsg[] = (msgRows || []).map((m, i) => ({
@@ -98,7 +112,6 @@ export default function MyPage() {
       // split at revision message
       const revMsgIdx = msgs.findIndex(m => m.role === "bot" && m.text.includes("[수정본]"));
       const diagMsgs = revMsgIdx >= 0 ? msgs.slice(0, revMsgIdx + 1) : msgs;
-      const interviewMsgs = revMsgIdx >= 0 ? msgs.slice(revMsgIdx + 1) : [];
 
       let revision = "";
       let changes = "";
@@ -118,7 +131,19 @@ export default function MyPage() {
         return { ...m, text: stripMd(m.text) ? m.text : m.text };
       });
 
-      const html = buildPrintHtml(jobTitle, item.question, revision, changes, cleanDiag, interviewMsgs);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const interviewQs: SummaryInterviewQ[] = (iqRows || []).map((iq: any) => {
+        const answers = iq.interview_answers || [];
+        const qMsgs: SummaryMsg[] = [];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        answers.forEach((a: any, j: number) => {
+          if (a.user_answer) qMsgs.push({ id: j * 2, role: "user", text: a.user_answer });
+          if (a.ai_feedback) qMsgs.push({ id: j * 2 + 1, role: "bot", text: a.ai_feedback });
+        });
+        return { question: iq.question as string, msgs: qMsgs };
+      });
+
+      const html = buildPrintHtml(jobTitle, item.question, revision, changes, cleanDiag, interviewQs);
       const win = window.open("", "_blank");
       if (!win) return;
       win.document.write(html);
@@ -133,7 +158,7 @@ export default function MyPage() {
   async function handleViewHtml(jobTitle: string, item: CoverItemRecord) {
     setViewLoadingId(item.id);
     try {
-      const [{ data: msgRows }, { data: revRows }] = await Promise.all([
+      const [{ data: msgRows }, { data: revRows }, { data: iqRows }] = await Promise.all([
         supabase.from("messages")
           .select("id, role, content, created_at")
           .eq("cover_item_id", item.id)
@@ -143,6 +168,10 @@ export default function MyPage() {
           .eq("cover_item_id", item.id)
           .limit(1)
           .maybeSingle(),
+        supabase.from("interview_questions")
+          .select("question, order_index, interview_answers(user_answer, ai_feedback)")
+          .eq("cover_item_id", item.id)
+          .order("order_index", { ascending: true }),
       ]);
 
       const msgs: SummaryMsg[] = (msgRows || []).map((m, i) => ({
@@ -153,7 +182,6 @@ export default function MyPage() {
 
       const revMsgIdx = msgs.findIndex(m => m.role === "bot" && m.text.includes("[수정본]"));
       const diagMsgs = revMsgIdx >= 0 ? msgs.slice(0, revMsgIdx + 1) : msgs;
-      const interviewMsgs = revMsgIdx >= 0 ? msgs.slice(revMsgIdx + 1) : [];
 
       let revision = "";
       let changes = "";
@@ -167,7 +195,19 @@ export default function MyPage() {
         changes = parsed.changes;
       }
 
-      const html = buildPrintHtml(jobTitle, item.question, revision, changes, diagMsgs, interviewMsgs);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const interviewQs: SummaryInterviewQ[] = (iqRows || []).map((iq: any) => {
+        const answers = iq.interview_answers || [];
+        const qMsgs: SummaryMsg[] = [];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        answers.forEach((a: any, j: number) => {
+          if (a.user_answer) qMsgs.push({ id: j * 2, role: "user", text: a.user_answer });
+          if (a.ai_feedback) qMsgs.push({ id: j * 2 + 1, role: "bot", text: a.ai_feedback });
+        });
+        return { question: iq.question as string, msgs: qMsgs };
+      });
+
+      const html = buildPrintHtml(jobTitle, item.question, revision, changes, diagMsgs, interviewQs);
       const win = window.open("", "_blank");
       if (!win) return;
       win.document.write(html);
@@ -176,6 +216,26 @@ export default function MyPage() {
     } finally {
       setViewLoadingId(null);
     }
+  }
+
+  async function handleChangePassword() {
+    if (!pwNew.trim()) { setPwMsg({ text: "새 비밀번호를 입력해주세요.", ok: false }); return; }
+    if (pwNew.length < 6) { setPwMsg({ text: "비밀번호는 6자 이상이어야 해요.", ok: false }); return; }
+    if (pwNew !== pwConfirm) { setPwMsg({ text: "비밀번호가 일치하지 않아요.", ok: false }); return; }
+    setPwLoading(true);
+    setPwMsg(null);
+    const { error } = await supabase.auth.updateUser({ password: pwNew });
+    setPwLoading(false);
+    if (error) setPwMsg({ text: error.message, ok: false });
+    else { setPwMsg({ text: "비밀번호가 변경됐어요.", ok: true }); setPwNew(""); setPwConfirm(""); }
+  }
+
+  async function handleDeleteAccount() {
+    setDeleteLoading(true);
+    // profiles 삭제 (cascade로 연결 데이터도 정리됨)
+    if (user) await supabase.from("profiles").delete().eq("id", user.id);
+    await supabase.auth.signOut();
+    window.location.href = "/";
   }
 
   if (loading) {
@@ -192,7 +252,7 @@ export default function MyPage() {
       <div style={{ background: BG, minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16 }}>
         <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
         <p style={{ fontSize: 13, color: "rgba(255,255,255,0.35)" }}>로그인이 필요합니다.</p>
-        <Link href="/" style={{ fontSize: 12, color: "rgba(255,255,255,0.25)", textDecoration: "none" }}>← 홈으로</Link>
+        <Link href="/" style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", textDecoration: "none" }}>← 홈으로</Link>
       </div>
     );
   }
@@ -202,23 +262,13 @@ export default function MyPage() {
       <style>{`@keyframes spin { to { transform: rotate(360deg); } } ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }`}</style>
 
       {/* Header */}
-      <header style={{ height: 52, padding: "0 20px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid rgba(255,255,255,0.06)", background: "rgba(13,13,24,0.96)", backdropFilter: "blur(12px)", position: "sticky", top: 0, zIndex: 40 }}>
-        <Link href="/chat" style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", textDecoration: "none", display: "flex", alignItems: "center", gap: 6 }}>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <header style={{ height: 52, padding: "0 20px", display: "flex", alignItems: "center", borderBottom: "1px solid rgba(255,255,255,0.08)", background: "rgba(13,13,24,0.98)", backdropFilter: "blur(12px)", position: "sticky", top: 0, zIndex: 40 }}>
+        <Link href="/" style={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.7)", textDecoration: "none", display: "flex", alignItems: "center", gap: 6 }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
           </svg>
-          채팅으로
+          홈으로
         </Link>
-        <span style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.55)" }}>마이페이지</span>
-        <button
-          onClick={() => {
-            sessionStorage.setItem("showTutorial", "1");
-            router.push("/chat");
-          }}
-          style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", background: "none", border: "none", cursor: "pointer", padding: 0, textDecoration: "underline", textUnderlineOffset: 3 }}
-        >
-          사용법
-        </button>
       </header>
 
       <div style={{ maxWidth: 640, margin: "0 auto", padding: "24px 20px" }}>
@@ -227,19 +277,27 @@ export default function MyPage() {
         <div style={{ borderRadius: 20, border: `1px solid ${credits > 0 ? "rgba(255,209,102,0.3)" : "rgba(248,113,113,0.25)"}`, background: credits > 0 ? "rgba(255,209,102,0.06)" : "rgba(248,113,113,0.05)", padding: "24px 24px 20px", marginBottom: 16 }}>
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
             <div>
-              <p style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginBottom: 8 }}>{user.email}</p>
-              <p style={{ fontSize: 12, fontWeight: 600, color: credits > 0 ? "rgba(255,209,102,0.6)" : "rgba(248,113,113,0.6)", marginBottom: 6 }}>남은 뱃지</p>
+              <p style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginBottom: 8 }}>{user.email}</p>
+              <p style={{ fontSize: 13, fontWeight: 600, color: credits > 0 ? "rgba(255,209,102,0.7)" : "rgba(248,113,113,0.7)", marginBottom: 6 }}>남은 뱃지</p>
               <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
                 <span style={{ fontSize: 52, fontWeight: 800, color: credits > 0 ? GOLD : "rgb(248,113,113)", letterSpacing: "-0.03em", lineHeight: 1 }}>{credits}</span>
                 <span style={{ fontSize: 16, color: credits > 0 ? "rgba(255,209,102,0.55)" : "rgba(248,113,113,0.55)" }}>개</span>
               </div>
               {credits === 0 && (
-                <p style={{ fontSize: 12, color: "rgba(248,113,113,0.7)", marginTop: 8, fontWeight: 500 }}>뱃지가 없어요. 관리자에게 문의해주세요.</p>
+                <p style={{ fontSize: 13, color: "rgba(248,113,113,0.8)", marginTop: 8, fontWeight: 500 }}>뱃지가 없어요. 관리자에게 문의해주세요.</p>
               )}
             </div>
-            <span style={{ fontSize: 48 }}>🏅</span>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 10 }}>
+              <span style={{ fontSize: 48 }}>🏅</span>
+              <button
+                onClick={() => { sessionStorage.setItem("showTutorial", "1"); router.push("/chat"); }}
+                style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.65)", background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.16)", borderRadius: 8, padding: "5px 12px", cursor: "pointer" }}
+              >
+                사용법
+              </button>
+            </div>
           </div>
-          <p style={{ fontSize: 11, color: "rgba(255,255,255,0.18)", marginTop: 16 }}>뱃지 1개 = 자소서 문항 분석 1회 · 분석 시작 시 차감</p>
+          <p style={{ fontSize: 12, color: "rgba(255,255,255,0.28)", marginTop: 16 }}>뱃지 1개 = 자소서 문항 분석 1회 · 분석 시작 시 차감</p>
         </div>
 
         {/* 뱃지 내역 */}
@@ -338,14 +396,93 @@ export default function MyPage() {
         )}
 
         {transactions.length === 0 && sessions.length === 0 && (
-          <div style={{ textAlign: "center", padding: "60px 0" }}>
-            <p style={{ fontSize: 14, color: "rgba(255,255,255,0.2)", marginBottom: 16 }}>아직 기록이 없어요</p>
-            <Link href="/chat" style={{ display: "inline-block", fontSize: 13, color: ACCENT, textDecoration: "none", padding: "10px 24px", borderRadius: 12, background: `rgba(201,100,66,0.12)`, border: `1px solid rgba(201,100,66,0.25)` }}>
+          <div style={{ textAlign: "center", padding: "40px 0" }}>
+            <p style={{ fontSize: 14, color: "rgba(255,255,255,0.3)", marginBottom: 16 }}>아직 기록이 없어요</p>
+            <Link href="/chat" style={{ display: "inline-block", fontSize: 13, fontWeight: 600, color: ACCENT, textDecoration: "none", padding: "10px 24px", borderRadius: 12, background: `rgba(201,100,66,0.12)`, border: `1px solid rgba(201,100,66,0.25)` }}>
               자소서 분석 시작하기 →
             </Link>
           </div>
         )}
+
+        {/* 비밀번호 변경 */}
+        <div style={{ borderRadius: 16, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.02)", padding: "20px 20px", marginTop: 16 }}>
+          <p style={{ fontSize: 14, fontWeight: 700, color: "rgba(255,255,255,0.75)", marginBottom: 16 }}>비밀번호 변경</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <input
+              type="password"
+              placeholder="새 비밀번호 (6자 이상)"
+              value={pwNew}
+              onChange={e => setPwNew(e.target.value)}
+              style={{ width: "100%", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 10, padding: "10px 14px", fontSize: 14, color: "rgba(255,255,255,0.85)", outline: "none", boxSizing: "border-box" }}
+            />
+            <input
+              type="password"
+              placeholder="새 비밀번호 확인"
+              value={pwConfirm}
+              onChange={e => setPwConfirm(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && handleChangePassword()}
+              style={{ width: "100%", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 10, padding: "10px 14px", fontSize: 14, color: "rgba(255,255,255,0.85)", outline: "none", boxSizing: "border-box" }}
+            />
+            {pwMsg && (
+              <p style={{ fontSize: 13, fontWeight: 500, color: pwMsg.ok ? "rgb(74,222,128)" : "rgb(248,113,113)" }}>{pwMsg.text}</p>
+            )}
+            <button
+              onClick={handleChangePassword}
+              disabled={pwLoading}
+              style={{ padding: "10px 0", borderRadius: 10, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.14)", color: "rgba(255,255,255,0.75)", fontSize: 14, fontWeight: 600, cursor: pwLoading ? "default" : "pointer", opacity: pwLoading ? 0.5 : 1 }}
+            >
+              {pwLoading ? "변경 중..." : "비밀번호 변경"}
+            </button>
+          </div>
+        </div>
+
+        {/* 회원탈퇴 */}
+        <div style={{ marginTop: 12, padding: "16px 20px", borderRadius: 16, border: "1px solid rgba(248,113,113,0.15)", background: "rgba(248,113,113,0.03)" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div>
+              <p style={{ fontSize: 14, fontWeight: 700, color: "rgba(255,255,255,0.65)" }}>회원탈퇴</p>
+              <p style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", marginTop: 3 }}>계정과 모든 데이터가 삭제돼요.</p>
+            </div>
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              style={{ fontSize: 13, fontWeight: 600, color: "rgba(248,113,113,0.8)", background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.2)", borderRadius: 10, padding: "8px 16px", cursor: "pointer" }}
+            >
+              탈퇴하기
+            </button>
+          </div>
+        </div>
+
+        <div style={{ height: 40 }} />
       </div>
+
+      {/* 회원탈퇴 확인 모달 */}
+      {showDeleteConfirm && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)" }}
+          onClick={() => !deleteLoading && setShowDeleteConfirm(false)}>
+          <div style={{ background: "#18182A", border: "1px solid rgba(248,113,113,0.3)", borderRadius: 20, padding: "28px 24px", maxWidth: 320, width: "100%", textAlign: "center" }}
+            onClick={e => e.stopPropagation()}>
+            <p style={{ fontSize: 20 }}>⚠️</p>
+            <p style={{ fontSize: 16, fontWeight: 700, color: "rgba(255,255,255,0.9)", marginTop: 12, marginBottom: 8 }}>정말 탈퇴하시겠어요?</p>
+            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", marginBottom: 24, wordBreak: "keep-all" }}>계정과 모든 분석 기록이 영구 삭제되며 복구할 수 없어요.</p>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={deleteLoading}
+                style={{ flex: 1, padding: "11px 0", borderRadius: 12, background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.65)", fontSize: 14, fontWeight: 600, cursor: "pointer" }}
+              >
+                취소
+              </button>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deleteLoading}
+                style={{ flex: 1, padding: "11px 0", borderRadius: 12, background: "rgba(248,113,113,0.15)", border: "1px solid rgba(248,113,113,0.35)", color: "rgb(248,113,113)", fontSize: 14, fontWeight: 700, cursor: deleteLoading ? "default" : "pointer", opacity: deleteLoading ? 0.6 : 1 }}
+              >
+                {deleteLoading ? "처리 중..." : "탈퇴 확인"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

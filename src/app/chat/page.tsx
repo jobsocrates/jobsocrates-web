@@ -493,6 +493,7 @@ export default function ChatPage() {
   const [jobTitle, setJobTitle] = useState("");
   const [jdKeywords, setJdKeywords] = useState<string[]>([]);
   const [jdFile, setJdFile] = useState<File | null>(null);
+  const [jdImageData, setJdImageData] = useState<string | null>(null);
   const [isExtractingJD, setIsExtractingJD] = useState(false);
 
   const [items, setItems] = useState<CoverItem[]>([initItem]);
@@ -669,6 +670,7 @@ export default function ChatPage() {
     setIsExtractingJD(true);
     try {
       const base64 = await toBase64(f);
+      setJdImageData(base64);
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -677,6 +679,7 @@ export default function ChatPage() {
       const data = await res.json();
       setJdKeywords(Array.isArray(data) ? data : []);
     } catch {
+      setJdImageData(null);
       setJdKeywords([]);
     } finally {
       setIsExtractingJD(false);
@@ -707,7 +710,7 @@ export default function ChatPage() {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "analyze", jobTitle, question, jdKeywords, draft, charLimit, messages: history }),
+        body: JSON.stringify({ type: "analyze", jobTitle, question, jdKeywords, draft, charLimit, messages: history, jdImageData: jdImageData || undefined, jdMediaType: jdFile?.type || "image/jpeg" }),
       });
       if (!res.body) throw new Error();
       const reader = res.body.getReader();
@@ -1194,13 +1197,12 @@ export default function ChatPage() {
           </button>
           <div className="flex items-center gap-2 flex-shrink-0">
             {currentUser && userCredits !== null && currentUser.email !== ADMIN_EMAIL && (
-              <Link
-                href="/mypage"
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs lg:text-[15px] font-semibold transition-all hover:opacity-80"
-                style={{ background: "rgba(255,209,102,0.12)", border: "1px solid rgba(255,209,102,0.25)", color: "rgba(255,209,102,0.85)" }}
+              <div
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs lg:text-[15px] font-semibold"
+                style={{ background: "rgba(255,209,102,0.12)", border: "1px solid rgba(255,209,102,0.25)", color: "rgba(255,209,102,0.9)" }}
               >
                 🏅 {userCredits}
-              </Link>
+              </div>
             )}
             <button
               onClick={async () => { await supabase.auth.signOut(); window.location.href = "/"; }}
@@ -2191,6 +2193,7 @@ export default function ChatPage() {
           question={selected.question}
           draft={selected.draft}
           msgs={selected.msgs}
+          interviewQs={selected.interviewQs.map(q => ({ question: q.question, msgs: q.msgs }))}
           onClose={() => setShowSummary(false)}
           onNextItem={() => { setShowSummary(false); addItem(); }}
         />

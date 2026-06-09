@@ -154,14 +154,35 @@ export async function POST(req: Request) {
     }
 
     case "analyze": {
+      const jdSection = body.jdImageData
+        ? `JD: 첫 메시지 이미지로 제공됨 (이미지 전체를 읽고 분석에 활용해라)`
+        : `JD 키워드: ${(body.jdKeywords ?? []).join(", ") || "없음"}`;
       const sysText = prompt("analyze") +
-        `\n\n## 세션 정보\n직무: ${body.jobTitle}\n문항: ${body.question || "미입력"}\nJD 키워드: ${(body.jdKeywords ?? []).join(", ") || "없음"}\n글자 수 제한: ${body.charLimit ? `${body.charLimit}자 (수정본 작성 시 이 글자 수에 맞춰야 함)` : "미입력"}\n\n## 자소서 초안\n${body.draft}`;
+        `\n\n## 세션 정보\n직무: ${body.jobTitle}\n문항: ${body.question || "미입력"}\n${jdSection}\n글자 수 제한: ${body.charLimit ? `${body.charLimit}자 (수정본 작성 시 이 글자 수에 맞춰야 함)` : "미입력"}\n\n## 자소서 초안\n${body.draft}`;
       const sys: Anthropic.Messages.TextBlockParam[] = [
         { type: "text", text: sysText, cache_control: { type: "ephemeral" } },
       ];
-      const msgs: MsgParam[] = body.messages?.length > 0
+      let msgs: MsgParam[] = body.messages?.length > 0
         ? body.messages
         : [{ role: "user", content: "자소서 초안을 분석하고 첫 질문을 시작해줘." }];
+      // JD 이미지가 있으면 첫 번째 user 메시지에 이미지 블록 삽입
+      if (body.jdImageData && msgs.length > 0 && msgs[0].role === "user" && typeof msgs[0].content === "string") {
+        const mediaType = (body.jdMediaType ?? "image/jpeg") as "image/jpeg" | "image/png" | "image/gif" | "image/webp";
+        msgs = [
+          {
+            role: "user",
+            content: [
+              {
+                type: "image",
+                source: { type: "base64", media_type: mediaType, data: body.jdImageData },
+                cache_control: { type: "ephemeral" },
+              },
+              { type: "text", text: msgs[0].content },
+            ],
+          },
+          ...msgs.slice(1),
+        ];
+      }
       return stream(sys, msgs);
     }
 

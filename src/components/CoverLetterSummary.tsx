@@ -12,11 +12,17 @@ export interface SummaryMsg {
   text: string;
 }
 
+export interface SummaryInterviewQ {
+  question: string;
+  msgs: SummaryMsg[];
+}
+
 interface Props {
   jobTitle: string;
   question: string;
   draft: string;
   msgs: SummaryMsg[];
+  interviewQs?: SummaryInterviewQ[];
   onClose: () => void;
   onNextItem?: () => void;
 }
@@ -60,7 +66,7 @@ export function buildPrintHtml(
   revision: string,
   changes: string,
   diagMsgs: SummaryMsg[],
-  interviewMsgs: SummaryMsg[]
+  interviewQs: SummaryInterviewQ[]
 ): string {
   const changeItems = changes
     .split("\n")
@@ -144,6 +150,10 @@ body{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#ff
 .legend-dot{width:10px;height:10px;border-radius:50%;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 
 hr{border:none;border-top:1px solid #d1d5db;margin:40px 0}
+.interview-q{margin-bottom:28px}
+.interview-q-num{font-size:10px;font-weight:800;color:#4338ca;letter-spacing:.1em;margin-bottom:6px;text-transform:uppercase}
+.interview-q-text{font-size:13.5px;font-weight:600;color:#111827;line-height:1.65;word-break:keep-all;padding:12px 16px;background:#eef2ff;border-radius:0 10px 10px 10px;border-left:4px solid #4338ca;margin-bottom:10px}
+.no-answer{font-size:12px;color:#9ca3af;font-style:italic;margin-left:4px}
 @media print{body{padding:20px 24px}}
 </style>
 </head>
@@ -188,18 +198,22 @@ ${revision ? `
   }).join("")}
 </div>
 
-${interviewMsgs.length > 0 ? `
+${interviewQs.length > 0 ? `
 <hr>
 <div class="section">
   <div class="section-header">
     <span class="section-num">${revision ? "03" : "02"}</span>
     <span class="section-title">면접 예상 Q&amp;A</span>
   </div>
-  <div class="legend">
-    <div class="legend-item"><div class="legend-dot" style="background:#4338ca"></div> AI 질문</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#c2410c"></div> 나의 답변</div>
-  </div>
-  ${interviewMsgs.map(m => msgRow(m)).join("")}
+  ${interviewQs.map((q, i) => `
+    <div class="interview-q">
+      <p class="interview-q-num">Q${i + 1}</p>
+      <p class="interview-q-text">${escHtml(q.question)}</p>
+      ${q.msgs.length > 0
+        ? q.msgs.map(m => msgRow(m)).join("")
+        : '<p class="no-answer">아직 답변하지 않은 질문이에요.</p>'}
+    </div>
+  `).join("")}
 </div>
 ` : ""}
 
@@ -208,7 +222,7 @@ ${interviewMsgs.length > 0 ? `
 }
 
 /* ── 메인 컴포넌트 ── */
-export function CoverLetterSummary({ jobTitle, question, draft, msgs, onClose, onNextItem }: Props) {
+export function CoverLetterSummary({ jobTitle, question, draft, msgs, interviewQs = [], onClose, onNextItem }: Props) {
   useEffect(() => {
     document.body.style.overflow = "hidden";
     return () => { document.body.style.overflow = ""; };
@@ -216,7 +230,6 @@ export function CoverLetterSummary({ jobTitle, question, draft, msgs, onClose, o
 
   const revMsgIdx = msgs.findIndex((m) => m.role === "bot" && m.text.includes("[수정본]"));
   const diagMsgs = revMsgIdx >= 0 ? msgs.slice(0, revMsgIdx + 1) : msgs;
-  const interviewMsgs = revMsgIdx >= 0 ? msgs.slice(revMsgIdx + 1) : [];
 
   const { revision, changes } =
     revMsgIdx >= 0 ? parseRevisionMsg(msgs[revMsgIdx].text) : { revision: "", changes: "" };
@@ -228,7 +241,7 @@ export function CoverLetterSummary({ jobTitle, question, draft, msgs, onClose, o
 
   function handlePdf() {
     const html = buildPrintHtml(
-      jobTitle, question, revision, changes, diagMsgs, interviewMsgs
+      jobTitle, question, revision, changes, diagMsgs, interviewQs
     );
     const win = window.open("", "_blank");
     if (!win) return;
@@ -279,22 +292,19 @@ export function CoverLetterSummary({ jobTitle, question, draft, msgs, onClose, o
       <div className="flex-1 overflow-y-auto px-6 py-7">
         <div className="max-w-4xl mx-auto flex flex-col gap-12">
 
-          {/* 01 · 자소서 비교 */}
-          <Section number="01" title="자소서 비교">
+          {/* 01 · 수정본 */}
+          <Section number="01" title="수정본">
             <div className="flex flex-col gap-4">
-              <div className="grid grid-cols-2 gap-4">
-                <DraftBox label="원본 초안" text={draft} />
-                {revision ? (
-                  <DraftBox label="수정본" text={revision} accent />
-                ) : (
-                  <div
-                    className="rounded-2xl flex items-center justify-center py-10"
-                    style={{ background: "rgba(255,255,255,0.02)", border: "1px dashed rgba(255,255,255,0.1)" }}
-                  >
-                    <p className="text-sm" style={{ color: "rgba(255,255,255,0.2)" }}>수정본이 아직 작성되지 않았어요</p>
-                  </div>
-                )}
-              </div>
+              {revision ? (
+                <DraftBox label="수정된 자소서" text={revision} accent />
+              ) : (
+                <div
+                  className="rounded-2xl flex items-center justify-center py-10"
+                  style={{ background: "rgba(255,255,255,0.02)", border: "1px dashed rgba(255,255,255,0.1)" }}
+                >
+                  <p className="text-sm" style={{ color: "rgba(255,255,255,0.2)" }}>수정본이 아직 작성되지 않았어요</p>
+                </div>
+              )}
 
               {changeItems.length > 0 && (
                 <div
@@ -339,13 +349,24 @@ export function CoverLetterSummary({ jobTitle, question, draft, msgs, onClose, o
           </Section>
 
           {/* 03 · 면접 Q&A */}
-          {interviewMsgs.length > 0 && (
+          {interviewQs.length > 0 && (
             <Section number="03" title="면접 예상 Q&A">
-              <div className="flex flex-col gap-3">
-                {interviewMsgs.map((msg) => {
-                  if (!stripMd(msg.text).trim()) return null;
-                  return <SummaryMsgRow key={msg.id} msg={msg} />;
-                })}
+              <div className="flex flex-col gap-6">
+                {interviewQs.map((q, i) => (
+                  <div key={i}>
+                    <div className="flex items-start gap-2 mb-3">
+                      <span className="text-xs font-bold flex-shrink-0 mt-[3px]" style={{ color: BLUE }}>Q{i + 1}</span>
+                      <p className="text-sm font-semibold text-white" style={{ wordBreak: "keep-all", lineHeight: 1.6 }}>{q.question}</p>
+                    </div>
+                    {q.msgs.length > 0 ? (
+                      <div className="flex flex-col gap-3">
+                        {q.msgs.map((msg) => <SummaryMsgRow key={msg.id} msg={msg} />)}
+                      </div>
+                    ) : (
+                      <p className="text-xs" style={{ color: "rgba(255,255,255,0.25)" }}>아직 답변하지 않은 질문이에요</p>
+                    )}
+                  </div>
+                ))}
               </div>
             </Section>
           )}

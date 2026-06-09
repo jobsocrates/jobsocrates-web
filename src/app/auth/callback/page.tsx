@@ -2,6 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import type { Session } from "@supabase/supabase-js";
+
+async function ensureProfile(session: Session) {
+  const { user } = session;
+  await supabase.from("profiles").upsert(
+    { id: user.id, email: user.email ?? "", credits: 0 },
+    { onConflict: "id", ignoreDuplicates: true }
+  );
+}
 
 export default function AuthCallbackPage() {
   const [error, setError] = useState("");
@@ -23,25 +32,32 @@ export default function AuthCallbackPage() {
     console.log("[Callback] href:", window.location.href);
 
     if (code) {
-      supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
+      supabase.auth.exchangeCodeForSession(code).then(async ({ data, error }) => {
         if (error) setError(error.message);
-        else window.location.href = "/";
+        else {
+          if (data.session) await ensureProfile(data.session);
+          window.location.href = "/";
+        }
       });
       return;
     }
 
     if (token_hash && type) {
-      supabase.auth.verifyOtp({ token_hash, type: type as "signup" | "recovery" | "email" }).then(({ error }) => {
+      supabase.auth.verifyOtp({ token_hash, type: type as "signup" | "recovery" | "email" }).then(async ({ data, error }) => {
         if (error) setError(error.message);
-        else window.location.href = "/";
+        else {
+          if (data.session) await ensureProfile(data.session);
+          window.location.href = "/";
+        }
       });
       return;
     }
 
     // 방법 3: onAuthStateChange로 대기 (Supabase가 hash 자동 처리하는 경우)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log("[Callback] auth event:", event, !!session);
       if (event === "SIGNED_IN" && session) {
+        await ensureProfile(session);
         window.location.href = "/";
       }
     });

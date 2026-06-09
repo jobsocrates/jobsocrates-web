@@ -80,9 +80,12 @@ export default function AdminPage() {
 
   // Users
   const [users, setUsers] = useState<UserProfile[]>([]);
+  const [usersLoading, setUsersLoading] = useState(false);
   const [creditInputs, setCreditInputs] = useState<Record<string, string>>({});
   const [grantingId, setGrantingId] = useState<string | null>(null);
   const [grantedId, setGrantedId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; email: string } | null>(null);
+  const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
 
   // Notes
   const [goodNotes, setGoodNotes] = useState("");
@@ -192,11 +195,17 @@ export default function AdminPage() {
   }
 
   async function fetchUsers() {
-    const { data } = await supabase
-      .from("profiles")
-      .select("id, email, credits, created_at")
-      .order("created_at", { ascending: false });
-    setUsers((data || []) as UserProfile[]);
+    setUsersLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, email, credits, created_at")
+        .order("created_at", { ascending: false });
+      if (error) console.error("[fetchUsers]", error);
+      setUsers((data || []) as UserProfile[]);
+    } finally {
+      setUsersLoading(false);
+    }
   }
 
   async function adjustCredit(userId: string, sign: 1 | -1) {
@@ -212,6 +221,14 @@ export default function AdminPage() {
       setTimeout(() => setGrantedId(null), 2000);
     }
     setGrantingId(null);
+  }
+
+  async function handleDeleteUser(userId: string) {
+    setDeletingUserId(userId);
+    await supabase.from("profiles").delete().eq("id", userId);
+    setUsers(prev => prev.filter(u => u.id !== userId));
+    setDeleteTarget(null);
+    setDeletingUserId(null);
   }
 
   async function fetchNotes() {
@@ -292,18 +309,23 @@ export default function AdminPage() {
       `}</style>
 
       {/* Header */}
-      <header style={{ height: 52, padding: "0 20px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid rgba(255,255,255,0.06)", background: "rgba(13,13,24,0.96)", backdropFilter: "blur(12px)", position: "sticky", top: 0, zIndex: 40 }}>
-        <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.4)" }}>Admin</span>
+      <header style={{ height: 56, padding: "0 20px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid rgba(255,255,255,0.08)", background: "rgba(13,13,24,0.98)", backdropFilter: "blur(12px)", position: "sticky", top: 0, zIndex: 40 }}>
+        <span style={{ fontSize: 13, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(255,255,255,0.7)" }}>Admin</span>
 
-        <nav style={{ display: "flex", gap: 2 }}>
+        <nav style={{ display: "flex", gap: 4 }}>
           {(["dashboard", "review", "notes", "users"] as Tab[]).map((t) => (
-            <button key={t} onClick={() => setTab(t)} style={{ padding: "5px 14px", borderRadius: 8, fontSize: 12, fontWeight: 500, border: "none", cursor: "pointer", transition: "all 0.15s", background: tab === t ? "rgba(255,255,255,0.09)" : "transparent", color: tab === t ? "rgba(255,255,255,0.88)" : "rgba(255,255,255,0.3)" }}>
+            <button key={t} onClick={() => setTab(t)} style={{ padding: "6px 14px", borderRadius: 8, fontSize: 13, fontWeight: tab === t ? 700 : 500, border: tab === t ? "1px solid rgba(255,255,255,0.15)" : "1px solid transparent", cursor: "pointer", transition: "all 0.15s", background: tab === t ? "rgba(255,255,255,0.1)" : "transparent", color: tab === t ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.5)" }}>
               {t === "dashboard" ? "대시보드" : t === "review" ? "대화 리뷰" : t === "notes" ? "프롬프트 노트" : "유저 관리"}
             </button>
           ))}
         </nav>
 
-        <a href="/" style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", textDecoration: "none" }}>← 홈</a>
+        <a href="/" style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.55)", textDecoration: "none", display: "flex", alignItems: "center", gap: 5 }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+          </svg>
+          홈
+        </a>
       </header>
 
       {/* ─── DASHBOARD ─── */}
@@ -590,35 +612,47 @@ export default function AdminPage() {
         <div style={{ padding: "24px", maxWidth: 860, margin: "0 auto" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
             <div>
-              <p style={{ fontSize: 15, fontWeight: 700, color: "rgba(255,255,255,0.85)", marginBottom: 3 }}>유저 뱃지 관리</p>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 3 }}>
+                <p style={{ fontSize: 15, fontWeight: 700, color: "rgba(255,255,255,0.85)" }}>유저 뱃지 관리</p>
+                {users.length > 0 && (
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.5)", background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 20, padding: "2px 9px" }}>
+                    총 {users.length}명
+                  </span>
+                )}
+              </div>
               <p style={{ fontSize: 12, color: "rgba(255,255,255,0.3)" }}>가입일 최신순 · 뱃지 지급 및 차감</p>
             </div>
-            <button onClick={fetchUsers} style={{ padding: "6px 14px", borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: "pointer", border: "1px solid rgba(255,255,255,0.1)", background: "transparent", color: "rgba(255,255,255,0.4)" }}>
-              새로고침
+            <button
+              onClick={fetchUsers}
+              disabled={usersLoading}
+              style={{ padding: "6px 14px", borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: usersLoading ? "default" : "pointer", border: "1px solid rgba(255,255,255,0.1)", background: usersLoading ? "rgba(255,255,255,0.04)" : "transparent", color: usersLoading ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.5)", transition: "all 0.15s" }}
+            >
+              {usersLoading ? "로딩 중..." : "새로고침"}
             </button>
           </div>
 
           <div style={{ borderRadius: 16, border: "1px solid rgba(255,255,255,0.07)", background: "rgba(255,255,255,0.02)", overflow: "hidden" }}>
             {/* Header row */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 80px 260px", gap: 0, padding: "10px 18px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-              <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.25)", textTransform: "uppercase", letterSpacing: "0.08em" }}>이메일 / 가입일</span>
-              <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.25)", textTransform: "uppercase", letterSpacing: "0.08em", textAlign: "center" }}>뱃지</span>
-              <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.25)", textTransform: "uppercase", letterSpacing: "0.08em", textAlign: "right" }}>관리 (수량 입력 후 지급/차감)</span>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 80px 1fr 44px", gap: 0, padding: "10px 18px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.08em" }}>이메일 / 가입일</span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.08em", textAlign: "center" }}>뱃지</span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.08em", textAlign: "right" }}>수량 입력 후 지급 / 차감</span>
+              <span />
             </div>
 
             {users.length === 0 ? (
-              <p style={{ padding: "24px 18px", fontSize: 12, color: "rgba(255,255,255,0.2)", textAlign: "center" }}>유저 없음</p>
+              <p style={{ padding: "24px 18px", fontSize: 13, color: "rgba(255,255,255,0.3)", textAlign: "center" }}>유저 없음</p>
             ) : users.map(u => (
-              <div key={u.id} style={{ display: "grid", gridTemplateColumns: "1fr 80px 260px", gap: 0, padding: "12px 18px", borderBottom: "1px solid rgba(255,255,255,0.04)", alignItems: "center" }}>
+              <div key={u.id} style={{ display: "grid", gridTemplateColumns: "1fr 80px 1fr 44px", gap: 0, padding: "13px 18px", borderBottom: "1px solid rgba(255,255,255,0.04)", alignItems: "center" }}>
                 <div style={{ paddingRight: 12, minWidth: 0 }}>
-                  <p style={{ fontSize: 13, color: "rgba(255,255,255,0.72)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.email}</p>
+                  <p style={{ fontSize: 13, fontWeight: 500, color: "rgba(255,255,255,0.82)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.email}</p>
                   {u.created_at && (
-                    <p style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", marginTop: 2 }}>
+                    <p style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 3 }}>
                       가입 {u.created_at.slice(0, 10)}
                     </p>
                   )}
                 </div>
-                <p style={{ fontSize: 16, fontWeight: 700, color: u.credits > 0 ? "rgba(255,209,102,0.85)" : "rgba(255,255,255,0.25)", textAlign: "center" }}>
+                <p style={{ fontSize: 17, fontWeight: 700, color: u.credits > 0 ? "rgba(255,209,102,0.9)" : "rgba(255,255,255,0.25)", textAlign: "center" }}>
                   🏅 {u.credits}
                 </p>
                 <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
@@ -628,25 +662,64 @@ export default function AdminPage() {
                     value={creditInputs[u.id] || ""}
                     onChange={e => setCreditInputs(prev => ({ ...prev, [u.id]: e.target.value }))}
                     placeholder="수량"
-                    style={{ width: 64, padding: "5px 8px", borderRadius: 8, fontSize: 12, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.85)", outline: "none", textAlign: "center" }}
+                    style={{ width: 60, padding: "6px 8px", borderRadius: 8, fontSize: 13, background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.14)", color: "rgba(255,255,255,0.9)", outline: "none", textAlign: "center" }}
                   />
                   <button
                     onClick={() => adjustCredit(u.id, 1)}
                     disabled={!creditInputs[u.id] || grantingId === u.id}
-                    style={{ padding: "5px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer", border: "none", background: grantedId === u.id ? "rgba(74,222,128,0.2)" : ACCENT, color: grantedId === u.id ? GREEN : "#fff", opacity: (!creditInputs[u.id] || grantingId === u.id) ? 0.4 : 1, transition: "all 0.15s" }}
+                    style={{ padding: "6px 14px", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer", border: "none", background: grantedId === u.id ? "rgba(74,222,128,0.2)" : ACCENT, color: grantedId === u.id ? GREEN : "#fff", opacity: (!creditInputs[u.id] || grantingId === u.id) ? 0.4 : 1, transition: "all 0.15s" }}
                   >
                     {grantingId === u.id ? "..." : grantedId === u.id ? "완료 ✓" : "지급"}
                   </button>
                   <button
                     onClick={() => adjustCredit(u.id, -1)}
                     disabled={!creditInputs[u.id] || grantingId === u.id || u.credits <= 0}
-                    style={{ padding: "5px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer", border: `1px solid rgba(248,113,113,0.3)`, background: "rgba(248,113,113,0.1)", color: "rgba(248,113,113,0.8)", opacity: (!creditInputs[u.id] || grantingId === u.id || u.credits <= 0) ? 0.35 : 1, transition: "all 0.15s" }}
+                    style={{ padding: "6px 14px", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer", border: `1px solid rgba(248,113,113,0.3)`, background: "rgba(248,113,113,0.1)", color: "rgba(248,113,113,0.9)", opacity: (!creditInputs[u.id] || grantingId === u.id || u.credits <= 0) ? 0.35 : 1, transition: "all 0.15s" }}
                   >
                     차감
                   </button>
                 </div>
+                <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                  <button
+                    onClick={() => setDeleteTarget({ id: u.id, email: u.email })}
+                    title="계정 삭제"
+                    style={{ width: 32, height: 32, borderRadius: 8, border: "1px solid rgba(248,113,113,0.2)", background: "rgba(248,113,113,0.07)", color: "rgba(248,113,113,0.6)", fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.15s" }}
+                  >
+                    🗑
+                  </button>
+                </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* 유저 삭제 확인 모달 */}
+      {deleteTarget && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, background: "rgba(0,0,0,0.75)", backdropFilter: "blur(4px)" }}
+          onClick={() => !deletingUserId && setDeleteTarget(null)}>
+          <div style={{ background: "#18182A", border: "1px solid rgba(248,113,113,0.3)", borderRadius: 20, padding: "28px 24px", maxWidth: 340, width: "100%", textAlign: "center" }}
+            onClick={e => e.stopPropagation()}>
+            <p style={{ fontSize: 20 }}>🗑️</p>
+            <p style={{ fontSize: 16, fontWeight: 700, color: "rgba(255,255,255,0.9)", marginTop: 12, marginBottom: 8 }}>정말 삭제하시겠어요?</p>
+            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", marginBottom: 6, wordBreak: "break-all" }}>{deleteTarget.email}</p>
+            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginBottom: 24 }}>계정과 모든 데이터가 삭제되며 복구할 수 없어요.</p>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                onClick={() => setDeleteTarget(null)}
+                disabled={!!deletingUserId}
+                style={{ flex: 1, padding: "11px 0", borderRadius: 12, background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.7)", fontSize: 14, fontWeight: 600, cursor: "pointer" }}
+              >
+                취소
+              </button>
+              <button
+                onClick={() => handleDeleteUser(deleteTarget.id)}
+                disabled={!!deletingUserId}
+                style={{ flex: 1, padding: "11px 0", borderRadius: 12, background: "rgba(248,113,113,0.15)", border: "1px solid rgba(248,113,113,0.4)", color: "rgb(248,113,113)", fontSize: 14, fontWeight: 700, cursor: deletingUserId ? "default" : "pointer", opacity: deletingUserId ? 0.6 : 1 }}
+              >
+                {deletingUserId ? "삭제 중..." : "삭제 확인"}
+              </button>
+            </div>
           </div>
         </div>
       )}

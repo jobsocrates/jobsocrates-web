@@ -17,9 +17,9 @@ export const TUTORIAL_CONTENT = {
       icon: "🏅",
       title: "뱃지가 뭔가요?",
       items: [
-        { icon: "👆", text: "화면 우측 상단의 뱃지 모양에서 보유 수량을 확인할 수 있어요." },
-        { icon: "✍️", text: "뱃지 1개 = 자소서 문항 1개 완성이에요." },
-        { icon: "📂", text: "뱃지를 누르면 지금까지 완성한 자소서를 다시 볼 수 있어요." },
+        { icon: "🏅", text: "화면 상단의 뱃지 숫자로 남은 분석 횟수를 확인할 수 있어요." },
+        { icon: "✍️", text: "뱃지 1개 = 자소서 문항 1개 분석이에요." },
+        { icon: "📂", text: "이전 기록, 비밀번호 변경 등 자세한 내용은 마이페이지에서 확인하세요." },
       ],
       warning: '"자소서 분석하기"를 누르면 뱃지 1개가 사용돼요. 시작하면 끝까지 함께 가요!',
     },
@@ -95,15 +95,19 @@ export function TutorialModal({ userId, onClose }: Props) {
   return (
     <div
       className="fixed inset-0 z-[60] flex items-center justify-center p-4 sm:p-6"
-      style={{ background: "rgba(0,0,0,0.78)", backdropFilter: "blur(10px)" }}
+      style={{ animation: "backdropIn 0.4s ease forwards" }}
     >
       <style>{`
+        @keyframes backdropIn {
+          from { opacity: 0; background: rgba(0,0,0,0); backdrop-filter: blur(0px); }
+          to   { opacity: 1; background: rgba(0,0,0,0.78); backdrop-filter: blur(10px); }
+        }
         @keyframes tutIn {
-          from { opacity: 0; transform: translateY(20px) scale(0.97); }
+          from { opacity: 0; transform: translateY(14px) scale(0.975); }
           to   { opacity: 1; transform: translateY(0) scale(1); }
         }
         @keyframes pageIn {
-          from { opacity: 0; transform: translateY(10px); }
+          from { opacity: 0; transform: translateY(8px); }
           to   { opacity: 1; transform: translateY(0); }
         }
       `}</style>
@@ -116,7 +120,7 @@ export function TutorialModal({ userId, onClose }: Props) {
           background: "#0D0D18",
           border: "1px solid rgba(255,255,255,0.1)",
           boxShadow: "0 40px 100px rgba(0,0,0,0.7)",
-          animation: "tutIn 0.35s cubic-bezier(0.16,1,0.3,1) forwards",
+          animation: "tutIn 0.55s cubic-bezier(0.22, 0.61, 0.36, 1) forwards",
         }}
       >
         {/* ── 헤더 ── */}

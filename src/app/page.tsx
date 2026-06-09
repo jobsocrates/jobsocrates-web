@@ -208,13 +208,21 @@ export default function Home() {
               {userEmail ? (
                 <>
                   {/* 뱃지 카운트 */}
-                  {badgeCount !== null && userEmail !== ADMIN_EMAIL && (
-                    <Link
-                      href="/mypage"
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold transition-all hover:opacity-80"
+                  {badgeCount !== null && badgeCount > 0 && userEmail !== ADMIN_EMAIL && (
+                    <div
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold"
                       style={{ background: "rgba(255,209,102,0.12)", border: "1px solid rgba(255,209,102,0.25)", color: "rgba(255,209,102,0.9)" }}
                     >
                       🏅 {badgeCount}
+                    </div>
+                  )}
+                  {userEmail !== ADMIN_EMAIL && (
+                    <Link
+                      href="/mypage"
+                      className="text-sm px-3.5 py-2 rounded-xl font-medium transition-all hover:opacity-80"
+                      style={{ background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.7)", border: "1px solid rgba(255,255,255,0.15)" }}
+                    >
+                      마이페이지
                     </Link>
                   )}
                   {userEmail === ADMIN_EMAIL && (
@@ -253,11 +261,6 @@ export default function Home() {
 
           <div className="max-w-[1300px] mx-auto px-6 sm:px-8 py-20 w-full flex flex-col lg:flex-row items-center gap-14 lg:gap-20 relative">
             <div className="flex-1 flex flex-col items-start gap-8 anim">
-              <div className="inline-flex items-center gap-2.5 rounded-full px-4 py-2 text-sm font-semibold" style={{ background: `${NAV_BTN}18`, color: NAV_BTN, border: `1px solid ${NAV_BTN}38` }}>
-                <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: NAV_BTN }} />
-                첫 문항 무료 · 지금 바로 시작
-              </div>
-
               <div className="flex flex-col gap-1">
                 <h1 className="text-[3.5rem] sm:text-[4.5rem] lg:text-[5.5rem] xl:text-[6.5rem] font-black leading-[1.05] tracking-tight text-white" style={{ letterSpacing: "-0.03em" }}>
                   베끼는 자소서는
@@ -283,9 +286,8 @@ export default function Home() {
                   style={{ background: NAV_BTN, boxShadow: `0 6px 28px ${NAV_BTN}50`, fontSize: "16px", letterSpacing: "-0.01em" }}
                 >
                   시작하기
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                  <span style={{ fontSize: "18px", fontWeight: 300, lineHeight: 1 }}>›</span>
                 </button>
-                <p className="text-sm" style={{ color: "rgba(255,255,255,0.3)" }}>로그인 후 바로 시작 · 첫 문항 무료</p>
               </div>
             </div>
 
@@ -417,7 +419,7 @@ export default function Home() {
                 style={{ background: NAV_BTN, boxShadow: `0 8px 36px ${NAV_BTN}50`, fontSize: "18px", letterSpacing: "-0.01em" }}
               >
                 시작하기
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                <span style={{ fontSize: "20px", fontWeight: 300, lineHeight: 1 }}>›</span>
               </button>
             </div>
           </div>
