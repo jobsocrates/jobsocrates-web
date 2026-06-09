@@ -48,6 +48,20 @@ input[type="number"] { -moz-appearance: textfield; }
 /* ── 모바일 safe area ── */
 .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
 
+/* ── 스크롤바 숨김 ── */
+textarea {
+  scrollbar-width: none;
+}
+textarea::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  scrollbar-width: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 /* ── 인풋 포커스 글로우 ── */
 .glow-input {
   transition: border-color 0.2s ease, box-shadow 0.2s ease;

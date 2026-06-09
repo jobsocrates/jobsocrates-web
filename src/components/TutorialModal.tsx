@@ -127,7 +127,7 @@ export function TutorialModal({ userId, onClose }: Props) {
         className="w-full flex flex-col rounded-3xl overflow-hidden"
         style={{
           maxWidth: "min(96vw, 820px)",
-          maxHeight: "92vh",
+          maxHeight: "96vh",
           background: "#0D0D18",
           border: "1px solid rgba(255,255,255,0.1)",
           boxShadow: "0 60px 120px rgba(0,0,0,0.8)",
@@ -135,9 +135,9 @@ export function TutorialModal({ userId, onClose }: Props) {
         }}
       >
         {/* ── 헤더 ── */}
-        <div className="flex items-center justify-between px-8 pt-7 pb-0 flex-shrink-0">
+        <div className="flex items-center justify-between px-7 pt-5 pb-0 flex-shrink-0">
           <span
-            className="text-sm font-semibold px-3.5 py-1.5 rounded-full"
+            className="text-sm font-semibold px-3 py-1 rounded-full"
             style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.4)", border: "1px solid rgba(255,255,255,0.08)" }}
           >
             {TUTORIAL_CONTENT.header}
@@ -159,18 +159,18 @@ export function TutorialModal({ userId, onClose }: Props) {
         </div>
 
         {/* ── 챕터 + 제목 ── */}
-        <div className="px-8 pt-6 pb-0 flex-shrink-0">
-          <div className="flex items-center gap-3 mb-3">
+        <div className="px-7 pt-4 pb-0 flex-shrink-0">
+          <div className="flex items-center gap-2.5 mb-2">
             <span
-              className="text-sm font-bold px-3.5 py-1.5 rounded-full"
+              className="text-sm font-bold px-3 py-1 rounded-full"
               style={{ background: `${ACCENT}18`, color: ACCENT, border: `1px solid ${ACCENT}35` }}
             >
               {current.chapter}
             </span>
-            <span className="text-2xl leading-none">{current.icon}</span>
+            <span className="text-xl leading-none">{current.icon}</span>
           </div>
           <h2
-            className="text-3xl sm:text-4xl font-bold leading-snug"
+            className="text-2xl sm:text-3xl font-bold leading-snug"
             style={{ color: "rgba(255,255,255,0.96)", letterSpacing: "-0.03em" }}
           >
             {current.title}
@@ -180,28 +180,28 @@ export function TutorialModal({ userId, onClose }: Props) {
         {/* ── 본문 ── */}
         <div
           key={animKey}
-          className="px-8 pb-3 pt-6 flex flex-col gap-5 overflow-y-auto flex-1"
+          className="hide-scrollbar px-7 pb-2 pt-4 flex flex-col gap-3 overflow-y-auto flex-1"
           style={{ animation: "pageIn 0.32s ease forwards" }}
         >
 
           {/* 1장 — 뱃지 */}
           {current.id === "badge" && (
             <>
-              <div className="flex flex-col gap-5">
+              <div className="flex flex-col gap-4">
                 {current.items.map((item, i) => (
-                  <div key={i} className="flex items-start gap-5">
-                    <span className="text-2xl flex-shrink-0 leading-none mt-0.5">{item.icon}</span>
-                    <p className="text-lg leading-relaxed" style={{ color: "rgba(255,255,255,0.78)", wordBreak: "keep-all" }}>
+                  <div key={i} className="flex items-start gap-4">
+                    <span className="text-xl flex-shrink-0 leading-none mt-0.5">{item.icon}</span>
+                    <p className="text-base leading-relaxed" style={{ color: "rgba(255,255,255,0.78)", wordBreak: "keep-all" }}>
                       {item.text}
                     </p>
                   </div>
                 ))}
               </div>
               <div
-                className="flex items-start gap-4 px-6 py-5 rounded-2xl"
+                className="flex items-start gap-3 px-5 py-4 rounded-2xl"
                 style={{ background: "rgba(255,209,102,0.08)", border: "1px solid rgba(255,209,102,0.28)" }}
               >
-                <span className="text-2xl leading-none flex-shrink-0 mt-0.5">⚠️</span>
+                <span className="text-xl leading-none flex-shrink-0 mt-0.5">⚠️</span>
                 <p className="text-base leading-relaxed font-medium" style={{ color: "rgba(255,209,102,0.92)", wordBreak: "keep-all" }}>
                   {current.warning}
                 </p>
@@ -220,8 +220,8 @@ export function TutorialModal({ userId, onClose }: Props) {
                     key={i}
                     className={isLast ? "sm:col-span-2" : ""}
                     style={{
-                      padding: "20px 22px",
-                      borderRadius: 18,
+                      padding: "16px 18px",
+                      borderRadius: 16,
                       background: c.bg,
                       border: `1px solid ${c.border}`,
                       display: "flex",
@@ -231,7 +231,7 @@ export function TutorialModal({ userId, onClose }: Props) {
                   >
                     <span
                       style={{
-                        fontSize: 28,
+                        fontSize: 24,
                         fontWeight: 800,
                         color: c.num,
                         lineHeight: 1,
@@ -268,17 +268,17 @@ export function TutorialModal({ userId, onClose }: Props) {
                   className="rounded-2xl overflow-hidden"
                   style={{ border: "1px solid rgba(74,222,128,0.28)", background: "rgba(74,222,128,0.07)" }}
                 >
-                  <div className="flex items-center gap-2.5 px-5 py-3.5 border-b" style={{ borderColor: "rgba(74,222,128,0.15)" }}>
-                    <span className="text-lg leading-none">⭕</span>
+                  <div className="flex items-center gap-2 px-4 py-3 border-b" style={{ borderColor: "rgba(74,222,128,0.15)" }}>
+                    <span className="text-base leading-none">⭕</span>
                     <span className="text-sm font-bold" style={{ color: GREEN }}>
                       {current.good.label}
                     </span>
                   </div>
-                  <div className="px-5 py-5">
-                    <p className="text-base leading-relaxed" style={{ color: "rgba(255,255,255,0.82)", wordBreak: "keep-all", fontStyle: "italic" }}>
+                  <div className="px-4 py-4">
+                    <p className="text-sm leading-relaxed" style={{ color: "rgba(255,255,255,0.82)", wordBreak: "keep-all", fontStyle: "italic" }}>
                       {current.good.text}
                     </p>
-                    <p className="text-sm mt-3 font-semibold" style={{ color: "rgba(74,222,128,0.9)" }}>
+                    <p className="text-sm mt-2 font-semibold" style={{ color: "rgba(74,222,128,0.9)" }}>
                       → {current.good.reason}
                     </p>
                   </div>
@@ -288,17 +288,17 @@ export function TutorialModal({ userId, onClose }: Props) {
                   className="rounded-2xl overflow-hidden"
                   style={{ border: "1px solid rgba(248,113,113,0.25)", background: "rgba(248,113,113,0.06)" }}
                 >
-                  <div className="flex items-center gap-2.5 px-5 py-3.5 border-b" style={{ borderColor: "rgba(248,113,113,0.15)" }}>
-                    <span className="text-lg leading-none">❌</span>
+                  <div className="flex items-center gap-2 px-4 py-3 border-b" style={{ borderColor: "rgba(248,113,113,0.15)" }}>
+                    <span className="text-base leading-none">❌</span>
                     <span className="text-sm font-bold" style={{ color: "rgb(248,113,113)" }}>
                       {current.bad.label}
                     </span>
                   </div>
-                  <div className="px-5 py-5">
-                    <p className="text-base leading-relaxed" style={{ color: "rgba(255,255,255,0.55)", wordBreak: "keep-all", fontStyle: "italic" }}>
+                  <div className="px-4 py-4">
+                    <p className="text-sm leading-relaxed" style={{ color: "rgba(255,255,255,0.55)", wordBreak: "keep-all", fontStyle: "italic" }}>
                       {current.bad.text}
                     </p>
-                    <p className="text-sm mt-3 font-semibold" style={{ color: "rgba(248,113,113,0.85)" }}>
+                    <p className="text-sm mt-2 font-semibold" style={{ color: "rgba(248,113,113,0.85)" }}>
                       → {current.bad.reason}
                     </p>
                   </div>
@@ -307,11 +307,11 @@ export function TutorialModal({ userId, onClose }: Props) {
 
               {/* 면접 팁 */}
               <div
-                className="flex items-start gap-4 px-6 py-5 rounded-2xl"
+                className="flex items-start gap-3 px-5 py-4 rounded-2xl"
                 style={{ background: "rgba(107,142,255,0.08)", border: "1px solid rgba(107,142,255,0.25)" }}
               >
-                <span className="text-2xl leading-none flex-shrink-0 mt-0.5">🎙️</span>
-                <p className="text-base leading-relaxed font-medium" style={{ color: "rgba(107,142,255,0.95)", wordBreak: "keep-all" }}>
+                <span className="text-xl leading-none flex-shrink-0 mt-0.5">🎙️</span>
+                <p className="text-sm leading-relaxed font-medium" style={{ color: "rgba(107,142,255,0.95)", wordBreak: "keep-all" }}>
                   {current.tip}
                 </p>
               </div>
@@ -336,12 +336,12 @@ export function TutorialModal({ userId, onClose }: Props) {
 
         {/* ── 버튼 ── */}
         <div
-          className="px-8 pt-4 pb-8 flex flex-col gap-3 flex-shrink-0"
+          className="px-7 pt-3 pb-6 flex flex-col gap-2.5 flex-shrink-0"
           style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
         >
           <button
             onClick={goNext}
-            className="w-full py-4 rounded-2xl text-base font-bold text-white transition-all hover:scale-[1.01] active:scale-[0.99]"
+            className="w-full py-3.5 rounded-2xl text-base font-bold text-white transition-all hover:scale-[1.01] active:scale-[0.99]"
             style={{ background: ACCENT, boxShadow: `0 6px 24px ${ACCENT}35`, letterSpacing: "-0.01em", fontSize: 16 }}
           >
             {isLast ? "시작하기" : "다음"}
