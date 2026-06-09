@@ -114,7 +114,7 @@ interface MomentProps {
   color: string;
   tag: string;
   title: string;
-  desc: string;
+  desc: ReactNode;
   visual: ReactNode;
   delay: number;
 }
@@ -161,7 +161,7 @@ export function HowSection() {
       color: BLUE,
       tag: "진단",
       title: "부족한 점이 뭔지 먼저 알려드립니다",
-      desc: "고치기 전에, 지금 초안에서 무엇이 부족한지 짚어드립니다. 논리 흐름, 문맥 연결, 직무 이해도를 한눈에.",
+      desc: <>고치기 전에, 지금 초안에서 무엇이 부족한지 짚어드립니다.<br />논리 흐름, 문맥 연결, 직무 이해도를 한눈에.</>,
       visual: <DiagnosisMini />,
     },
     {
@@ -176,8 +176,8 @@ export function HowSection() {
       num: "03",
       color: ACCENT,
       tag: "자소서 완성",
-      title: "어떤 점이 바뀌었는지 완성본과 함께 알려드립니다",
-      desc: "내 이야기로만 다시 쓴 자소서. 어디가 왜 바뀌었는지도 바로 보입니다.",
+      title: "나눈 모든 대화를 언제든 다시 볼 수 있습니다",
+      desc: <>우리가 나눈 모든 대화들을 언제든 다시 볼 수 있습니다.<br />PDF 다운로드 가능.</>,
       visual: <RevisionMini />,
     },
     {

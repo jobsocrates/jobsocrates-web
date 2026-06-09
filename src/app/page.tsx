@@ -326,7 +326,7 @@ export default function Home() {
           <div className="max-w-[900px] mx-auto py-28 anim flex flex-col gap-10">
             <p className="text-base font-medium" style={{ color: "rgba(255,255,255,0.4)" }}>이 네 가지, 공통점이 하나 있어요.</p>
             <h2 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.3]" style={{ wordBreak: "keep-all", letterSpacing: "-0.03em" }}>
-              <span className="text-white">할 말이 없는 게 아니라,</span><br />
+              <span className="text-white">할 말이 없는 게 아니라</span><br />
               <span style={{ background: "linear-gradient(120deg, #818CF8 0%, #38BDF8 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>어떻게 꺼내야 할지</span><br />
               <span className="text-white">모르는 거예요.</span>
             </h2>
@@ -389,7 +389,7 @@ export default function Home() {
               className="text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.35]"
               style={{ letterSpacing: "-0.03em", wordBreak: "keep-all" }}
             >
-              <span className="text-white">그 대화가 쌓이면서,</span><br />
+              <span className="text-white">그 대화가 쌓이면서</span><br />
               <span style={{ background: "linear-gradient(135deg, #FFD166 10%, #A78BFA 80%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>당신만의 자소서가</span><br />
               <span className="text-white">완성됩니다.</span>
             </h2>
@@ -404,7 +404,7 @@ export default function Home() {
           </div>
           <div className="max-w-[800px] mx-auto flex flex-col items-center text-center gap-8 relative">
             <h2 className="text-5xl sm:text-6xl lg:text-7xl font-black text-white anim" style={{ letterSpacing: "-0.03em", lineHeight: 1.3, wordBreak: "keep-all" }}>
-              준비됐으면,<br />지금 시작하세요
+              준비됐으면<br />지금 시작하세요
             </h2>
             <p className="text-xl anim anim-delay-1" style={{ color: "rgba(255,255,255,0.4)" }}>첫 문항은 무료입니다.</p>
             <div className="anim anim-delay-2">
