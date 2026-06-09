@@ -1210,7 +1210,7 @@ export default function ChatPage() {
         {/* 알림 토스트 */}
         {toast && (
           <div
-            className="fixed top-16 left-1/2 z-50 px-5 py-2.5 rounded-2xl text-sm font-medium shadow-lg"
+            className="fixed bottom-6 left-1/2 z-50 px-5 py-2.5 rounded-2xl text-sm font-medium shadow-lg"
             style={{
               transform: "translateX(-50%)",
               background: "rgba(201,100,66,0.18)",
@@ -1533,28 +1533,6 @@ export default function ChatPage() {
                       >
                         분석 시작하기 →
                       </button>
-                    )}
-
-                    {/* 뱃지 잔액 — 버튼 바로 아래 */}
-                    {currentUser && userCredits !== null && currentUser.email !== ADMIN_EMAIL && (
-                      userCredits > 0 ? (
-                        <div className="flex items-center justify-center gap-2">
-                          <span style={{ fontSize: 13 }}>🏅</span>
-                          <span className="text-xs" style={{ color: "rgba(255,209,102,0.7)" }}>
-                            보유 뱃지 <span style={{ fontWeight: 700, color: "#FFD166" }}>{userCredits}개</span>
-                          </span>
-                        </div>
-                      ) : (
-                        <div
-                          className="flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl"
-                          style={{ background: "rgba(248,113,113,0.1)", border: "1px solid rgba(248,113,113,0.28)" }}
-                        >
-                          <span style={{ fontSize: 14 }}>🏅</span>
-                          <span className="text-xs font-semibold" style={{ color: "rgba(248,113,113,0.9)" }}>
-                            보유 뱃지 0개 — 관리자에게 문의해주세요
-                          </span>
-                        </div>
-                      )
                     )}
 
                     <p className="text-xs text-center" style={{ color: "rgba(255,255,255,0.18)" }}>
