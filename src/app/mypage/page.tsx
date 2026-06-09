@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { buildPrintHtml, stripMd, parseRevisionMsg, type SummaryMsg, type SummaryInterviewQ } from "@/components/CoverLetterSummary";
+import { TutorialModal } from "@/components/TutorialModal";
 
 const BG = "#0D0D18";
 const ACCENT = "#C96442";
@@ -39,7 +39,7 @@ function formatDate(dateStr: string) {
 }
 
 export default function MyPage() {
-  const router = useRouter();
+  const [showTutorial, setShowTutorial] = useState(false);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<{ id: string; email: string } | null>(null);
   const [credits, setCredits] = useState<number>(0);
@@ -299,7 +299,7 @@ export default function MyPage() {
             <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 10 }}>
               <span style={{ fontSize: 48 }}>🏅</span>
               <button
-                onClick={() => { sessionStorage.setItem("showTutorial", "1"); router.push("/chat"); }}
+                onClick={() => setShowTutorial(true)}
                 style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.65)", background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.16)", borderRadius: 8, padding: "5px 12px", cursor: "pointer" }}
               >
                 사용법
@@ -465,6 +465,10 @@ export default function MyPage() {
 
         <div style={{ height: 40 }} />
       </div>
+
+      {showTutorial && (
+        <TutorialModal userId={user.id} onClose={() => setShowTutorial(false)} />
+      )}
 
       {/* 회원탈퇴 확인 모달 */}
       {showDeleteConfirm && (
