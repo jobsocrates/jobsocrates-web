@@ -280,190 +280,173 @@ export default function MyPage() {
         </Link>
       </header>
 
-      <div style={{ maxWidth: 640, margin: "0 auto", padding: "24px 20px" }}>
-
-        {/* 뱃지 카드 */}
-        <div className="card-depth" style={{ borderRadius: 20, border: `1px solid ${credits > 0 ? "rgba(255,209,102,0.3)" : "rgba(248,113,113,0.25)"}`, background: credits > 0 ? "rgba(255,209,102,0.06)" : "rgba(248,113,113,0.05)", padding: "24px 24px 20px", marginBottom: 16 }}>
-          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
+      {/* ── 뱃지 카드 (상단 풀폭) ── */}
+      <div style={{ maxWidth: 900, margin: "0 auto", padding: "24px 20px 0" }}>
+        <div className="card-depth" style={{ borderRadius: 20, border: `1px solid ${credits > 0 ? "rgba(255,209,102,0.3)" : "rgba(248,113,113,0.25)"}`, background: credits > 0 ? "rgba(255,209,102,0.06)" : "rgba(248,113,113,0.05)", padding: "24px 28px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
             <div>
-              <p style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginBottom: 8 }}>{user.email}</p>
-              <p style={{ fontSize: 13, fontWeight: 600, color: credits > 0 ? "rgba(255,209,102,0.7)" : "rgba(248,113,113,0.7)", marginBottom: 6 }}>남은 뱃지</p>
+              <p style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginBottom: 6 }}>{user.email}</p>
+              <p style={{ fontSize: 13, fontWeight: 600, color: credits > 0 ? "rgba(255,209,102,0.7)" : "rgba(248,113,113,0.7)", marginBottom: 4 }}>남은 뱃지</p>
               <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-                <span style={{ fontSize: 52, fontWeight: 800, color: credits > 0 ? GOLD : "rgb(248,113,113)", letterSpacing: "-0.03em", lineHeight: 1 }}>{credits}</span>
-                <span style={{ fontSize: 16, color: credits > 0 ? "rgba(255,209,102,0.55)" : "rgba(248,113,113,0.55)" }}>개</span>
+                <span style={{ fontSize: 56, fontWeight: 800, color: credits > 0 ? GOLD : "rgb(248,113,113)", letterSpacing: "-0.03em", lineHeight: 1 }}>{credits}</span>
+                <span style={{ fontSize: 18, color: credits > 0 ? "rgba(255,209,102,0.55)" : "rgba(248,113,113,0.55)" }}>개</span>
               </div>
               {credits === 0 && (
                 <p style={{ fontSize: 13, color: "rgba(248,113,113,0.8)", marginTop: 8, fontWeight: 500 }}>뱃지가 없어요. 관리자에게 문의해주세요.</p>
               )}
+              <p style={{ fontSize: 12, color: "rgba(255,255,255,0.25)", marginTop: 10 }}>뱃지 1개 = 자소서 문항 분석 1회 · 분석 시작 시 차감</p>
             </div>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 10 }}>
-              <span style={{ fontSize: 48 }}>🏅</span>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 12 }}>
+              <span style={{ fontSize: 52 }}>🏅</span>
               <button
                 onClick={() => setShowTutorial(true)}
-                style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.65)", background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.16)", borderRadius: 8, padding: "5px 12px", cursor: "pointer" }}
+                style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.7)", background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.16)", borderRadius: 9, padding: "7px 16px", cursor: "pointer" }}
               >
                 사용법
               </button>
             </div>
           </div>
-          <p style={{ fontSize: 12, color: "rgba(255,255,255,0.28)", marginTop: 16 }}>뱃지 1개 = 자소서 문항 분석 1회 · 분석 시작 시 차감</p>
         </div>
+      </div>
 
-        {/* 뱃지 내역 */}
-        {transactions.length > 0 && (
-          <div className="card-depth-sm" style={{ borderRadius: 16, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.025)", overflow: "hidden", marginBottom: 16 }}>
-            <div style={{ padding: "12px 18px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-              <p style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.4)" }}>뱃지 내역</p>
-            </div>
-            {transactions.map(txn => (
-              <div key={txn.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 18px", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-                <div>
-                  <p style={{ fontSize: 13, color: "rgba(255,255,255,0.72)" }}>{txn.reason || (txn.amount > 0 ? "지급" : "차감")}</p>
-                  <p style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", marginTop: 2 }}>{formatDate(txn.created_at)}</p>
-                </div>
-                <span style={{ fontSize: 15, fontWeight: 700, color: txn.amount > 0 ? GREEN : RED }}>
-                  {txn.amount > 0 ? "+" : ""}{txn.amount}
-                </span>
+      {/* ── 2단 본문 ── */}
+      <div className="mypage-grid" style={{ maxWidth: 900, margin: "0 auto", padding: "16px 20px 40px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, alignItems: "start" }}>
+
+        {/* 왼쪽: 이전 기록 */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {sessions.length > 0 ? (
+            <div className="card-depth-sm" style={{ borderRadius: 16, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.025)", overflow: "hidden" }}>
+              <div style={{ padding: "14px 18px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                <p style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.55)" }}>이전 기록</p>
               </div>
-            ))}
-          </div>
-        )}
-
-        {/* 이전 세션 기록 */}
-        {sessions.length > 0 && (
-          <div className="card-depth-sm" style={{ borderRadius: 16, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.025)", overflow: "hidden" }}>
-            <div style={{ padding: "12px 18px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-              <p style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.4)" }}>이전 기록</p>
-            </div>
-            {sessions.map(session => (
-              <div key={session.id} style={{ padding: "14px 18px", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: session.cover_items?.length ? 8 : 0 }}>
-                  <p style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.72)" }}>
-                    {session.job_title || "직무 미입력"}
-                  </p>
-                  <span style={{ fontSize: 11, color: "rgba(255,255,255,0.25)" }}>{formatDate(session.created_at)}</span>
-                </div>
-                {session.cover_items?.length > 0 && (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-                    {session.cover_items.map(item => (
-                      <div key={item.id} style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", paddingLeft: 8, gap: 8 }}>
-                        <p style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", flex: 1, minWidth: 0, lineHeight: 1.6, display: "flex", gap: 5 }}>
-                          <span style={{ color: item.status === "done" ? "rgba(74,222,128,0.6)" : BLUE, fontSize: 10, flexShrink: 0, marginTop: 2 }}>
-                            {item.status === "done" ? "✓" : "·"}
-                          </span>
-                          <span style={{ wordBreak: "keep-all", overflowWrap: "break-word" }}>
-                            {item.question || "문항 미입력"}
-                          </span>
-                        </p>
-                        {item.status === "done" && (
-                          <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
-                            <button
-                              onClick={() => handleViewHtml(session.job_title, item)}
-                              disabled={viewLoadingId === item.id || pdfLoadingId === item.id}
-                              style={{
-                                fontSize: 10,
-                                fontWeight: 600,
-                                color: "rgba(107,142,255,0.7)",
-                                background: "rgba(107,142,255,0.08)",
-                                border: "1px solid rgba(107,142,255,0.2)",
-                                borderRadius: 8,
-                                padding: "3px 8px",
-                                cursor: viewLoadingId === item.id ? "default" : "pointer",
-                                opacity: viewLoadingId === item.id ? 0.5 : 1,
-                                transition: "opacity 0.15s",
-                              }}
-                            >
-                              {viewLoadingId === item.id ? "..." : "바로 보기"}
-                            </button>
-                            <button
-                              onClick={() => handleDownloadPdf(session.job_title, item)}
-                              disabled={pdfLoadingId === item.id || viewLoadingId === item.id}
-                              style={{
-                                fontSize: 10,
-                                fontWeight: 600,
-                                color: "rgba(255,255,255,0.3)",
-                                background: "rgba(255,255,255,0.05)",
-                                border: "1px solid rgba(255,255,255,0.08)",
-                                borderRadius: 8,
-                                padding: "3px 8px",
-                                cursor: pdfLoadingId === item.id ? "default" : "pointer",
-                                opacity: pdfLoadingId === item.id ? 0.5 : 1,
-                                transition: "opacity 0.15s",
-                              }}
-                            >
-                              {pdfLoadingId === item.id ? "..." : "PDF"}
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    ))}
+              {sessions.map(session => (
+                <div key={session.id} style={{ padding: "14px 18px", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: session.cover_items?.length ? 8 : 0 }}>
+                    <p style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.75)" }}>
+                      {session.job_title || "직무 미입력"}
+                    </p>
+                    <span style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", flexShrink: 0, marginLeft: 8 }}>{formatDate(session.created_at)}</span>
                   </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-
-        {transactions.length === 0 && sessions.length === 0 && (
-          <div style={{ textAlign: "center", padding: "40px 0" }}>
-            <p style={{ fontSize: 14, color: "rgba(255,255,255,0.3)", marginBottom: 16 }}>아직 기록이 없어요</p>
-            <Link href="/chat" style={{ display: "inline-block", fontSize: 13, fontWeight: 600, color: ACCENT, textDecoration: "none", padding: "10px 24px", borderRadius: 12, background: `rgba(201,100,66,0.12)`, border: `1px solid rgba(201,100,66,0.25)` }}>
-              자소서 분석 시작하기 →
-            </Link>
-          </div>
-        )}
-
-        {/* 비밀번호 변경 */}
-        <div style={{ borderRadius: 16, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.02)", padding: "20px 20px", marginTop: 16 }}>
-          <p style={{ fontSize: 14, fontWeight: 700, color: "rgba(255,255,255,0.75)", marginBottom: 16 }}>비밀번호 변경</p>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <input
-              type="password"
-              placeholder="새 비밀번호 (6자 이상)"
-              value={pwNew}
-              onChange={e => setPwNew(e.target.value)}
-              className="glow-input"
-              style={{ width: "100%", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 10, padding: "10px 14px", fontSize: 14, color: "rgba(255,255,255,0.85)", outline: "none", boxSizing: "border-box" }}
-            />
-            <input
-              type="password"
-              placeholder="새 비밀번호 확인"
-              value={pwConfirm}
-              onChange={e => setPwConfirm(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && handleChangePassword()}
-              className="glow-input"
-              style={{ width: "100%", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 10, padding: "10px 14px", fontSize: 14, color: "rgba(255,255,255,0.85)", outline: "none", boxSizing: "border-box" }}
-            />
-            {pwMsg && (
-              <p style={{ fontSize: 13, fontWeight: 500, color: pwMsg.ok ? "rgb(74,222,128)" : "rgb(248,113,113)" }}>{pwMsg.text}</p>
-            )}
-            <button
-              onClick={handleChangePassword}
-              disabled={pwLoading}
-              style={{ padding: "10px 0", borderRadius: 10, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.14)", color: "rgba(255,255,255,0.75)", fontSize: 14, fontWeight: 600, cursor: pwLoading ? "default" : "pointer", opacity: pwLoading ? 0.5 : 1 }}
-            >
-              {pwLoading ? "변경 중..." : "비밀번호 변경"}
-            </button>
-          </div>
-        </div>
-
-        {/* 회원탈퇴 */}
-        <div style={{ marginTop: 12, padding: "16px 20px", borderRadius: 16, border: "1px solid rgba(248,113,113,0.15)", background: "rgba(248,113,113,0.03)" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div>
-              <p style={{ fontSize: 14, fontWeight: 700, color: "rgba(255,255,255,0.65)" }}>회원탈퇴</p>
-              <p style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", marginTop: 3 }}>계정과 모든 데이터가 삭제돼요.</p>
+                  {session.cover_items?.length > 0 && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                      {session.cover_items.map(item => (
+                        <div key={item.id} style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", paddingLeft: 8, gap: 8 }}>
+                          <p style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", flex: 1, minWidth: 0, lineHeight: 1.6, display: "flex", gap: 5 }}>
+                            <span style={{ color: item.status === "done" ? "rgba(74,222,128,0.6)" : BLUE, fontSize: 10, flexShrink: 0, marginTop: 2 }}>
+                              {item.status === "done" ? "✓" : "·"}
+                            </span>
+                            <span style={{ wordBreak: "keep-all", overflowWrap: "break-word" }}>
+                              {item.question || "문항 미입력"}
+                            </span>
+                          </p>
+                          {item.status === "done" && (
+                            <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+                              <button
+                                onClick={() => handleViewHtml(session.job_title, item)}
+                                disabled={viewLoadingId === item.id || pdfLoadingId === item.id}
+                                style={{ fontSize: 10, fontWeight: 600, color: "rgba(107,142,255,0.7)", background: "rgba(107,142,255,0.08)", border: "1px solid rgba(107,142,255,0.2)", borderRadius: 8, padding: "3px 8px", cursor: viewLoadingId === item.id ? "default" : "pointer", opacity: viewLoadingId === item.id ? 0.5 : 1 }}
+                              >
+                                {viewLoadingId === item.id ? "..." : "바로 보기"}
+                              </button>
+                              <button
+                                onClick={() => handleDownloadPdf(session.job_title, item)}
+                                disabled={pdfLoadingId === item.id || viewLoadingId === item.id}
+                                style={{ fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,0.3)", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, padding: "3px 8px", cursor: pdfLoadingId === item.id ? "default" : "pointer", opacity: pdfLoadingId === item.id ? 0.5 : 1 }}
+                              >
+                                {pdfLoadingId === item.id ? "..." : "PDF"}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
-            <button
-              onClick={() => setShowDeleteConfirm(true)}
-              style={{ fontSize: 13, fontWeight: 600, color: "rgba(248,113,113,0.8)", background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.2)", borderRadius: 10, padding: "8px 16px", cursor: "pointer" }}
-            >
-              탈퇴하기
-            </button>
-          </div>
+          ) : (
+            <div className="card-depth-sm" style={{ borderRadius: 16, border: "1px solid rgba(255,255,255,0.07)", background: "rgba(255,255,255,0.02)", padding: "32px 20px", textAlign: "center" }}>
+              <p style={{ fontSize: 14, color: "rgba(255,255,255,0.25)", marginBottom: 14 }}>아직 기록이 없어요</p>
+              <Link href="/chat" style={{ display: "inline-block", fontSize: 13, fontWeight: 600, color: ACCENT, textDecoration: "none", padding: "9px 20px", borderRadius: 10, background: `rgba(201,100,66,0.12)`, border: `1px solid rgba(201,100,66,0.25)` }}>
+                자소서 분석 시작하기 →
+              </Link>
+            </div>
+          )}
         </div>
 
-        <div style={{ height: 40 }} />
+        {/* 오른쪽: 뱃지 내역 + 계정 설정 */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
+          {/* 뱃지 내역 */}
+          {transactions.length > 0 && (
+            <div className="card-depth-sm" style={{ borderRadius: 16, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.025)", overflow: "hidden" }}>
+              <div style={{ padding: "14px 18px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                <p style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.55)" }}>뱃지 내역</p>
+              </div>
+              {transactions.slice(0, 8).map(txn => (
+                <div key={txn.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 18px", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                  <div>
+                    <p style={{ fontSize: 13, color: "rgba(255,255,255,0.72)" }}>{txn.reason || (txn.amount > 0 ? "지급" : "차감")}</p>
+                    <p style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", marginTop: 2 }}>{formatDate(txn.created_at)}</p>
+                  </div>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: txn.amount > 0 ? GREEN : RED }}>
+                    {txn.amount > 0 ? "+" : ""}{txn.amount}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* 비밀번호 변경 */}
+          <div className="card-depth-sm" style={{ borderRadius: 16, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.025)", padding: "20px" }}>
+            <p style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.55)", marginBottom: 14 }}>비밀번호 변경</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <input
+                type="password"
+                placeholder="새 비밀번호 (6자 이상)"
+                value={pwNew}
+                onChange={e => setPwNew(e.target.value)}
+                className="glow-input"
+                style={{ width: "100%", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 10, padding: "10px 14px", fontSize: 14, color: "rgba(255,255,255,0.85)", outline: "none", boxSizing: "border-box" }}
+              />
+              <input
+                type="password"
+                placeholder="새 비밀번호 확인"
+                value={pwConfirm}
+                onChange={e => setPwConfirm(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && handleChangePassword()}
+                className="glow-input"
+                style={{ width: "100%", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 10, padding: "10px 14px", fontSize: 14, color: "rgba(255,255,255,0.85)", outline: "none", boxSizing: "border-box" }}
+              />
+              {pwMsg && (
+                <p style={{ fontSize: 13, fontWeight: 500, color: pwMsg.ok ? "rgb(74,222,128)" : "rgb(248,113,113)" }}>{pwMsg.text}</p>
+              )}
+              <button
+                onClick={handleChangePassword}
+                disabled={pwLoading}
+                style={{ padding: "10px 0", borderRadius: 10, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.14)", color: "rgba(255,255,255,0.75)", fontSize: 14, fontWeight: 600, cursor: pwLoading ? "default" : "pointer", opacity: pwLoading ? 0.5 : 1 }}
+              >
+                {pwLoading ? "변경 중..." : "비밀번호 변경"}
+              </button>
+            </div>
+          </div>
+
+          {/* 회원탈퇴 */}
+          <div style={{ padding: "16px 20px", borderRadius: 16, border: "1px solid rgba(248,113,113,0.15)", background: "rgba(248,113,113,0.03)" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div>
+                <p style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.6)" }}>회원탈퇴</p>
+                <p style={{ fontSize: 12, color: "rgba(255,255,255,0.28)", marginTop: 3 }}>계정과 모든 데이터가 삭제돼요.</p>
+              </div>
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                style={{ fontSize: 12, fontWeight: 600, color: "rgba(248,113,113,0.8)", background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.2)", borderRadius: 9, padding: "7px 14px", cursor: "pointer" }}
+              >
+                탈퇴하기
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
       {showTutorial && (

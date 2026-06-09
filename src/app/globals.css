@@ -88,6 +88,13 @@ textarea::-webkit-scrollbar {
   display: none;
 }
 
+/* ── 마이페이지 2단 그리드 (모바일 1열) ── */
+@media (max-width: 640px) {
+  .mypage-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
 /* ── 인풋 포커스 글로우 ── */
 .glow-input {
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
