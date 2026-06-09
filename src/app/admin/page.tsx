@@ -49,7 +49,7 @@ interface CoverItemFull {
   }[];
 }
 
-interface UserProfile { id: string; email: string; credits: number; }
+interface UserProfile { id: string; email: string; credits: number; created_at?: string; }
 interface Breakdown { today: number; week: number; month: number; total: number; }
 interface DashStats {
   users: Breakdown;
@@ -194,18 +194,19 @@ export default function AdminPage() {
   async function fetchUsers() {
     const { data } = await supabase
       .from("profiles")
-      .select("id, email, credits")
-      .order("email");
+      .select("id, email, credits, created_at")
+      .order("created_at", { ascending: false });
     setUsers((data || []) as UserProfile[]);
   }
 
-  async function grantCredit(userId: string) {
+  async function adjustCredit(userId: string, sign: 1 | -1) {
     const amount = parseInt(creditInputs[userId] || "0");
-    if (!amount || isNaN(amount)) return;
+    if (!amount || isNaN(amount) || amount <= 0) return;
+    const delta = amount * sign;
     setGrantingId(userId);
-    const { error } = await supabase.rpc("grant_credit", { p_user_id: userId, p_amount: amount });
+    const { error } = await supabase.rpc("grant_credit", { p_user_id: userId, p_amount: delta });
     if (!error) {
-      setUsers(prev => prev.map(u => u.id === userId ? { ...u, credits: u.credits + amount } : u));
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, credits: u.credits + delta } : u));
       setCreditInputs(prev => ({ ...prev, [userId]: "" }));
       setGrantedId(userId);
       setTimeout(() => setGrantedId(null), 2000);
@@ -586,11 +587,11 @@ export default function AdminPage() {
 
       {/* ─── USERS ─── */}
       {tab === "users" && (
-        <div style={{ padding: "24px", maxWidth: 800, margin: "0 auto" }}>
+        <div style={{ padding: "24px", maxWidth: 860, margin: "0 auto" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
             <div>
               <p style={{ fontSize: 15, fontWeight: 700, color: "rgba(255,255,255,0.85)", marginBottom: 3 }}>유저 뱃지 관리</p>
-              <p style={{ fontSize: 12, color: "rgba(255,255,255,0.3)" }}>유저별 뱃지 잔액 확인 및 지급</p>
+              <p style={{ fontSize: 12, color: "rgba(255,255,255,0.3)" }}>가입일 최신순 · 뱃지 지급 및 차감</p>
             </div>
             <button onClick={fetchUsers} style={{ padding: "6px 14px", borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: "pointer", border: "1px solid rgba(255,255,255,0.1)", background: "transparent", color: "rgba(255,255,255,0.4)" }}>
               새로고침
@@ -599,34 +600,49 @@ export default function AdminPage() {
 
           <div style={{ borderRadius: 16, border: "1px solid rgba(255,255,255,0.07)", background: "rgba(255,255,255,0.02)", overflow: "hidden" }}>
             {/* Header row */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 80px 180px", gap: 0, padding: "10px 18px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-              <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.25)", textTransform: "uppercase", letterSpacing: "0.08em" }}>이메일</span>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 80px 260px", gap: 0, padding: "10px 18px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.25)", textTransform: "uppercase", letterSpacing: "0.08em" }}>이메일 / 가입일</span>
               <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.25)", textTransform: "uppercase", letterSpacing: "0.08em", textAlign: "center" }}>뱃지</span>
-              <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.25)", textTransform: "uppercase", letterSpacing: "0.08em", textAlign: "right" }}>지급</span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.25)", textTransform: "uppercase", letterSpacing: "0.08em", textAlign: "right" }}>관리 (수량 입력 후 지급/차감)</span>
             </div>
 
             {users.length === 0 ? (
               <p style={{ padding: "24px 18px", fontSize: 12, color: "rgba(255,255,255,0.2)", textAlign: "center" }}>유저 없음</p>
             ) : users.map(u => (
-              <div key={u.id} style={{ display: "grid", gridTemplateColumns: "1fr 80px 180px", gap: 0, padding: "12px 18px", borderBottom: "1px solid rgba(255,255,255,0.04)", alignItems: "center" }}>
-                <p style={{ fontSize: 13, color: "rgba(255,255,255,0.72)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 12 }}>{u.email}</p>
+              <div key={u.id} style={{ display: "grid", gridTemplateColumns: "1fr 80px 260px", gap: 0, padding: "12px 18px", borderBottom: "1px solid rgba(255,255,255,0.04)", alignItems: "center" }}>
+                <div style={{ paddingRight: 12, minWidth: 0 }}>
+                  <p style={{ fontSize: 13, color: "rgba(255,255,255,0.72)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.email}</p>
+                  {u.created_at && (
+                    <p style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", marginTop: 2 }}>
+                      가입 {u.created_at.slice(0, 10)}
+                    </p>
+                  )}
+                </div>
                 <p style={{ fontSize: 16, fontWeight: 700, color: u.credits > 0 ? "rgba(255,209,102,0.85)" : "rgba(255,255,255,0.25)", textAlign: "center" }}>
                   🏅 {u.credits}
                 </p>
                 <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
                   <input
                     type="number"
+                    min={1}
                     value={creditInputs[u.id] || ""}
                     onChange={e => setCreditInputs(prev => ({ ...prev, [u.id]: e.target.value }))}
                     placeholder="수량"
-                    style={{ width: 70, padding: "5px 10px", borderRadius: 8, fontSize: 12, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.85)", outline: "none", textAlign: "center" }}
+                    style={{ width: 64, padding: "5px 8px", borderRadius: 8, fontSize: 12, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.85)", outline: "none", textAlign: "center" }}
                   />
                   <button
-                    onClick={() => grantCredit(u.id)}
+                    onClick={() => adjustCredit(u.id, 1)}
                     disabled={!creditInputs[u.id] || grantingId === u.id}
-                    style={{ padding: "5px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer", border: "none", background: grantedId === u.id ? "rgba(74,222,128,0.2)" : ACCENT, color: grantedId === u.id ? GREEN : "#fff", opacity: (!creditInputs[u.id] || grantingId === u.id) ? 0.4 : 1, transition: "all 0.15s" }}
+                    style={{ padding: "5px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer", border: "none", background: grantedId === u.id ? "rgba(74,222,128,0.2)" : ACCENT, color: grantedId === u.id ? GREEN : "#fff", opacity: (!creditInputs[u.id] || grantingId === u.id) ? 0.4 : 1, transition: "all 0.15s" }}
                   >
-                    {grantingId === u.id ? "..." : grantedId === u.id ? "지급됨 ✓" : "지급"}
+                    {grantingId === u.id ? "..." : grantedId === u.id ? "완료 ✓" : "지급"}
+                  </button>
+                  <button
+                    onClick={() => adjustCredit(u.id, -1)}
+                    disabled={!creditInputs[u.id] || grantingId === u.id || u.credits <= 0}
+                    style={{ padding: "5px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer", border: `1px solid rgba(248,113,113,0.3)`, background: "rgba(248,113,113,0.1)", color: "rgba(248,113,113,0.8)", opacity: (!creditInputs[u.id] || grantingId === u.id || u.credits <= 0) ? 0.35 : 1, transition: "all 0.15s" }}
+                  >
+                    차감
                   </button>
                 </div>
               </div>

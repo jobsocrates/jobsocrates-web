@@ -18,10 +18,11 @@ interface Props {
   draft: string;
   msgs: SummaryMsg[];
   onClose: () => void;
+  onNextItem?: () => void;
 }
 
-/* ── 텍스트 정제 ── */
-function stripMd(t: string) {
+/* ── 텍스트 정제 / PDF 유틸 (mypage 에서도 import 가능) ── */
+export function stripMd(t: string) {
   return t
     .replace(/\*\*(.*?)\*\*/g, "$1")
     .replace(/\*(.*?)\*/g, "$1")
@@ -32,7 +33,7 @@ function stripMd(t: string) {
     .trim();
 }
 
-function parseRevisionMsg(text: string) {
+export function parseRevisionMsg(text: string) {
   const revMatch = text.match(/\[수정본\]([\s\S]*?)\[\/수정본\]/);
   const chgMatch = text.match(/\[변경사항\]([\s\S]*?)\[\/변경사항\]/);
   const revision = revMatch ? revMatch[1].trim() : "";
@@ -45,7 +46,7 @@ function parseRevisionMsg(text: string) {
 }
 
 /* ── PDF 생성용 HTML ── */
-function escHtml(s: string) {
+export function escHtml(s: string) {
   return s
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -53,7 +54,7 @@ function escHtml(s: string) {
     .replace(/\n/g, "<br>");
 }
 
-function buildPrintHtml(
+export function buildPrintHtml(
   jobTitle: string,
   question: string,
   revision: string,
@@ -216,7 +217,7 @@ ${interviewMsgs.length > 0 ? `
 }
 
 /* ── 메인 컴포넌트 ── */
-export function CoverLetterSummary({ jobTitle, question, draft, msgs, onClose }: Props) {
+export function CoverLetterSummary({ jobTitle, question, draft, msgs, onClose, onNextItem }: Props) {
   useEffect(() => {
     document.body.style.overflow = "hidden";
     return () => { document.body.style.overflow = ""; };
@@ -243,10 +244,7 @@ export function CoverLetterSummary({ jobTitle, question, draft, msgs, onClose }:
     win.document.write(html);
     win.document.close();
     win.focus();
-    setTimeout(() => {
-      win.print();
-      onClose();
-    }, 400);
+    setTimeout(() => { win.print(); }, 400);
   }
 
   return (
@@ -365,24 +363,55 @@ export function CoverLetterSummary({ jobTitle, question, draft, msgs, onClose }:
 
       {/* 푸터 */}
       <div
-        className="flex-shrink-0 px-6 py-4 border-t flex items-center justify-between gap-4"
+        className="flex-shrink-0 px-6 pt-4 pb-5 border-t flex flex-col gap-3"
         style={{ borderColor: "rgba(255,255,255,0.07)", background: "rgba(255,255,255,0.02)" }}
       >
-        <p className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>
-          수정본 · 대화 내용 · 면접 Q&A 포함
-        </p>
-        <button
-          onClick={handlePdf}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:scale-[1.03] active:scale-[0.97] flex-shrink-0"
-          style={{ background: ACCENT, boxShadow: `0 0 20px ${ACCENT}40` }}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="7 10 12 15 17 10"/>
-            <line x1="12" y1="15" x2="12" y2="3"/>
-          </svg>
-          PDF 다운받기
-        </button>
+        {/* 안내 + PDF */}
+        <div className="flex items-center justify-between gap-4">
+          <p className="text-xs" style={{ color: "rgba(255,255,255,0.22)" }}>
+            기록은 마이페이지에서 언제든지 다시 다운로드할 수 있어요
+          </p>
+          <button
+            onClick={handlePdf}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium transition-all hover:opacity-75 flex-shrink-0"
+            style={{
+              background: "rgba(255,255,255,0.06)",
+              color: "rgba(255,255,255,0.45)",
+              border: "1px solid rgba(255,255,255,0.1)",
+            }}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            PDF 저장
+          </button>
+        </div>
+
+        {/* 주요 액션 */}
+        <div className="flex gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 py-3 rounded-xl text-sm font-medium transition-all hover:opacity-75"
+            style={{
+              background: "rgba(255,255,255,0.05)",
+              color: "rgba(255,255,255,0.45)",
+              border: "1px solid rgba(255,255,255,0.08)",
+            }}
+          >
+            완료하기
+          </button>
+          {onNextItem && (
+            <button
+              onClick={onNextItem}
+              className="flex-1 py-3 rounded-xl text-sm font-semibold text-white transition-all hover:scale-[1.02] active:scale-[0.98]"
+              style={{ background: ACCENT, boxShadow: `0 0 20px ${ACCENT}35` }}
+            >
+              다음 문항 작성하기 →
+            </button>
+          )}
+        </div>
       </div>
 
       </div>

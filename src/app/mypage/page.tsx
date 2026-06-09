@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import { buildPrintHtml, stripMd, parseRevisionMsg, type SummaryMsg } from "@/components/CoverLetterSummary";
 
 const BG = "#0D0D18";
 const ACCENT = "#C96442";
@@ -42,6 +43,7 @@ export default function MyPage() {
   const [credits, setCredits] = useState<number>(0);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [sessions, setSessions] = useState<SessionRecord[]>([]);
+  const [pdfLoadingId, setPdfLoadingId] = useState<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
@@ -68,6 +70,62 @@ export default function MyPage() {
       setLoading(false);
     });
   }, []);
+
+  async function handleDownloadPdf(jobTitle: string, item: CoverItemRecord) {
+    setPdfLoadingId(item.id);
+    try {
+      const [{ data: msgRows }, { data: revRows }] = await Promise.all([
+        supabase.from("messages")
+          .select("id, role, content, created_at")
+          .eq("cover_item_id", item.id)
+          .order("created_at", { ascending: true }),
+        supabase.from("revisions")
+          .select("content, changes")
+          .eq("cover_item_id", item.id)
+          .limit(1)
+          .maybeSingle(),
+      ]);
+
+      const msgs: SummaryMsg[] = (msgRows || []).map((m, i) => ({
+        id: i,
+        role: (m.role === "assistant" ? "bot" : "user") as "bot" | "user",
+        text: m.content as string,
+      }));
+
+      // split at revision message
+      const revMsgIdx = msgs.findIndex(m => m.role === "bot" && m.text.includes("[수정본]"));
+      const diagMsgs = revMsgIdx >= 0 ? msgs.slice(0, revMsgIdx + 1) : msgs;
+      const interviewMsgs = revMsgIdx >= 0 ? msgs.slice(revMsgIdx + 1) : [];
+
+      let revision = "";
+      let changes = "";
+      if (revRows) {
+        revision = (revRows.content as string) || "";
+        const rawChanges = revRows.changes;
+        changes = Array.isArray(rawChanges) ? rawChanges.join("\n") : String(rawChanges || "");
+      } else if (revMsgIdx >= 0) {
+        const parsed = parseRevisionMsg(msgs[revMsgIdx].text);
+        revision = parsed.revision;
+        changes = parsed.changes;
+      }
+
+      // strip revision markup from diagMsgs for non-revision messages
+      const cleanDiag = diagMsgs.map(m => {
+        if (m.role === "bot" && m.text.includes("[수정본]")) return m;
+        return { ...m, text: stripMd(m.text) ? m.text : m.text };
+      });
+
+      const html = buildPrintHtml(jobTitle, item.question, revision, changes, cleanDiag, interviewMsgs);
+      const win = window.open("", "_blank");
+      if (!win) return;
+      win.document.write(html);
+      win.document.close();
+      win.focus();
+      setTimeout(() => { win.print(); }, 400);
+    } finally {
+      setPdfLoadingId(null);
+    }
+  }
 
   if (loading) {
     return (
@@ -107,17 +165,20 @@ export default function MyPage() {
       <div style={{ maxWidth: 640, margin: "0 auto", padding: "24px 20px" }}>
 
         {/* 뱃지 카드 */}
-        <div style={{ borderRadius: 20, border: "1px solid rgba(255,209,102,0.25)", background: "rgba(255,209,102,0.05)", padding: "24px 24px 20px", marginBottom: 16 }}>
+        <div style={{ borderRadius: 20, border: `1px solid ${credits > 0 ? "rgba(255,209,102,0.3)" : "rgba(248,113,113,0.25)"}`, background: credits > 0 ? "rgba(255,209,102,0.06)" : "rgba(248,113,113,0.05)", padding: "24px 24px 20px", marginBottom: 16 }}>
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
             <div>
               <p style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", marginBottom: 8 }}>{user.email}</p>
-              <p style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.45)", marginBottom: 10 }}>내 뱃지 잔액</p>
+              <p style={{ fontSize: 12, fontWeight: 600, color: credits > 0 ? "rgba(255,209,102,0.6)" : "rgba(248,113,113,0.6)", marginBottom: 6 }}>남은 뱃지</p>
               <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-                <span style={{ fontSize: 44, fontWeight: 800, color: GOLD, letterSpacing: "-0.03em", lineHeight: 1 }}>{credits}</span>
-                <span style={{ fontSize: 15, color: "rgba(255,209,102,0.55)" }}>개</span>
+                <span style={{ fontSize: 52, fontWeight: 800, color: credits > 0 ? GOLD : "rgb(248,113,113)", letterSpacing: "-0.03em", lineHeight: 1 }}>{credits}</span>
+                <span style={{ fontSize: 16, color: credits > 0 ? "rgba(255,209,102,0.55)" : "rgba(248,113,113,0.55)" }}>개</span>
               </div>
+              {credits === 0 && (
+                <p style={{ fontSize: 12, color: "rgba(248,113,113,0.7)", marginTop: 8, fontWeight: 500 }}>뱃지가 없어요. 관리자에게 문의해주세요.</p>
+              )}
             </div>
-            <span style={{ fontSize: 44 }}>🏅</span>
+            <span style={{ fontSize: 48 }}>🏅</span>
           </div>
           <p style={{ fontSize: 11, color: "rgba(255,255,255,0.18)", marginTop: 16 }}>뱃지 1개 = 자소서 문항 분석 1회 · 분석 시작 시 차감</p>
         </div>
@@ -157,14 +218,39 @@ export default function MyPage() {
                   <span style={{ fontSize: 11, color: "rgba(255,255,255,0.25)" }}>{formatDate(session.created_at)}</span>
                 </div>
                 {session.cover_items?.length > 0 && (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
                     {session.cover_items.map(item => (
-                      <p key={item.id} style={{ fontSize: 12, color: "rgba(255,255,255,0.32)", paddingLeft: 8 }}>
-                        <span style={{ color: item.status === "done" ? "rgba(74,222,128,0.6)" : BLUE, marginRight: 6, fontSize: 10 }}>
-                          {item.status === "done" ? "✓" : "·"}
-                        </span>
-                        {item.question || "문항 미입력"}
-                      </p>
+                      <div key={item.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingLeft: 8, gap: 8 }}>
+                        <p style={{ fontSize: 12, color: "rgba(255,255,255,0.32)", flex: 1, minWidth: 0 }}>
+                          <span style={{ color: item.status === "done" ? "rgba(74,222,128,0.6)" : BLUE, marginRight: 6, fontSize: 10 }}>
+                            {item.status === "done" ? "✓" : "·"}
+                          </span>
+                          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {item.question || "문항 미입력"}
+                          </span>
+                        </p>
+                        {item.status === "done" && (
+                          <button
+                            onClick={() => handleDownloadPdf(session.job_title, item)}
+                            disabled={pdfLoadingId === item.id}
+                            style={{
+                              flexShrink: 0,
+                              fontSize: 10,
+                              fontWeight: 600,
+                              color: "rgba(255,255,255,0.3)",
+                              background: "rgba(255,255,255,0.05)",
+                              border: "1px solid rgba(255,255,255,0.08)",
+                              borderRadius: 8,
+                              padding: "3px 8px",
+                              cursor: pdfLoadingId === item.id ? "default" : "pointer",
+                              opacity: pdfLoadingId === item.id ? 0.5 : 1,
+                              transition: "opacity 0.15s",
+                            }}
+                          >
+                            {pdfLoadingId === item.id ? "..." : "PDF"}
+                          </button>
+                        )}
+                      </div>
                     ))}
                   </div>
                 )}
