@@ -203,15 +203,15 @@ export default function Home() {
             >
               <img src="/ai-avatar.webp" alt="" className="w-6 h-6 rounded-full object-cover flex-shrink-0" />
               취업소크라테스
-              <span className="text-sm font-normal" style={{ color: "rgba(255,255,255,0.28)" }}>JobSocrates</span>
+              <span className="hidden sm:inline text-sm font-normal" style={{ color: "rgba(255,255,255,0.28)" }}>JobSocrates</span>
             </button>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2">
               {userEmail ? (
                 <>
                   {/* 뱃지 카운트 */}
                   {badgeCount !== null && badgeCount > 0 && userEmail !== ADMIN_EMAIL && (
                     <div
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold"
+                      className="flex items-center gap-1 px-2 sm:px-3 py-1.5 rounded-xl text-xs sm:text-sm font-semibold"
                       style={{ background: "rgba(255,209,102,0.12)", border: "1px solid rgba(255,209,102,0.25)", color: "rgba(255,209,102,0.9)" }}
                     >
                       🏅 {badgeCount}
@@ -220,22 +220,26 @@ export default function Home() {
                   {userEmail !== ADMIN_EMAIL && (
                     <Link
                       href="/mypage"
-                      className="text-sm px-3.5 py-2 rounded-xl font-medium transition-all hover:opacity-80"
+                      className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm px-2.5 sm:px-3.5 py-2 rounded-xl font-medium transition-all hover:opacity-80"
                       style={{ background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.7)", border: "1px solid rgba(255,255,255,0.15)" }}
                     >
-                      마이페이지
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                      <span className="hidden sm:inline">마이페이지</span>
                     </Link>
                   )}
                   {userEmail === ADMIN_EMAIL && (
-                    <a href="/admin" className="hidden sm:flex items-center gap-1.5 text-sm px-3.5 py-2 rounded-xl transition-colors hover:text-white" style={{ color: "rgba(255,255,255,0.65)", border: "1px solid rgba(255,255,255,0.18)" }}>
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-                      관리자
+                    <a href="/admin" className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm px-2.5 sm:px-3.5 py-2 rounded-xl transition-colors hover:text-white" style={{ color: "rgba(255,255,255,0.65)", border: "1px solid rgba(255,255,255,0.18)" }}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                      <span className="hidden sm:inline">관리자</span>
                     </a>
                   )}
-                  <a href="/chat" className="text-sm px-4 py-2 rounded-xl font-bold transition-all hover:scale-[1.04] active:scale-[0.97]" style={{ background: NAV_BTN, color: "#fff", boxShadow: `0 2px 18px ${NAV_BTN}50` }}>
+                  <a href="/chat" className="text-xs sm:text-sm px-3 sm:px-4 py-2 rounded-xl font-bold transition-all hover:scale-[1.04] active:scale-[0.97]" style={{ background: NAV_BTN, color: "#fff", boxShadow: `0 2px 18px ${NAV_BTN}50` }}>
                     시작하기
                   </a>
-                  <button onClick={() => supabase.auth.signOut().then(() => { setUserEmail(null); setBadgeCount(null); })} className="hidden sm:block text-sm px-3 py-2 rounded-xl transition-colors hover:text-white" style={{ color: "rgba(255,255,255,0.5)" }}>로그아웃</button>
+                  <button onClick={() => supabase.auth.signOut().then(() => { setUserEmail(null); setBadgeCount(null); })} className="flex items-center gap-1 text-xs sm:text-sm px-2 sm:px-3 py-2 rounded-xl transition-colors hover:text-white" style={{ color: "rgba(255,255,255,0.5)" }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    <span className="hidden sm:inline">로그아웃</span>
+                  </button>
                 </>
               ) : (
                 <>

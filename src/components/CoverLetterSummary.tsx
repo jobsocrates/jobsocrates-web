@@ -83,7 +83,7 @@ export function buildPrintHtml(
     if (isDiag) {
       return `
         <div class="diag-box">
-          <p class="diag-label">📋 초안 진단</p>
+          <div class="diag-label-row"><img class="avatar" src="${baseUrl}/ai-avatar.webp" alt="" style="object-fit:cover"> 초안 진단</div>
           <p class="diag-text">${escHtml(text)}</p>
         </div>`;
     }
@@ -136,6 +136,7 @@ body{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#ff
 
 .diag-box{background:#eef2ff;border-left:4px solid #4338ca;border-radius:0 10px 10px 0;padding:14px 18px;margin-bottom:14px}
 .diag-label{font-size:10px;font-weight:700;color:#4338ca;letter-spacing:.1em;margin-bottom:8px;text-transform:uppercase}
+.diag-label-row{display:flex;align-items:center;gap:7px;font-size:10px;font-weight:700;color:#4338ca;letter-spacing:.1em;margin-bottom:8px;text-transform:uppercase}
 .diag-text{font-size:13px;line-height:1.8;color:#111827;word-break:keep-all}
 
 .msg-wrap{margin-bottom:14px}
@@ -498,12 +499,16 @@ function SummaryMsgRow({
 
   return (
     <div className={`flex gap-3 ${isBot ? "" : "flex-row-reverse"}`}>
-      <div
-        className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5"
-        style={isBot ? { background: BLUE, color: "#fff" } : { background: ACCENT, color: "#fff" }}
-      >
-        {isBot ? "AI" : "나"}
-      </div>
+      {isBot ? (
+        <img src="/ai-avatar.webp" alt="" className="w-7 h-7 rounded-full object-cover flex-shrink-0 mt-0.5" />
+      ) : (
+        <div
+          className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5"
+          style={{ background: ACCENT, color: "#fff" }}
+        >
+          나
+        </div>
+      )}
       <div
         className="flex-1 rounded-xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap"
         style={{

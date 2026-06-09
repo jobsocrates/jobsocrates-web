@@ -113,12 +113,7 @@ function DiagnosisCard({ text, streaming }: { text: string; streaming: boolean }
         style={{ background: `${BLUE}09`, border: `1px solid ${BLUE}1C` }}
       >
         <div className="flex items-center gap-2 px-4 py-2.5 border-b" style={{ borderColor: `${BLUE}16` }}>
-          <div
-            className="w-5 h-5 rounded-full flex items-center justify-center font-bold flex-shrink-0"
-            style={{ background: BLUE, color: "#fff", fontSize: "9px" }}
-          >
-            AI
-          </div>
+          <img src="/ai-avatar.webp" alt="" className="w-5 h-5 rounded-full object-cover flex-shrink-0" />
           <span className="text-xs lg:text-[15px] font-semibold" style={{ color: BLUE }}>초안 진단</span>
         </div>
         <div className="px-4 py-3.5">
