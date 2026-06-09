@@ -66,7 +66,8 @@ export function buildPrintHtml(
   revision: string,
   changes: string,
   diagMsgs: SummaryMsg[],
-  interviewQs: SummaryInterviewQ[]
+  interviewQs: SummaryInterviewQ[],
+  baseUrl = ""
 ): string {
   const changeItems = changes
     .split("\n")
@@ -90,7 +91,7 @@ export function buildPrintHtml(
       return `
         <div class="msg-wrap">
           <div class="msg-ai">
-            <div class="avatar avatar-ai">AI</div>
+            <img class="avatar" src="${baseUrl}/ai-avatar.webp" alt="" style="object-fit:cover">
             <div class="bubble-ai">${escHtml(text)}</div>
           </div>
         </div>`;
@@ -108,6 +109,7 @@ export function buildPrintHtml(
 <html lang="ko">
 <head>
 <meta charset="utf-8">
+<base href="${baseUrl}">
 <title>취업소크라테스 리포트 — ${escHtml(question)}</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -139,9 +141,8 @@ body{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#ff
 .msg-wrap{margin-bottom:14px}
 .msg-ai{display:flex;gap:10px;align-items:flex-start}
 .msg-user{display:flex;gap:10px;align-items:flex-start;justify-content:flex-end}
-.avatar{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.avatar-ai{background:#4338ca}
-.avatar-me{background:#c2410c}
+.avatar{width:28px;height:28px;border-radius:50%;flex-shrink:0;object-fit:cover;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.avatar-me{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0;background:#c2410c;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .bubble-ai{background:#f1f5f9;border:1px solid #94a3b8;border-left:4px solid #4338ca;border-radius:2px 12px 12px 12px;padding:12px 16px;font-size:13px;line-height:1.75;word-break:keep-all;max-width:80%;color:#111827}
 .bubble-me{background:#fff7ed;border:1px solid #fdba74;border-right:4px solid #c2410c;border-radius:12px 2px 12px 12px;padding:12px 16px;font-size:13px;line-height:1.75;word-break:keep-all;max-width:80%;color:#111827}
 
@@ -241,7 +242,7 @@ export function CoverLetterSummary({ jobTitle, question, draft, msgs, interviewQ
 
   function handlePdf() {
     const html = buildPrintHtml(
-      jobTitle, question, revision, changes, diagMsgs, interviewQs
+      jobTitle, question, revision, changes, diagMsgs, interviewQs, window.location.origin
     );
     const win = window.open("", "_blank");
     if (!win) return;

@@ -11,7 +11,7 @@ function DiagnosisMini() {
   return (
     <div className="rounded-xl overflow-hidden" style={{ background: `${BLUE}09`, border: `1px solid ${BLUE}22` }}>
       <div className="flex items-center gap-2 px-3 py-2 border-b" style={{ borderColor: `${BLUE}16` }}>
-        <div className="w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: BLUE, color: "#fff", fontSize: "7px", fontWeight: 700 }}>AI</div>
+        <img src="/ai-avatar.webp" alt="" className="w-4 h-4 rounded-full object-cover flex-shrink-0" />
         <span className="text-xs font-semibold" style={{ color: BLUE }}>초안 진단</span>
       </div>
       <div className="px-3 py-3 flex flex-col gap-2">
@@ -34,7 +34,7 @@ function BoostMini() {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-end gap-2">
-        <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: BLUE, color: "#fff", fontSize: "7px", fontWeight: 700 }}>AI</div>
+        <img src="/ai-avatar.webp" alt="" className="w-5 h-5 rounded-full object-cover flex-shrink-0" />
         <div className="px-3 py-2 text-xs leading-relaxed" style={{ background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.82)", borderRadius: "4px 12px 12px 12px" }}>
           「팀 성과」— 당신이 직접 한 게 뭔가요?
         </div>
@@ -45,7 +45,7 @@ function BoostMini() {
         </div>
       </div>
       <div className="flex items-end gap-2">
-        <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: BLUE, color: "#fff", fontSize: "7px", fontWeight: 700 }}>AI</div>
+        <img src="/ai-avatar.webp" alt="" className="w-5 h-5 rounded-full object-cover flex-shrink-0" />
         <div className="px-3 py-2 text-xs leading-relaxed" style={{ background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.82)", borderRadius: "4px 12px 12px 12px" }}>
           배포 직전 성능 이슈, 어떻게 해결했어요?
         </div>
@@ -59,7 +59,7 @@ function RevisionMini() {
     <div className="flex flex-col gap-2">
       <div className="rounded-xl overflow-hidden" style={{ background: `${BLUE}09`, border: `1px solid ${BLUE}22` }}>
         <div className="flex items-center gap-2 px-3 py-2 border-b" style={{ borderColor: `${BLUE}14` }}>
-          <div className="w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: BLUE, color: "#fff", fontSize: "7px", fontWeight: 700 }}>AI</div>
+          <img src="/ai-avatar.webp" alt="" className="w-4 h-4 rounded-full object-cover flex-shrink-0" />
           <span className="text-xs font-semibold" style={{ color: BLUE }}>자소서 완성본</span>
         </div>
         <div className="px-3 pt-3 pb-5 relative overflow-hidden" style={{ maxHeight: "72px" }}>

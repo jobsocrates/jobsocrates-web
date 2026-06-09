@@ -105,7 +105,7 @@ function ChatPreviewCard() {
       <div className="p-5 flex flex-col gap-4">
         <div className="rounded-xl overflow-hidden" style={{ background: `${BLUE}09`, border: `1px solid ${BLUE}22` }}>
           <div className="flex items-center gap-2 px-4 py-2.5 border-b" style={{ borderColor: `${BLUE}14` }}>
-            <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: BLUE, color: "#fff", fontSize: "8px", fontWeight: 700 }}>AI</div>
+            <img src="/ai-avatar.webp" alt="" className="w-5 h-5 rounded-full object-cover flex-shrink-0" />
             <span className="text-sm font-semibold" style={{ color: BLUE }}>초안 진단</span>
           </div>
           <div className="px-4 py-3 flex flex-col gap-2">
@@ -118,7 +118,7 @@ function ChatPreviewCard() {
           </div>
         </div>
         <div className="flex items-end gap-2.5">
-          <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: BLUE, color: "#fff", fontSize: "8px", fontWeight: 700 }}>AI</div>
+          <img src="/ai-avatar.webp" alt="" className="w-6 h-6 rounded-full object-cover flex-shrink-0" />
           <div className="px-4 py-2.5 text-sm leading-relaxed" style={{ background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.85)", borderRadius: "4px 14px 14px 14px", maxWidth: "82%" }}>
             「팀 성과」라고 하셨는데 — 당신이 직접 한 게 뭔가요?
           </div>
@@ -130,7 +130,7 @@ function ChatPreviewCard() {
         </div>
         <div className="rounded-xl overflow-hidden" style={{ background: `${BLUE}09`, border: `1px solid ${BLUE}22` }}>
           <div className="flex items-center gap-2 px-4 py-2.5 border-b" style={{ borderColor: `${BLUE}14` }}>
-            <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: BLUE, color: "#fff", fontSize: "8px", fontWeight: 700 }}>AI</div>
+            <img src="/ai-avatar.webp" alt="" className="w-5 h-5 rounded-full object-cover flex-shrink-0" />
             <span className="text-sm font-semibold" style={{ color: BLUE }}>자소서 완성중</span>
           </div>
           <div className="px-4 py-3">
@@ -199,10 +199,11 @@ export default function Home() {
           <div className="max-w-[1300px] mx-auto px-5 sm:px-8 h-16 flex items-center justify-between">
             <button
               onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-              className="font-bold text-white text-base tracking-tight hover:opacity-80 transition-opacity"
+              className="flex items-center gap-2 font-bold text-white text-base tracking-tight hover:opacity-80 transition-opacity"
             >
+              <img src="/ai-avatar.webp" alt="" className="w-6 h-6 rounded-full object-cover flex-shrink-0" />
               취업소크라테스
-              <span className="hidden sm:inline text-sm font-normal ml-2" style={{ color: "rgba(255,255,255,0.28)" }}>JobSocrates</span>
+              <span className="text-sm font-normal" style={{ color: "rgba(255,255,255,0.28)" }}>JobSocrates</span>
             </button>
             <div className="flex items-center gap-2">
               {userEmail ? (
@@ -428,7 +429,8 @@ export default function Home() {
         {/* ── 푸터 ── */}
         <footer className="py-10 px-6 sm:px-8" style={{ borderTop: "1px solid rgba(255,255,255,0.06)", background: "#07091A" }}>
           <div className="max-w-[1300px] mx-auto flex flex-col items-center gap-2.5">
-            <span className="text-base font-medium" style={{ color: "rgba(255,255,255,0.38)" }}>취업소크라테스 · <span style={{ color: "rgba(255,255,255,0.2)" }}>JobSocrates</span></span>
+            <img src="/ai-avatar.webp" alt="" className="w-8 h-8 rounded-full object-cover" />
+            <span className="text-base font-medium" style={{ color: "rgba(255,255,255,0.38)" }}>취업소크라테스 <span style={{ color: "rgba(255,255,255,0.2)" }}>JobSocrates</span></span>
             <a href="mailto:jobsocrates76@gmail.com" className="text-sm transition-colors hover:text-white" style={{ color: "rgba(255,255,255,0.3)" }}>co-work · jobsocrates76@gmail.com</a>
           </div>
         </footer>

@@ -27,8 +27,7 @@ export function ChatMock() {
       style={{ background: "#0A0A18", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 24px 48px rgba(0,0,0,0.4)" }}>
       <div className="px-4 py-3 border-b flex items-center gap-3 flex-shrink-0"
         style={{ borderColor: "rgba(255,255,255,0.07)", background: "rgba(255,255,255,0.02)" }}>
-        <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
-          style={{ background: "#6B8EFF", color: "#fff" }}>AI</div>
+        <img src="/ai-avatar.webp" alt="" className="w-6 h-6 rounded-full object-cover flex-shrink-0" />
         <span className="text-sm font-semibold text-white">사례 디깅</span>
         <span className="text-xs ml-auto px-2 py-0.5 rounded-full"
           style={{ background: "rgba(107,142,255,0.15)", color: "#6B8EFF" }}>3 / 6턴</span>
@@ -37,8 +36,7 @@ export function ChatMock() {
         {msgs.map((m, i) => (
           <div key={i} className={`flex items-end gap-2 ${m.r === "user" ? "justify-end" : ""}`}>
             {m.r === "bot" && (
-              <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
-                style={{ background: "#6B8EFF", color: "#fff" }}>AI</div>
+              <img src="/ai-avatar.webp" alt="" className="w-6 h-6 rounded-full object-cover flex-shrink-0" />
             )}
             <div className="max-w-[78%] px-3 py-2 text-sm leading-relaxed"
               style={m.r === "bot"
@@ -49,8 +47,7 @@ export function ChatMock() {
           </div>
         ))}
         <div className="flex items-end gap-2">
-          <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
-            style={{ background: "#6B8EFF", color: "#fff" }}>AI</div>
+          <img src="/ai-avatar.webp" alt="" className="w-6 h-6 rounded-full object-cover flex-shrink-0" />
           <div className="px-3 py-2.5" style={{ background: "rgba(255,255,255,0.07)", borderRadius: "4px 14px 14px 14px" }}>
             <div className="flex gap-1 items-center h-3.5">
               {DOTS.map(({ c, d }) => (

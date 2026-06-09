@@ -162,7 +162,7 @@ function DiagnosisCard({ text, streaming }: { text: string; streaming: boolean }
       {/* "이 중에서 ~" 질문 — 별도 봇 버블 */}
       {followText && (
         <div className="flex items-end gap-2.5">
-          <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs flex-shrink-0 mb-0.5 font-bold" style={{ background: BLUE, color: "#fff" }}>AI</div>
+          <img src="/ai-avatar.webp" alt="" className="w-7 h-7 rounded-full object-cover flex-shrink-0 mb-0.5" />
           <div
             className="max-w-[82%] px-4 py-3 text-sm lg:text-base leading-relaxed whitespace-pre-wrap"
             style={{ background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.88)", borderRadius: "4px 16px 16px 16px", wordBreak: "keep-all" }}
@@ -218,7 +218,7 @@ function StreamingRevisionCard({ text }: { text: string }) {
     <div className="flex flex-col gap-3 w-full">
       <div className="rounded-2xl overflow-hidden" style={{ background: `${BLUE}0D`, border: `1px solid ${BLUE}28` }}>
         <div className="flex items-center gap-2 px-4 py-2.5 border-b" style={{ borderColor: `${BLUE}20` }}>
-          <div className="w-5 h-5 rounded-full flex items-center justify-center font-bold flex-shrink-0" style={{ background: BLUE, color: "#fff", fontSize: "9px" }}>AI</div>
+          <img src="/ai-avatar.webp" alt="" className="w-5 h-5 rounded-full object-cover flex-shrink-0" />
           <span className="text-xs lg:text-[15px] font-semibold" style={{ color: BLUE }}>수정본</span>
         </div>
         <div className="px-4 py-4">
@@ -248,7 +248,7 @@ function RevisionMessage({ text }: { text: string }) {
       {revision && (
         <div className="rounded-2xl overflow-hidden" style={{ background: `${BLUE}0D`, border: `1px solid ${BLUE}28` }}>
           <div className="flex items-center gap-2 px-4 py-2.5 border-b" style={{ borderColor: `${BLUE}20` }}>
-            <div className="w-5 h-5 rounded-full flex items-center justify-center font-bold flex-shrink-0" style={{ background: BLUE, color: "#fff", fontSize: "9px" }}>AI</div>
+            <img src="/ai-avatar.webp" alt="" className="w-5 h-5 rounded-full object-cover flex-shrink-0" />
             <span className="text-xs lg:text-[15px] font-semibold" style={{ color: BLUE }}>수정본</span>
           </div>
           <div className="px-4 py-4">
@@ -265,9 +265,7 @@ function RevisionMessage({ text }: { text: string }) {
 
 function BotBubbleAvatar() {
   return (
-    <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs flex-shrink-0 mb-0.5 font-bold" style={{ background: BLUE, color: "#fff" }}>
-      AI
-    </div>
+    <img src="/ai-avatar.webp" alt="" className="w-7 h-7 rounded-full object-cover flex-shrink-0 mb-0.5" />
   );
 }
 
@@ -330,12 +328,7 @@ function InterviewQCard({
                   className={`flex items-end gap-2 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
                 >
                   {msg.role === "bot" && (
-                    <div
-                      className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mb-0.5"
-                      style={{ background: VIOLET, color: "#fff" }}
-                    >
-                      AI
-                    </div>
+                    <img src="/ai-avatar.webp" alt="" className="w-6 h-6 rounded-full object-cover flex-shrink-0 mb-0.5" />
                   )}
                   <div
                     className="max-w-[85%] px-3.5 py-2.5 text-sm lg:text-base leading-relaxed whitespace-pre-wrap"
@@ -1259,7 +1252,7 @@ export default function ChatPage() {
               window.scrollTo({ top: 0, behavior: "smooth" });
             }}
           >
-            <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: ACCENT }} />
+            <img src="/ai-avatar.webp" alt="" className="w-5 h-5 rounded-full object-cover flex-shrink-0" />
             <span className="text-xs sm:text-sm lg:text-[15px] font-semibold truncate" style={{ color: "rgba(255,255,255,0.78)", letterSpacing: "-0.01em" }}>취업소크라테스</span>
           </button>
           <div className="flex items-center gap-2 flex-shrink-0">

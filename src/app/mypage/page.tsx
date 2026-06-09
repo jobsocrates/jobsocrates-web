@@ -145,7 +145,7 @@ export default function MyPage() {
         return { question: iq.question as string, msgs: qMsgs };
       });
 
-      const html = buildPrintHtml(jobTitle, item.question, revision, changes, cleanDiag, interviewQs);
+      const html = buildPrintHtml(jobTitle, item.question, revision, changes, cleanDiag, interviewQs, window.location.origin);
       const win = window.open("", "_blank");
       if (!win) return;
       win.document.write(html);
@@ -209,7 +209,7 @@ export default function MyPage() {
         return { question: iq.question as string, msgs: qMsgs };
       });
 
-      const html = buildPrintHtml(jobTitle, item.question, revision, changes, diagMsgs, interviewQs);
+      const html = buildPrintHtml(jobTitle, item.question, revision, changes, diagMsgs, interviewQs, window.location.origin);
       const win = window.open("", "_blank");
       if (!win) return;
       win.document.write(html);
