@@ -792,21 +792,29 @@ export default function ChatPage() {
   }
 
   async function fetchCredits(userId: string) {
-    const { data } = await supabase
+    // credits 조회 (항상 존재하는 컬럼 — 분리해서 안정성 확보)
+    const { data: creditData } = await supabase
       .from("profiles")
-      .select("credits, tutorial_seen")
+      .select("credits")
       .eq("id", userId)
       .single();
-    if (data) {
-      setUserCredits(data.credits ?? 0);
-      // sessionStorage 강제 표시 플래그 (마이페이지 "사용법 다시 보기")
-      const forced = sessionStorage.getItem("showTutorial") === "1";
-      if (forced) {
-        sessionStorage.removeItem("showTutorial");
-        setShowTutorial(true);
-      } else if (!(data as Record<string, unknown>).tutorial_seen) {
-        setShowTutorial(true);
-      }
+    if (creditData) setUserCredits(creditData.credits ?? 0);
+
+    // 튜토리얼 표시 여부 결정
+    const forced = sessionStorage.getItem("showTutorial") === "1";
+    if (forced) {
+      sessionStorage.removeItem("showTutorial");
+      setShowTutorial(true);
+      return;
+    }
+    // tutorial_seen 컬럼이 없으면 data가 null → !null?.tutorial_seen = true → 튜토리얼 표시
+    const { data: tutData } = await supabase
+      .from("profiles")
+      .select("tutorial_seen")
+      .eq("id", userId)
+      .single();
+    if (!(tutData as Record<string, unknown> | null)?.tutorial_seen) {
+      setShowTutorial(true);
     }
   }
 
