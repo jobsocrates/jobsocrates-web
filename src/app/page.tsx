@@ -257,7 +257,7 @@ export default function Home() {
                   className="text-[3.5rem] sm:text-[4.5rem] lg:text-[5.5rem] xl:text-[6.5rem] font-black leading-[1.05] tracking-tight"
                   style={{ background: `linear-gradient(135deg, #fff 10%, ${NAV_BTN} 80%)`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", letterSpacing: "-0.03em" }}
                 >
-                  끝났습니다.
+                  끝났습니다
                 </h1>
               </div>
 
@@ -398,7 +398,7 @@ export default function Home() {
           </div>
           <div className="max-w-[800px] mx-auto flex flex-col items-center text-center gap-8 relative">
             <h2 className="text-5xl sm:text-6xl lg:text-7xl font-black text-white anim" style={{ letterSpacing: "-0.03em", lineHeight: 1.05, wordBreak: "keep-all" }}>
-              준비됐으면,<br />지금 시작하세요.
+              준비됐으면,<br />지금 시작하세요
             </h2>
             <p className="text-xl anim anim-delay-1" style={{ color: "rgba(255,255,255,0.4)" }}>첫 문항은 무료입니다.</p>
             <div className="anim anim-delay-2">
