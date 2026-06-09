@@ -323,14 +323,14 @@ export default function Home() {
 
         {/* ── 브릿지 WHY→HOW ── */}
         <section className="px-6 sm:px-8" style={{ background: "#0D0E1F" }}>
-          <div className="max-w-[900px] mx-auto py-28 anim flex flex-col gap-7">
+          <div className="max-w-[900px] mx-auto py-28 anim flex flex-col gap-10">
             <p className="text-base font-medium" style={{ color: "rgba(255,255,255,0.4)" }}>이 네 가지, 공통점이 하나 있어요.</p>
-            <h2 className="text-4xl sm:text-5xl lg:text-6xl font-black text-white leading-[1.1]" style={{ wordBreak: "keep-all", letterSpacing: "-0.03em" }}>
-              할 말이 없는 게 아니라,<br />
-              <span style={{ color: NAV_BTN }}>어떻게 꺼내야 할지</span><br />
-              모르는 거예요.
+            <h2 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.3]" style={{ wordBreak: "keep-all", letterSpacing: "-0.03em" }}>
+              <span className="text-white">할 말이 없는 게 아니라,</span><br />
+              <span style={{ background: "linear-gradient(135deg, #fff 15%, #6B8EFF 85%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>어떻게 꺼내야 할지</span><br />
+              <span className="text-white">모르는 거예요.</span>
             </h2>
-            <p className="text-lg sm:text-xl leading-[1.8] max-w-2xl" style={{ color: "rgba(255,255,255,0.5)", wordBreak: "keep-all" }}>
+            <p className="text-lg sm:text-xl leading-[1.9] max-w-2xl" style={{ color: "rgba(255,255,255,0.5)", wordBreak: "keep-all" }}>
               지금까지 모든 도구는 문장을 고쳐주는 데만 집중했어요.<br />
               취업소크라테스는 <span style={{ color: "rgba(255,255,255,0.85)", fontWeight: 600 }}>꺼내는 것부터</span> 시작합니다.
             </p>
@@ -381,17 +381,17 @@ export default function Home() {
 
         {/* ── 클로징 브릿지 ── */}
         <section className="py-32 px-6 sm:px-8" style={{ background: "#07081A" }}>
-          <div className="max-w-[800px] mx-auto text-center anim flex flex-col items-center gap-6">
+          <div className="max-w-[800px] mx-auto text-center anim flex flex-col items-center gap-8">
             <p className="text-lg" style={{ color: "rgba(255,255,255,0.35)", wordBreak: "keep-all" }}>
               질문에 자세하게 답할수록, 더 좋은 질문이 돌아옵니다.
             </p>
             <h2
-              className="text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.15] text-white"
+              className="text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.35]"
               style={{ letterSpacing: "-0.03em", wordBreak: "keep-all" }}
             >
-              그 대화가 쌓이면서,<br />
-              당신만의 자소서가<br />
-              완성됩니다.
+              <span className="text-white">그 대화가 쌓이면서,</span><br />
+              <span style={{ background: "linear-gradient(135deg, #FFD166 10%, #A78BFA 80%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>당신만의 자소서가</span><br />
+              <span className="text-white">완성됩니다.</span>
             </h2>
             <div style={{ width: "48px", height: "2px", background: `${NAV_BTN}60`, borderRadius: "2px" }} />
           </div>
@@ -403,7 +403,7 @@ export default function Home() {
             <div style={{ position: "absolute", inset: 0, background: `radial-gradient(ellipse at 50% 60%, ${NAV_BTN}10 0%, transparent 60%)` }} />
           </div>
           <div className="max-w-[800px] mx-auto flex flex-col items-center text-center gap-8 relative">
-            <h2 className="text-5xl sm:text-6xl lg:text-7xl font-black text-white anim" style={{ letterSpacing: "-0.03em", lineHeight: 1.05, wordBreak: "keep-all" }}>
+            <h2 className="text-5xl sm:text-6xl lg:text-7xl font-black text-white anim" style={{ letterSpacing: "-0.03em", lineHeight: 1.3, wordBreak: "keep-all" }}>
               준비됐으면,<br />지금 시작하세요
             </h2>
             <p className="text-xl anim anim-delay-1" style={{ color: "rgba(255,255,255,0.4)" }}>첫 문항은 무료입니다.</p>
