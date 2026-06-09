@@ -123,7 +123,7 @@ export function TutorialModal({ userId, onClose }: Props) {
           background: "#0D0D18",
           border: "1px solid rgba(255,255,255,0.1)",
           boxShadow: "0 32px 80px rgba(0,0,0,0.65)",
-          animation: "tutIn 0.35s cubic-bezier(0.16,1,0.3,1) both",
+          animation: "tutIn 0.35s cubic-bezier(0.16,1,0.3,1) forwards",
         }}
       >
         {/* ── 상단 헤더 ── */}
@@ -174,7 +174,7 @@ export function TutorialModal({ userId, onClose }: Props) {
         <div
           key={animKey}
           className="px-6 pb-2 pt-4 flex flex-col gap-3"
-          style={{ animation: "pageIn 0.28s ease both" }}
+          style={{ animation: "pageIn 0.28s ease forwards" }}
         >
           {/* 1장 — 뱃지 */}
           {current.id === "badge" && (
