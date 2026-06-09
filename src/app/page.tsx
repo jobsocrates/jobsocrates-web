@@ -349,7 +349,7 @@ export default function Home() {
                 딱 하나만 요청드려요.
               </h2>
               <p className="mt-4 text-lg" style={{ color: "rgba(255,255,255,0.38)", wordBreak: "keep-all" }}>
-                이것만 지키면, 취업소크라테스가 합니다.
+                이것만 지키면, 나머지는 취업소크라테스가 합니다.
               </p>
             </div>
 
