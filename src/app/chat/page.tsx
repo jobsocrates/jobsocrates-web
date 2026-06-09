@@ -1179,7 +1179,7 @@ export default function ChatPage() {
           <Link
             href="/"
             className="flex items-center gap-1.5 text-xs lg:text-sm font-bold transition-opacity hover:opacity-80 flex-shrink-0"
-            style={{ color: "#C96442", background: "rgba(201,100,66,0.12)", border: "1px solid rgba(201,100,66,0.35)", padding: "5px 11px", borderRadius: 9 }}
+            style={{ color: "rgba(255,255,255,0.82)", background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.15)", padding: "5px 11px", borderRadius: 9 }}
           >
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" />

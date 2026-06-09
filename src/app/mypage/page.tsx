@@ -272,7 +272,7 @@ export default function MyPage() {
 
       {/* Header */}
       <header style={{ height: 56, padding: "0 20px", display: "flex", alignItems: "center", borderBottom: "1px solid rgba(255,255,255,0.08)", background: "rgba(13,13,24,0.98)", backdropFilter: "blur(12px)", position: "sticky", top: 0, zIndex: 40 }}>
-        <Link href="/" style={{ fontSize: 14, fontWeight: 700, color: ACCENT, textDecoration: "none", display: "flex", alignItems: "center", gap: 7, padding: "7px 14px", borderRadius: 10, background: `rgba(201,100,66,0.12)`, border: `1px solid rgba(201,100,66,0.35)` }}>
+        <Link href="/" style={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.82)", textDecoration: "none", display: "flex", alignItems: "center", gap: 7, padding: "7px 14px", borderRadius: 10, background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.15)" }}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
           </svg>
