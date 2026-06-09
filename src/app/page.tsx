@@ -276,8 +276,8 @@ export default function Home() {
               <div className="flex flex-col gap-3">
                 <button
                   onClick={handleStartChat}
-                  className="inline-flex items-center gap-2.5 px-7 py-4 rounded-2xl font-black text-white transition-all hover:scale-[1.04] active:scale-[0.97]"
-                  style={{ background: NAV_BTN, boxShadow: `0 8px 36px ${NAV_BTN}50`, fontSize: "17px", letterSpacing: "-0.01em" }}
+                  className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl font-black text-white transition-all hover:scale-[1.04] active:scale-[0.97]"
+                  style={{ background: NAV_BTN, boxShadow: `0 6px 28px ${NAV_BTN}50`, fontSize: "16px", letterSpacing: "-0.01em" }}
                 >
                   시작하기
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
@@ -327,7 +327,7 @@ export default function Home() {
             <p className="text-base font-medium" style={{ color: "rgba(255,255,255,0.4)" }}>이 네 가지, 공통점이 하나 있어요.</p>
             <h2 className="text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.3]" style={{ wordBreak: "keep-all", letterSpacing: "-0.03em" }}>
               <span className="text-white">할 말이 없는 게 아니라,</span><br />
-              <span style={{ background: "linear-gradient(135deg, #fff 15%, #6B8EFF 85%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>어떻게 꺼내야 할지</span><br />
+              <span style={{ background: "linear-gradient(120deg, #818CF8 0%, #38BDF8 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>어떻게 꺼내야 할지</span><br />
               <span className="text-white">모르는 거예요.</span>
             </h2>
             <p className="text-lg sm:text-xl leading-[1.9] max-w-2xl" style={{ color: "rgba(255,255,255,0.5)", wordBreak: "keep-all" }}>
@@ -410,8 +410,8 @@ export default function Home() {
             <div className="anim anim-delay-2">
               <button
                 onClick={handleStartChat}
-                className="inline-flex items-center gap-3 px-10 py-5 rounded-2xl font-black text-white transition-all hover:scale-[1.04] active:scale-[0.97]"
-                style={{ background: NAV_BTN, boxShadow: `0 10px 40px ${NAV_BTN}50`, fontSize: "20px", letterSpacing: "-0.01em" }}
+                className="inline-flex items-center gap-2.5 px-8 py-4 rounded-2xl font-black text-white transition-all hover:scale-[1.04] active:scale-[0.97]"
+                style={{ background: NAV_BTN, boxShadow: `0 8px 36px ${NAV_BTN}50`, fontSize: "18px", letterSpacing: "-0.01em" }}
               >
                 시작하기
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
