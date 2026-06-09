@@ -271,8 +271,8 @@ export default function MyPage() {
       <style>{`@keyframes spin { to { transform: rotate(360deg); } } ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }`}</style>
 
       {/* Header */}
-      <header style={{ height: 52, padding: "0 20px", display: "flex", alignItems: "center", borderBottom: "1px solid rgba(255,255,255,0.08)", background: "rgba(13,13,24,0.98)", backdropFilter: "blur(12px)", position: "sticky", top: 0, zIndex: 40 }}>
-        <Link href="/" style={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.7)", textDecoration: "none", display: "flex", alignItems: "center", gap: 6 }}>
+      <header style={{ height: 56, padding: "0 20px", display: "flex", alignItems: "center", borderBottom: "1px solid rgba(255,255,255,0.08)", background: "rgba(13,13,24,0.98)", backdropFilter: "blur(12px)", position: "sticky", top: 0, zIndex: 40 }}>
+        <Link href="/" style={{ fontSize: 14, fontWeight: 700, color: ACCENT, textDecoration: "none", display: "flex", alignItems: "center", gap: 7, padding: "7px 14px", borderRadius: 10, background: `rgba(201,100,66,0.12)`, border: `1px solid rgba(201,100,66,0.35)` }}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
           </svg>
@@ -346,12 +346,12 @@ export default function MyPage() {
                 {session.cover_items?.length > 0 && (
                   <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
                     {session.cover_items.map(item => (
-                      <div key={item.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingLeft: 8, gap: 8 }}>
-                        <p style={{ fontSize: 12, color: "rgba(255,255,255,0.32)", flex: 1, minWidth: 0 }}>
-                          <span style={{ color: item.status === "done" ? "rgba(74,222,128,0.6)" : BLUE, marginRight: 6, fontSize: 10 }}>
+                      <div key={item.id} style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", paddingLeft: 8, gap: 8 }}>
+                        <p style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", flex: 1, minWidth: 0, lineHeight: 1.6, display: "flex", gap: 5 }}>
+                          <span style={{ color: item.status === "done" ? "rgba(74,222,128,0.6)" : BLUE, fontSize: 10, flexShrink: 0, marginTop: 2 }}>
                             {item.status === "done" ? "✓" : "·"}
                           </span>
-                          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          <span style={{ wordBreak: "keep-all", overflowWrap: "break-word" }}>
                             {item.question || "문항 미입력"}
                           </span>
                         </p>

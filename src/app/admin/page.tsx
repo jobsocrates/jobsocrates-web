@@ -609,7 +609,7 @@ export default function AdminPage() {
 
       {/* ─── USERS ─── */}
       {tab === "users" && (
-        <div style={{ padding: "24px", maxWidth: 860, margin: "0 auto" }}>
+        <div style={{ padding: "24px 32px", maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 3 }}>
@@ -633,17 +633,17 @@ export default function AdminPage() {
 
           <div style={{ borderRadius: 16, border: "1px solid rgba(255,255,255,0.07)", background: "rgba(255,255,255,0.02)", overflow: "hidden" }}>
             {/* Header row */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 80px 1fr 44px", gap: 0, padding: "10px 18px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "minmax(180px,1fr) 90px auto 44px", gap: 0, padding: "10px 20px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
               <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.08em" }}>이메일 / 가입일</span>
               <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.08em", textAlign: "center" }}>뱃지</span>
-              <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.08em", textAlign: "right" }}>수량 입력 후 지급 / 차감</span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.08em", textAlign: "right", paddingRight: 12 }}>수량 입력 후 지급 / 차감</span>
               <span />
             </div>
 
             {users.length === 0 ? (
               <p style={{ padding: "24px 18px", fontSize: 13, color: "rgba(255,255,255,0.3)", textAlign: "center" }}>유저 없음</p>
             ) : users.map(u => (
-              <div key={u.id} style={{ display: "grid", gridTemplateColumns: "1fr 80px 1fr 44px", gap: 0, padding: "13px 18px", borderBottom: "1px solid rgba(255,255,255,0.04)", alignItems: "center" }}>
+              <div key={u.id} style={{ display: "grid", gridTemplateColumns: "minmax(180px,1fr) 90px auto 44px", gap: 0, padding: "14px 20px", borderBottom: "1px solid rgba(255,255,255,0.04)", alignItems: "center" }}>
                 <div style={{ paddingRight: 12, minWidth: 0 }}>
                   <p style={{ fontSize: 13, fontWeight: 500, color: "rgba(255,255,255,0.82)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.email}</p>
                   {u.created_at && (

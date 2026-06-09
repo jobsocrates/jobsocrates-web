@@ -286,7 +286,7 @@ export default function Home() {
                   style={{ background: NAV_BTN, boxShadow: `0 6px 28px ${NAV_BTN}50`, fontSize: "16px", letterSpacing: "-0.01em" }}
                 >
                   시작하기
-                  <span style={{ fontSize: "18px", fontWeight: 300, lineHeight: 1 }}>›</span>
+                  <span style={{ fontSize: "18px", fontWeight: 300, lineHeight: "16px", display: "flex", alignItems: "center" }}>›</span>
                 </button>
               </div>
             </div>
@@ -419,7 +419,7 @@ export default function Home() {
                 style={{ background: NAV_BTN, boxShadow: `0 8px 36px ${NAV_BTN}50`, fontSize: "18px", letterSpacing: "-0.01em" }}
               >
                 시작하기
-                <span style={{ fontSize: "20px", fontWeight: 300, lineHeight: 1 }}>›</span>
+                <span style={{ fontSize: "20px", fontWeight: 300, lineHeight: "18px", display: "flex", alignItems: "center" }}>›</span>
               </button>
             </div>
           </div>
