@@ -1182,10 +1182,16 @@ export default function ChatPage() {
             </svg>
             홈
           </Link>
-          <div className="flex items-center gap-1.5 min-w-0">
+          <button
+            className="flex items-center gap-1.5 min-w-0 hover:opacity-75 transition-opacity"
+            onClick={() => {
+              document.querySelectorAll(".overflow-y-auto").forEach((el) => { (el as HTMLElement).scrollTop = 0; });
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+          >
             <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: ACCENT }} />
             <span className="text-xs sm:text-sm lg:text-[15px] font-semibold truncate" style={{ color: "rgba(255,255,255,0.78)", letterSpacing: "-0.01em" }}>취업소크라테스</span>
-          </div>
+          </button>
           <div className="flex items-center gap-2 flex-shrink-0">
             {currentUser && userCredits !== null && currentUser.email !== ADMIN_EMAIL && (
               <Link
