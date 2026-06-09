@@ -1563,32 +1563,6 @@ export default function ChatPage() {
 
                 </div>
 
-                {/* ── 작성 팁 패널 (데스크톱 전용) ── */}
-                <div className="hidden lg:flex flex-col gap-4 w-[280px] flex-shrink-0">
-                  <div className="rounded-2xl sticky top-4" style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.08)" }}>
-                    <div className="px-4 py-3 border-b flex items-center gap-2" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
-                      <span style={{ fontSize: "14px", lineHeight: 1 }}>✏️</span>
-                      <span className="text-[15px] font-semibold" style={{ color: "rgba(255,255,255,0.5)" }}>작성 팁</span>
-                    </div>
-                    <div className="px-4 py-5 flex flex-col gap-5">
-                      {([
-                        { icon: "📝", title: "초안이 없어도 괜찮아요", desc: "아직 쓴 게 없다면 두세 줄이라도 생각나는 대로 써보세요." },
-                        { icon: "🎯", title: "구체적일수록 좋아요", desc: "상황→행동→결과 형태로 답할수록 더 좋은 질문이 돌아와요." },
-                        { icon: "📎", title: "JD가 있으면 업로드하세요", desc: "채용 공고를 올리면 직무 키워드를 자동으로 반영해요." },
-                        { icon: "🔢", title: "글자수를 꼭 입력하세요", desc: "자소서 문항의 글자 수 제한을 미리 입력하면 더 정확하게 완성돼요." },
-                      ] as { icon: string; title: string; desc: string }[]).map((tip, i) => (
-                        <div key={i} className="flex flex-col gap-1.5">
-                          <div className="flex items-center gap-2">
-                            <span style={{ fontSize: "14px", lineHeight: 1 }}>{tip.icon}</span>
-                            <span className="text-[15px] font-semibold" style={{ color: "rgba(255,255,255,0.72)" }}>{tip.title}</span>
-                          </div>
-                          <p className="text-sm leading-relaxed pl-6" style={{ color: "rgba(255,255,255,0.38)", wordBreak: "keep-all" }}>{tip.desc}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
                 </div>
                 </div>
               </div>
@@ -2067,47 +2041,68 @@ export default function ChatPage() {
       {showCreditConfirm && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-5"
-          style={{ background: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)" }}
+          style={{ background: "rgba(0,0,0,0.8)", backdropFilter: "blur(10px)" }}
         >
           <div
-            className="w-full flex flex-col gap-5 rounded-2xl p-6"
-            style={{ maxWidth: "360px", background: "#0D0D18", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 24px 60px rgba(0,0,0,0.7)" }}
+            className="w-full flex flex-col rounded-3xl overflow-hidden"
+            style={{
+              maxWidth: "520px",
+              background: "#0E0E1C",
+              border: "1px solid rgba(255,255,255,0.12)",
+              boxShadow: `0 40px 100px rgba(0,0,0,0.8), 0 0 60px ${ACCENT}12`,
+            }}
           >
-            <div className="flex flex-col gap-3">
-              <div className="flex items-center gap-2.5">
-                <span style={{ fontSize: 22 }}>🏅</span>
-                <p className="text-sm font-semibold" style={{ color: "rgba(255,255,255,0.88)" }}>분석을 시작할까요?</p>
+            {/* 상단 강조 영역 */}
+            <div className="px-8 pt-8 pb-6 flex flex-col gap-4" style={{ background: `linear-gradient(to bottom, ${ACCENT}0A, transparent)`, borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+              <div className="flex items-center gap-3">
+                <span style={{ fontSize: 32, lineHeight: 1 }}>🏅</span>
+                <div>
+                  <p className="text-xl font-bold" style={{ color: "rgba(255,255,255,0.95)" }}>분석을 시작할까요?</p>
+                  <p className="text-sm mt-0.5" style={{ color: "rgba(255,255,255,0.42)" }}>뱃지 1개가 사용돼요</p>
+                </div>
               </div>
+
               {userCredits !== null && (
                 <div
-                  className="flex items-center gap-2 px-3 py-2 rounded-xl"
-                  style={{ background: "rgba(255,209,102,0.08)", border: "1px solid rgba(255,209,102,0.2)" }}
+                  className="flex items-center justify-between px-5 py-4 rounded-2xl"
+                  style={{ background: "rgba(255,209,102,0.07)", border: "1px solid rgba(255,209,102,0.22)" }}
                 >
-                  <span className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>현재 잔액</span>
-                  <span className="text-xs font-bold" style={{ color: GOLD }}>{userCredits}개</span>
-                  <span className="text-xs" style={{ color: "rgba(255,255,255,0.2)" }}>→ 분석 후</span>
-                  <span className="text-xs font-bold" style={{ color: userCredits - 1 > 0 ? GOLD : "rgba(248,113,113,0.8)" }}>{userCredits - 1}개</span>
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-xs" style={{ color: "rgba(255,255,255,0.38)" }}>현재 잔액</span>
+                    <span className="text-2xl font-bold" style={{ color: GOLD, lineHeight: 1.2 }}>{userCredits}개</span>
+                  </div>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+                  </svg>
+                  <div className="flex flex-col gap-0.5 items-end">
+                    <span className="text-xs" style={{ color: "rgba(255,255,255,0.38)" }}>분석 후</span>
+                    <span className="text-2xl font-bold" style={{ color: userCredits - 1 > 0 ? GOLD : "rgba(248,113,113,0.85)", lineHeight: 1.2 }}>{userCredits - 1}개</span>
+                  </div>
                 </div>
               )}
-              <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.42)" }}>
-                이 문항 분석에 뱃지 1개가 사용돼요. 중간에 나가도 같은 문항은 추가 차감 없이 이어서 할 수 있으니 걱정 마세요!
-              </p>
             </div>
-            <div className="flex gap-2.5">
-              <button
-                onClick={() => { setShowCreditConfirm(false); startAnalysis(); }}
-                className="flex-1 py-3 rounded-xl text-sm font-semibold text-white transition-all hover:scale-[1.02] active:scale-[0.98]"
-                style={{ background: ACCENT, boxShadow: `0 4px 16px ${ACCENT}30` }}
-              >
-                시작하기
-              </button>
-              <button
-                onClick={() => setShowCreditConfirm(false)}
-                className="flex-1 py-3 rounded-xl text-sm transition-all hover:opacity-70"
-                style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.45)", border: "1px solid rgba(255,255,255,0.08)" }}
-              >
-                취소
-              </button>
+
+            {/* 안내 + 버튼 */}
+            <div className="px-8 py-6 flex flex-col gap-5">
+              <p className="text-[15px] leading-relaxed" style={{ color: "rgba(255,255,255,0.52)" }}>
+                중간에 나가도 같은 문항은 <span style={{ color: "rgba(255,255,255,0.8)", fontWeight: 600 }}>추가 차감 없이</span> 이어서 할 수 있어요.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => { setShowCreditConfirm(false); startAnalysis(); }}
+                  className="flex-1 py-4 rounded-2xl text-base font-bold text-white transition-all hover:scale-[1.02] active:scale-[0.98]"
+                  style={{ background: ACCENT, boxShadow: `0 6px 24px ${ACCENT}35` }}
+                >
+                  시작하기
+                </button>
+                <button
+                  onClick={() => setShowCreditConfirm(false)}
+                  className="flex-1 py-4 rounded-2xl text-base font-semibold transition-all hover:opacity-70"
+                  style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.1)" }}
+                >
+                  취소
+                </button>
+              </div>
             </div>
           </div>
         </div>
