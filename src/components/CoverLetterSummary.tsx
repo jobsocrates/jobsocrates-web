@@ -68,17 +68,8 @@ export function buildPrintHtml(
     .filter(Boolean);
 
   const msgRow = (m: SummaryMsg, isDiag = false, isRevMsg = false) => {
-    if (isRevMsg) {
-      const { rest } = parseRevisionMsg(m.text);
-      if (!rest.trim()) return "";
-      return `
-        <div class="msg-wrap">
-          <div class="msg-ai">
-            <div class="avatar avatar-ai">AI</div>
-            <div class="bubble-ai">${escHtml(stripMd(rest))}</div>
-          </div>
-        </div>`;
-    }
+    // 수정본 메시지 뒤에 붙는 "읽어보고 어색한점..." 텍스트 제거
+    if (isRevMsg) return "";
     const text = stripMd(m.text);
     if (!text.trim()) return "";
     const isBot = m.role === "bot";
@@ -101,8 +92,8 @@ export function buildPrintHtml(
     return `
       <div class="msg-wrap">
         <div class="msg-user">
-          <div class="avatar avatar-me">나</div>
           <div class="bubble-me">${escHtml(text)}</div>
+          <div class="avatar avatar-me">나</div>
         </div>
       </div>`;
   };
@@ -114,45 +105,45 @@ export function buildPrintHtml(
 <title>취업소크라테스 리포트 — ${escHtml(question)}</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#fff;color:#1a1a2e;padding:48px;font-size:14px;line-height:1.75}
+body{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#ffffff;color:#111827;padding:48px;font-size:14px;line-height:1.75}
 
-.header{margin-bottom:40px;padding-bottom:20px;border-bottom:2px solid #1a1a2e}
-.header h1{font-size:20px;font-weight:800;color:#1a1a2e}
-.header .meta{font-size:12px;color:#666;margin-top:6px}
+.header{margin-bottom:40px;padding-bottom:18px;border-bottom:3px solid #111827}
+.header h1{font-size:20px;font-weight:800;color:#111827;letter-spacing:-0.02em}
+.header .meta{font-size:12px;color:#6b7280;margin-top:6px}
 
 .section{margin-bottom:48px}
-.section-header{display:flex;align-items:center;gap:10px;margin-bottom:20px}
-.section-num{font-size:10px;font-weight:800;color:#fff;background:#1a1a2e;padding:3px 9px;border-radius:20px;letter-spacing:.06em}
-.section-title{font-size:15px;font-weight:700;color:#1a1a2e}
+.section-header{display:flex;align-items:center;gap:10px;margin-bottom:20px;padding-bottom:10px;border-bottom:1px solid #e5e7eb}
+.section-num{font-size:10px;font-weight:800;color:#ffffff;background:#111827;padding:3px 9px;border-radius:20px;letter-spacing:.06em}
+.section-title{font-size:15px;font-weight:700;color:#111827}
 
-.revision-box{background:#f0f4ff;border:1px solid #c7d2fe;border-radius:14px;overflow:hidden}
-.revision-header{background:#4338ca;padding:10px 18px}
+.revision-box{background:#fff;border:2px solid #111827;border-radius:12px;overflow:hidden;margin-bottom:4px}
+.revision-header{background:#111827;padding:10px 20px;display:flex;align-items:center;gap:8px}
 .revision-header p{font-size:10px;font-weight:700;color:#fff;letter-spacing:.1em;text-transform:uppercase}
-.revision-body{padding:20px 22px;font-size:13px;line-height:1.9;white-space:pre-wrap;word-break:keep-all;color:#1a1a2e}
+.revision-body{padding:22px 24px;font-size:13.5px;line-height:2;white-space:pre-wrap;word-break:keep-all;color:#111827}
 
-.changes-box{background:#fffbeb;border:1px solid #fcd34d;border-radius:12px;padding:16px 20px;margin-top:16px}
-.changes-header{font-size:11px;font-weight:700;color:#92400e;margin-bottom:12px}
-.changes-item{display:flex;gap:8px;margin-bottom:8px;font-size:13px;line-height:1.65;word-break:keep-all}
+.changes-box{background:#fffbeb;border:1px solid #f59e0b;border-left:4px solid #d97706;border-radius:0 10px 10px 0;padding:16px 20px;margin-top:14px}
+.changes-header{font-size:10px;font-weight:700;color:#92400e;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.08em}
+.changes-item{display:flex;gap:8px;margin-bottom:8px;font-size:13px;line-height:1.65;word-break:keep-all;color:#111827}
 .changes-dot{color:#d97706;font-weight:700;flex-shrink:0}
 
-.diag-box{background:#f0f4ff;border-left:3px solid #4338ca;border-radius:0 12px 12px 0;padding:14px 18px;margin-bottom:14px}
-.diag-label{font-size:10px;font-weight:700;color:#4338ca;letter-spacing:.1em;margin-bottom:8px}
-.diag-text{font-size:13px;line-height:1.8;color:#1a1a2e;word-break:keep-all}
+.diag-box{background:#eef2ff;border-left:4px solid #4338ca;border-radius:0 10px 10px 0;padding:14px 18px;margin-bottom:14px}
+.diag-label{font-size:10px;font-weight:700;color:#4338ca;letter-spacing:.1em;margin-bottom:8px;text-transform:uppercase}
+.diag-text{font-size:13px;line-height:1.8;color:#111827;word-break:keep-all}
 
 .msg-wrap{margin-bottom:14px}
 .msg-ai{display:flex;gap:10px;align-items:flex-start}
 .msg-user{display:flex;gap:10px;align-items:flex-start;justify-content:flex-end}
-.avatar{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0}
+.avatar{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .avatar-ai{background:#4338ca}
-.avatar-me{background:#e8562a}
-.bubble-ai{background:#f0f4ff;border-radius:4px 14px 14px 14px;padding:12px 16px;font-size:13px;line-height:1.75;word-break:keep-all;max-width:80%;color:#1a1a2e}
-.bubble-me{background:#fff3ee;border-radius:14px 4px 14px 14px;padding:12px 16px;font-size:13px;line-height:1.75;word-break:keep-all;max-width:80%;color:#1a1a2e;border:1px solid #fdd0bb}
+.avatar-me{background:#c2410c}
+.bubble-ai{background:#f1f5f9;border:1px solid #94a3b8;border-left:4px solid #4338ca;border-radius:2px 12px 12px 12px;padding:12px 16px;font-size:13px;line-height:1.75;word-break:keep-all;max-width:80%;color:#111827}
+.bubble-me{background:#fff7ed;border:1px solid #fdba74;border-right:4px solid #c2410c;border-radius:12px 2px 12px 12px;padding:12px 16px;font-size:13px;line-height:1.75;word-break:keep-all;max-width:80%;color:#111827}
 
-.legend{display:flex;gap:16px;margin-bottom:16px;padding:10px 14px;background:#f9f9f9;border-radius:10px}
-.legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:#555}
-.legend-dot{width:10px;height:10px;border-radius:50%}
+.legend{display:flex;gap:20px;margin-bottom:16px;padding:10px 16px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px}
+.legend-item{display:flex;align-items:center;gap:7px;font-size:11px;color:#374151;font-weight:500}
+.legend-dot{width:10px;height:10px;border-radius:50%;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 
-hr{border:none;border-top:1px solid #e5e7eb;margin:40px 0}
+hr{border:none;border-top:1px solid #d1d5db;margin:40px 0}
 @media print{body{padding:20px 24px}}
 </style>
 </head>
@@ -189,7 +180,7 @@ ${revision ? `
   </div>
   <div class="legend">
     <div class="legend-item"><div class="legend-dot" style="background:#4338ca"></div> AI 소크라테스</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#e8562a"></div> 나의 답변</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#c2410c"></div> 나의 답변</div>
   </div>
   ${diagMsgs.map((m, i) => {
     const isRevMsg = m.role === "bot" && m.text.includes("[수정본]");
@@ -206,7 +197,7 @@ ${interviewMsgs.length > 0 ? `
   </div>
   <div class="legend">
     <div class="legend-item"><div class="legend-dot" style="background:#4338ca"></div> AI 질문</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#e8562a"></div> 나의 답변</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#c2410c"></div> 나의 답변</div>
   </div>
   ${interviewMsgs.map(m => msgRow(m)).join("")}
 </div>
@@ -369,7 +360,7 @@ export function CoverLetterSummary({ jobTitle, question, draft, msgs, onClose, o
         {/* 안내 + PDF */}
         <div className="flex items-center justify-between gap-4">
           <p className="text-xs" style={{ color: "rgba(255,255,255,0.22)" }}>
-            기록은 마이페이지에서 언제든지 다시 다운로드할 수 있어요
+            기록은 마이페이지에서 언제든지 다시 볼 수 있어요
           </p>
           <button
             onClick={handlePdf}
@@ -480,18 +471,8 @@ function SummaryMsgRow({
     );
   }
 
-  if (isRevisionMsg) {
-    const { rest } = parseRevisionMsg(msg.text);
-    if (!rest) return null;
-    return (
-      <div className="flex gap-3">
-        <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5" style={{ background: BLUE, color: "#fff" }}>AI</div>
-        <div className="flex-1 rounded-xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap" style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.82)", wordBreak: "keep-all" }}>
-          {rest}
-        </div>
-      </div>
-    );
-  }
+  // 수정본 메시지 뒤에 붙는 "읽어보고 어색한 점이 있으면..." 텍스트 표시 안 함
+  if (isRevisionMsg) return null;
 
   return (
     <div className={`flex gap-3 ${isBot ? "" : "flex-row-reverse"}`}>

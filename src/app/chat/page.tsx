@@ -258,14 +258,6 @@ function RevisionMessage({ text }: { text: string }) {
         </div>
       )}
       {displayChanges && <ChangesCard text={displayChanges} />}
-      {rest && (
-        <div className="flex items-end gap-2.5">
-          <BotBubbleAvatar />
-          <div className="max-w-[80%] px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap" style={{ background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.88)", borderRadius: "4px 16px 16px 16px", wordBreak: "keep-all" }}>
-            {rest}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -367,43 +359,47 @@ function InterviewQCard({
 
           {/* 답변 입력창 — 아직 답변하지 않은 경우에만 */}
           {item.msgs.length === 0 && (
-            <div className="px-4 py-3 flex items-end gap-2">
-              <textarea
-                value={item.inputText}
-                onChange={(e) => onInputChange(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onSubmit(); } }}
-                onInput={(e) => {
-                  const el = e.target as HTMLTextAreaElement;
-                  el.style.height = "auto";
-                  el.style.height = Math.min(el.scrollHeight, 200) + "px";
-                }}
-                disabled={item.isLoadingFeedback}
-                placeholder="답변을 입력하세요"
-                rows={2}
-                className="flex-1 focus:outline-none disabled:opacity-30 resize-none placeholder:opacity-35"
-                style={{
-                  background: "rgba(255,255,255,0.05)",
-                  border: `1px solid ${VIOLET}28`,
-                  borderRadius: "12px",
-                  padding: "10px 14px",
-                  fontSize: "13px",
-                  lineHeight: "1.5",
-                  color: "rgba(255,255,255,0.9)",
-                  maxHeight: "200px",
-                  overflowY: "auto",
-                }}
-              />
-              <button
-                onClick={onSubmit}
-                disabled={item.isLoadingFeedback || !item.inputText.trim()}
-                className="flex-shrink-0 flex items-center justify-center rounded-xl transition-all hover:scale-105 active:scale-95 disabled:opacity-25"
-                style={{ background: VIOLET, width: "40px", height: "40px" }}
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="22" y1="2" x2="11" y2="13" />
-                  <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                </svg>
-              </button>
+            <div className="px-4 py-3 flex flex-col gap-1.5">
+              <div className="flex items-end gap-2">
+                <textarea
+                  value={item.inputText}
+                  onChange={(e) => onInputChange(e.target.value.slice(0, 300))}
+                  onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onSubmit(); } }}
+                  onInput={(e) => {
+                    const el = e.target as HTMLTextAreaElement;
+                    el.style.height = "auto";
+                    el.style.height = Math.min(el.scrollHeight, 200) + "px";
+                  }}
+                  disabled={item.isLoadingFeedback}
+                  placeholder="답변을 입력하세요"
+                  rows={2}
+                  className="flex-1 focus:outline-none disabled:opacity-30 resize-none placeholder:opacity-35"
+                  style={{
+                    background: "rgba(255,255,255,0.05)",
+                    border: `1px solid ${VIOLET}28`,
+                    borderRadius: "12px",
+                    padding: "10px 14px",
+                    fontSize: "13px",
+                    lineHeight: "1.5",
+                    color: "rgba(255,255,255,0.9)",
+                    maxHeight: "200px",
+                    overflowY: "auto",
+                  }}
+                />
+                <button
+                  onClick={onSubmit}
+                  disabled={item.isLoadingFeedback || !item.inputText.trim()}
+                  className="flex-shrink-0 flex items-center justify-center rounded-xl text-xs font-semibold transition-all hover:opacity-80 active:scale-95 disabled:opacity-25"
+                  style={{ background: VIOLET, color: "#fff", padding: "0 14px", height: "40px", whiteSpace: "nowrap" }}
+                >
+                  전송
+                </button>
+              </div>
+              <div className="flex justify-end">
+                <span className="text-xs tabular-nums" style={{ color: item.inputText.length >= 270 ? "rgba(248,113,113,0.8)" : "rgba(255,255,255,0.2)" }}>
+                  {item.inputText.length}/300
+                </span>
+              </div>
             </div>
           )}
         </div>
@@ -1734,29 +1730,33 @@ export default function ChatPage() {
                       </div>
                     ) : !showSummaryButton ? (
                       /* 일반 입력창 */
-                      <div className="flex items-center gap-3">
-                        <textarea
-                          ref={chatInputRef}
-                          value={input}
-                          onChange={(e) => setInput(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-                          disabled={isStreaming}
-                          placeholder="답변을 입력하세요"
-                          rows={1}
-                          className="glow-input flex-1 disabled:opacity-30 resize-none placeholder:opacity-40"
-                          style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)", borderRadius: "16px", padding: "11px 18px", fontSize: "14px", lineHeight: "1.5", color: "rgba(255,255,255,0.9)", height: "46px", maxHeight: "160px", overflowY: "auto" }}
-                        />
-                        <button
-                          onClick={handleSend}
-                          disabled={isStreaming || !input.trim()}
-                          className="flex-shrink-0 flex items-center justify-center rounded-xl transition-all hover:scale-105 active:scale-95 disabled:opacity-25"
-                          style={{ background: ACCENT, width: "46px", height: "46px", boxShadow: input.trim() ? `0 4px 14px ${ACCENT}30` : "none", transition: "all 0.2s ease" }}
-                        >
-                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <line x1="22" y1="2" x2="11" y2="13" />
-                            <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                          </svg>
-                        </button>
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-end gap-3">
+                          <textarea
+                            ref={chatInputRef}
+                            value={input}
+                            onChange={(e) => setInput(e.target.value.slice(0, 250))}
+                            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+                            disabled={isStreaming}
+                            placeholder="답변을 입력하세요"
+                            rows={1}
+                            className="glow-input flex-1 disabled:opacity-30 resize-none placeholder:opacity-40"
+                            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)", borderRadius: "16px", padding: "11px 18px", fontSize: "14px", lineHeight: "1.5", color: "rgba(255,255,255,0.9)", height: "46px", maxHeight: "160px", overflowY: "auto" }}
+                          />
+                          <button
+                            onClick={handleSend}
+                            disabled={isStreaming || !input.trim()}
+                            className="flex-shrink-0 flex items-center justify-center rounded-xl text-sm font-semibold transition-all hover:opacity-80 active:scale-95 disabled:opacity-25"
+                            style={{ background: ACCENT, color: "#fff", padding: "0 18px", height: "46px", boxShadow: input.trim() ? `0 4px 14px ${ACCENT}30` : "none", whiteSpace: "nowrap" }}
+                          >
+                            전송
+                          </button>
+                        </div>
+                        <div className="flex justify-end pr-1">
+                          <span className="text-xs tabular-nums" style={{ color: input.length >= 230 ? "rgba(248,113,113,0.8)" : "rgba(255,255,255,0.18)" }}>
+                            {input.length}/250
+                          </span>
+                        </div>
                       </div>
                     ) : null}
 

@@ -44,6 +44,7 @@ export default function MyPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [sessions, setSessions] = useState<SessionRecord[]>([]);
   const [pdfLoadingId, setPdfLoadingId] = useState<string | null>(null);
+  const [viewLoadingId, setViewLoadingId] = useState<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
@@ -124,6 +125,54 @@ export default function MyPage() {
       setTimeout(() => { win.print(); }, 400);
     } finally {
       setPdfLoadingId(null);
+    }
+  }
+
+  async function handleViewHtml(jobTitle: string, item: CoverItemRecord) {
+    setViewLoadingId(item.id);
+    try {
+      const [{ data: msgRows }, { data: revRows }] = await Promise.all([
+        supabase.from("messages")
+          .select("id, role, content, created_at")
+          .eq("cover_item_id", item.id)
+          .order("created_at", { ascending: true }),
+        supabase.from("revisions")
+          .select("content, changes")
+          .eq("cover_item_id", item.id)
+          .limit(1)
+          .maybeSingle(),
+      ]);
+
+      const msgs: SummaryMsg[] = (msgRows || []).map((m, i) => ({
+        id: i,
+        role: (m.role === "assistant" ? "bot" : "user") as "bot" | "user",
+        text: m.content as string,
+      }));
+
+      const revMsgIdx = msgs.findIndex(m => m.role === "bot" && m.text.includes("[수정본]"));
+      const diagMsgs = revMsgIdx >= 0 ? msgs.slice(0, revMsgIdx + 1) : msgs;
+      const interviewMsgs = revMsgIdx >= 0 ? msgs.slice(revMsgIdx + 1) : [];
+
+      let revision = "";
+      let changes = "";
+      if (revRows) {
+        revision = (revRows.content as string) || "";
+        const rawChanges = revRows.changes;
+        changes = Array.isArray(rawChanges) ? rawChanges.join("\n") : String(rawChanges || "");
+      } else if (revMsgIdx >= 0) {
+        const parsed = parseRevisionMsg(msgs[revMsgIdx].text);
+        revision = parsed.revision;
+        changes = parsed.changes;
+      }
+
+      const html = buildPrintHtml(jobTitle, item.question, revision, changes, diagMsgs, interviewMsgs);
+      const win = window.open("", "_blank");
+      if (!win) return;
+      win.document.write(html);
+      win.document.close();
+      win.focus();
+    } finally {
+      setViewLoadingId(null);
     }
   }
 
@@ -230,25 +279,44 @@ export default function MyPage() {
                           </span>
                         </p>
                         {item.status === "done" && (
-                          <button
-                            onClick={() => handleDownloadPdf(session.job_title, item)}
-                            disabled={pdfLoadingId === item.id}
-                            style={{
-                              flexShrink: 0,
-                              fontSize: 10,
-                              fontWeight: 600,
-                              color: "rgba(255,255,255,0.3)",
-                              background: "rgba(255,255,255,0.05)",
-                              border: "1px solid rgba(255,255,255,0.08)",
-                              borderRadius: 8,
-                              padding: "3px 8px",
-                              cursor: pdfLoadingId === item.id ? "default" : "pointer",
-                              opacity: pdfLoadingId === item.id ? 0.5 : 1,
-                              transition: "opacity 0.15s",
-                            }}
-                          >
-                            {pdfLoadingId === item.id ? "..." : "PDF"}
-                          </button>
+                          <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+                            <button
+                              onClick={() => handleViewHtml(session.job_title, item)}
+                              disabled={viewLoadingId === item.id || pdfLoadingId === item.id}
+                              style={{
+                                fontSize: 10,
+                                fontWeight: 600,
+                                color: "rgba(107,142,255,0.7)",
+                                background: "rgba(107,142,255,0.08)",
+                                border: "1px solid rgba(107,142,255,0.2)",
+                                borderRadius: 8,
+                                padding: "3px 8px",
+                                cursor: viewLoadingId === item.id ? "default" : "pointer",
+                                opacity: viewLoadingId === item.id ? 0.5 : 1,
+                                transition: "opacity 0.15s",
+                              }}
+                            >
+                              {viewLoadingId === item.id ? "..." : "바로 보기"}
+                            </button>
+                            <button
+                              onClick={() => handleDownloadPdf(session.job_title, item)}
+                              disabled={pdfLoadingId === item.id || viewLoadingId === item.id}
+                              style={{
+                                fontSize: 10,
+                                fontWeight: 600,
+                                color: "rgba(255,255,255,0.3)",
+                                background: "rgba(255,255,255,0.05)",
+                                border: "1px solid rgba(255,255,255,0.08)",
+                                borderRadius: 8,
+                                padding: "3px 8px",
+                                cursor: pdfLoadingId === item.id ? "default" : "pointer",
+                                opacity: pdfLoadingId === item.id ? 0.5 : 1,
+                                transition: "opacity 0.15s",
+                              }}
+                            >
+                              {pdfLoadingId === item.id ? "..." : "PDF"}
+                            </button>
+                          </div>
                         )}
                       </div>
                     ))}
