@@ -157,7 +157,7 @@ export async function POST(req: Request) {
       const jdSection = body.jdImageData
         ? `JD: 첫 메시지 이미지로 제공됨 (이미지 전체를 읽고 분석에 활용해라)`
         : `JD 키워드: ${(body.jdKeywords ?? []).join(", ") || "없음"}`;
-      const sysText = prompt("analyze") +
+      const sysText = prompt("analyze_v2") +
         `\n\n## 세션 정보\n직무: ${body.jobTitle}\n문항: ${body.question || "미입력"}\n${jdSection}\n글자 수 제한: ${body.charLimit ? `${body.charLimit}자 (수정본 작성 시 이 글자 수에 맞춰야 함)` : "미입력"}\n\n## 자소서 초안\n${body.draft}`;
       const sys: Anthropic.Messages.TextBlockParam[] = [
         { type: "text", text: sysText, cache_control: { type: "ephemeral" } },
