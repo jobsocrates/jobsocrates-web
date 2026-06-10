@@ -186,8 +186,10 @@ export default function Home() {
 
   function openAuth(tab: "login" | "signup") { setAuthTab(tab); setAuthOpen(true); }
   function handleStartChat() {
-    if (userEmail) window.location.href = "/chat";
-    else openAuth("login");
+    if (userEmail) {
+      sessionStorage.setItem("showTutorial", "1");
+      window.location.href = "/chat";
+    } else openAuth("login");
   }
 
   return (
@@ -233,7 +235,7 @@ export default function Home() {
                       <span className="hidden sm:inline">관리자</span>
                     </a>
                   )}
-                  <a href="/chat" className="text-xs sm:text-sm px-3 sm:px-4 py-2 rounded-xl font-bold transition-all hover:scale-[1.04] active:scale-[0.97]" style={{ background: NAV_BTN, color: "#fff", boxShadow: `0 2px 18px ${NAV_BTN}50` }}>
+                  <a href="/chat" onClick={() => sessionStorage.setItem("showTutorial", "1")} className="text-xs sm:text-sm px-3 sm:px-4 py-2 rounded-xl font-bold transition-all hover:scale-[1.04] active:scale-[0.97]" style={{ background: NAV_BTN, color: "#fff", boxShadow: `0 2px 18px ${NAV_BTN}50` }}>
                     시작하기
                   </a>
                   <button onClick={() => supabase.auth.signOut().then(() => { setUserEmail(null); setBadgeCount(null); })} className="flex items-center gap-1 text-xs sm:text-sm px-2 sm:px-3 py-2 rounded-xl transition-colors hover:text-white" style={{ color: "rgba(255,255,255,0.5)" }}>
