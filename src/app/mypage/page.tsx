@@ -414,9 +414,17 @@ export default function MyPage() {
                       </div>
                     )}
                     {profileAnalysis && !profileLoading && (
-                      <p style={{ fontSize: 14, color: "rgba(255,255,255,0.85)", lineHeight: 1.85, wordBreak: "keep-all" }}>
-                        {profileAnalysis}
-                      </p>
+                      <>
+                        <p style={{ fontSize: 14, color: "rgba(255,255,255,0.85)", lineHeight: 1.85, wordBreak: "keep-all" }}>
+                          {profileAnalysis}
+                        </p>
+                        <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid rgba(255,255,255,0.07)", display: "flex", alignItems: "center", gap: 8 }}>
+                          <img src="/ai-avatar.webp" alt="" style={{ width: 16, height: 16, borderRadius: "50%", objectFit: "cover", flexShrink: 0, opacity: 0.7 }} />
+                          <p style={{ fontSize: 13, fontWeight: 600, fontStyle: "italic", color: ACCENT, wordBreak: "keep-all", lineHeight: 1.5 }}>
+                            다음에 오실 땐 또 다른 당신의 모습을 발견시켜 드릴게요
+                          </p>
+                        </div>
+                      </>
                     )}
                   </div>
                 )}
