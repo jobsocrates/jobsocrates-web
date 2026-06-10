@@ -3,7 +3,12 @@
     "allow": [
       "PowerShell(New-Item *)",
       "Bash(git add *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Read(//c/Users/Owner/AppData/Roaming/Claude/local-agent-mode-sessions/skills-plugin/3cb877d1-2dc9-487b-9225-1d081277ce62/e3301bf2-17e5-41cf-b9f3-687b8e3c1196/skills/xlsx/**)",
+      "Bash(python -c ' *)",
+      "Bash(py -m pip install pandas openpyxl -q)",
+      "Bash(py -c ' *)",
+      "Bash(Out-File -FilePath \"C:\\\\Users\\\\Owner\\\\Desktop\\\\xlsx_output.txt\" -Encoding UTF8)"
     ]
   }
 }

@@ -51,8 +51,6 @@ export default function MyPage() {
   const [pdfLoadingId, setPdfLoadingId] = useState<string | null>(null);
   const [viewLoadingId, setViewLoadingId] = useState<string | null>(null);
   const [showAllSessions, setShowAllSessions] = useState(false);
-  const [profileAnalysis, setProfileAnalysis] = useState<string | null>(null);
-  const [profileLoading, setProfileLoading] = useState(false);
 
   // 비밀번호 변경
   const [pwNew, setPwNew] = useState("");
@@ -92,61 +90,6 @@ export default function MyPage() {
     });
   }, []);
 
-  useEffect(() => {
-    if (sessions.length === 0) return;
-    const allItemIds = sessions.flatMap(s => s.cover_items || []).map(i => i.id);
-    if (allItemIds.length === 0) return;
-    const totalAnswers = sessions.flatMap(s => s.cover_items || [])
-      .reduce((acc, i) => acc + (i.messages || []).filter(m => m.role === "user").length, 0);
-    if (totalAnswers < 3) return;
-
-    setProfileLoading(true);
-    (async () => {
-      try {
-        const [{ data: msgs }, { data: iqRows }] = await Promise.all([
-          supabase
-            .from("messages")
-            .select("content")
-            .eq("role", "user")
-            .in("cover_item_id", allItemIds)
-            .order("created_at", { ascending: false })
-            .limit(20),
-          supabase
-            .from("interview_questions")
-            .select("id")
-            .in("cover_item_id", allItemIds),
-        ]);
-
-        const userMessages = (msgs || []).map((m: { content: string }) => m.content).filter(Boolean);
-        if (userMessages.length < 3) return;
-
-        let interviewAnswers: string[] = [];
-        const iqIds = (iqRows || []).map((q: { id: string }) => q.id);
-        if (iqIds.length > 0) {
-          const { data: iaRows } = await supabase
-            .from("interview_answers")
-            .select("user_answer")
-            .in("interview_question_id", iqIds)
-            .not("user_answer", "is", null)
-            .limit(12);
-          interviewAnswers = (iaRows || []).map((a: { user_answer: string }) => a.user_answer).filter(Boolean);
-        }
-
-        const res = await fetch("/api/user-profile", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages: userMessages, interviewAnswers }),
-        });
-        if (!res.ok) return;
-        const { analysis } = await res.json();
-        setProfileAnalysis(analysis || null);
-      } catch (e) {
-        console.error("[user-profile]", e);
-      } finally {
-        setProfileLoading(false);
-      }
-    })();
-  }, [sessions]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleDownloadPdf(jobTitle: string, item: CoverItemRecord) {
     setPdfLoadingId(item.id);
@@ -418,34 +361,6 @@ export default function MyPage() {
                         <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 4, fontWeight: 600 }}>{stat.label}</div>
                       </div>
                     ))}
-                  </div>
-                )}
-
-                {/* 취업소크라테스가 본 당신 */}
-                {(profileLoading || profileAnalysis) && (
-                  <div style={{ borderRadius: 14, border: "1px solid rgba(255,255,255,0.09)", background: "rgba(255,255,255,0.03)", padding: "18px 20px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-                      <img src="/ai-avatar.webp" alt="" style={{ width: 20, height: 20, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
-                      <p style={{ fontSize: 14, fontWeight: 700, color: "rgba(255,255,255,0.88)" }}>취업소크라테스가 본 당신</p>
-                    </div>
-                    {profileLoading && (
-                      <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-                        <div style={{ width: 13, height: 13, borderRadius: "50%", border: `1.5px solid rgba(201,100,66,0.25)`, borderTopColor: ACCENT, animation: "spin 0.8s linear infinite", flexShrink: 0 }} />
-                        <span style={{ fontSize: 13, color: "rgba(255,255,255,0.35)" }}>당신의 이야기를 다시 돌아보고 있어요...</span>
-                      </div>
-                    )}
-                    {profileAnalysis && !profileLoading && (
-                      <>
-                        <p style={{ fontSize: 14, color: "rgba(255,255,255,0.85)", lineHeight: 1.85, wordBreak: "keep-all" }}>
-                          {profileAnalysis}
-                        </p>
-                        <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid rgba(255,255,255,0.07)" }}>
-                          <p style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.5)", wordBreak: "keep-all", lineHeight: 1.5 }}>
-                            다음에 오실 땐 또 다른 당신의 모습을 발견시켜 드릴게요 😊
-                          </p>
-                        </div>
-                      </>
-                    )}
                   </div>
                 )}
 
