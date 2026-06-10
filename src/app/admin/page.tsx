@@ -22,7 +22,7 @@ const VIOLET = "#A78BFA";
 const GREEN = "rgb(74,222,128)";
 const RED = "rgb(248,113,113)";
 
-type Tab = "dashboard" | "review" | "notes" | "users";
+type Tab = "dashboard" | "review" | "notes" | "users" | "funnel";
 type Filter = "all" | "good" | "bad" | "none";
 
 interface SessionItem {
@@ -50,6 +50,8 @@ interface CoverItemFull {
 }
 
 interface UserProfile { id: string; email: string; credits: number; created_at?: string; }
+interface FunnelRow { userId: string; email: string; createdAt: string; stageIndex: number; stageLabel: string; }
+interface FunnelData { totalUsers: number; stages: { label: string; count: number; pct: number; dropCount: number }[]; users: FunnelRow[]; }
 interface Breakdown { today: number; week: number; month: number; total: number; }
 interface DashStats {
   users: Breakdown;
@@ -90,6 +92,10 @@ export default function AdminPage() {
   // Review — 세션 삭제
   const [deleteSessionTarget, setDeleteSessionTarget] = useState<{ id: string; jobTitle: string } | null>(null);
   const [deletingSessionId, setDeletingSessionId] = useState<string | null>(null);
+
+  // Funnel
+  const [funnelData, setFunnelData] = useState<FunnelData | null>(null);
+  const [funnelLoading, setFunnelLoading] = useState(false);
 
   // Notes
   const [goodNotes, setGoodNotes] = useState("");
@@ -295,6 +301,59 @@ export default function AdminPage() {
     }
   }
 
+  async function fetchFunnel() {
+    setFunnelLoading(true);
+    const [{ data: profiles }, { data: sesData }, { data: ciData }] = await Promise.all([
+      supabase.from("profiles").select("id, email, created_at").order("created_at", { ascending: false }),
+      supabase.from("sessions").select("id, user_id"),
+      supabase.from("cover_items").select("id, session_id, messages(id), revisions(id), interview_questions(id, interview_answers(id))"),
+    ]);
+
+    const sessionByUser: Record<string, string[]> = {};
+    (sesData || []).forEach((s: any) => {
+      if (!sessionByUser[s.user_id]) sessionByUser[s.user_id] = [];
+      sessionByUser[s.user_id].push(s.id);
+    });
+
+    const coverBySession: Record<string, any[]> = {};
+    (ciData || []).forEach((ci: any) => {
+      if (!coverBySession[ci.session_id]) coverBySession[ci.session_id] = [];
+      coverBySession[ci.session_id].push(ci);
+    });
+
+    const STAGE_LABELS = ["가입만", "문항 생성", "대화 시작", "수정본 완성", "완주"];
+    const userRows: FunnelRow[] = (profiles || []).map((p: any) => {
+      const sids = sessionByUser[p.id] || [];
+      const items = sids.flatMap(sid => coverBySession[sid] || []);
+      let idx = 0;
+      if (items.length > 0) {
+        idx = 1;
+        if (items.some((ci: any) => (ci.messages || []).length > 0)) {
+          idx = 2;
+          if (items.some((ci: any) => (ci.revisions || []).length > 0)) {
+            idx = 3;
+            if (items.some((ci: any) => (ci.interview_questions || []).some((iq: any) => (iq.interview_answers || []).length > 0))) {
+              idx = 4;
+            }
+          }
+        }
+      }
+      return { userId: p.id, email: p.email, createdAt: p.created_at || "", stageIndex: idx, stageLabel: STAGE_LABELS[idx] };
+    });
+
+    const total = userRows.length;
+    const FUNNEL_NAMES = ["가입", "문항 생성", "대화 시작", "수정본 완성", "완주"];
+    const stages = FUNNEL_NAMES.map((label, i) => {
+      const count = userRows.filter(u => u.stageIndex >= i).length;
+      const dropCount = userRows.filter(u => u.stageIndex === i).length;
+      const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+      return { label, count, pct, dropCount };
+    });
+
+    setFunnelData({ totalUsers: total, stages, users: userRows });
+    setFunnelLoading(false);
+  }
+
   async function saveNotes() {
     setNotesSaving(true);
     const payload = { good_notes: goodNotes, bad_notes: badNotes, improvement_notes: improvementNotes, updated_at: new Date().toISOString() };
@@ -364,9 +423,9 @@ export default function AdminPage() {
         <span style={{ fontSize: 13, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(255,255,255,0.7)" }}>Admin</span>
 
         <nav style={{ display: "flex", gap: 4 }}>
-          {(["dashboard", "review", "notes", "users"] as Tab[]).map((t) => (
-            <button key={t} onClick={() => setTab(t)} style={{ padding: "6px 14px", borderRadius: 8, fontSize: 13, fontWeight: tab === t ? 700 : 500, border: tab === t ? "1px solid rgba(255,255,255,0.15)" : "1px solid transparent", cursor: "pointer", transition: "all 0.15s", background: tab === t ? "rgba(255,255,255,0.1)" : "transparent", color: tab === t ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.5)" }}>
-              {t === "dashboard" ? "대시보드" : t === "review" ? "대화 리뷰" : t === "notes" ? "프롬프트 노트" : "유저 관리"}
+          {(["dashboard", "review", "notes", "users", "funnel"] as Tab[]).map((t) => (
+            <button key={t} onClick={() => { setTab(t); if (t === "funnel" && !funnelData) fetchFunnel(); }} style={{ padding: "6px 14px", borderRadius: 8, fontSize: 13, fontWeight: tab === t ? 700 : 500, border: tab === t ? "1px solid rgba(255,255,255,0.15)" : "1px solid transparent", cursor: "pointer", transition: "all 0.15s", background: tab === t ? "rgba(255,255,255,0.1)" : "transparent", color: tab === t ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.5)" }}>
+              {t === "dashboard" ? "대시보드" : t === "review" ? "대화 리뷰" : t === "notes" ? "프롬프트 노트" : t === "users" ? "유저 관리" : "통계"}
             </button>
           ))}
         </nav>
@@ -763,6 +822,102 @@ export default function AdminPage() {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* ─── FUNNEL / 통계 ─── */}
+      {tab === "funnel" && (
+        <div style={{ padding: "28px 24px", maxWidth: 900, margin: "0 auto" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
+            <div>
+              <p style={{ fontSize: 15, fontWeight: 700, color: "rgba(255,255,255,0.85)", marginBottom: 3 }}>완주율 퍼널</p>
+              <p style={{ fontSize: 12, color: "rgba(255,255,255,0.3)" }}>가입 → 완주까지 각 단계별 이탈 현황</p>
+            </div>
+            <button onClick={fetchFunnel} disabled={funnelLoading} style={{ padding: "6px 16px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: funnelLoading ? "default" : "pointer", border: "1px solid rgba(255,255,255,0.1)", background: "transparent", color: funnelLoading ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.5)", transition: "all 0.15s" }}>
+              {funnelLoading ? "로딩 중..." : "새로고침"}
+            </button>
+          </div>
+
+          {funnelLoading && !funnelData ? (
+            <div style={{ display: "flex", justifyContent: "center", padding: 60 }}>
+              <div style={{ width: 24, height: 24, borderRadius: "50%", border: `2px solid rgba(201,100,66,0.3)`, borderTopColor: ACCENT, animation: "spin 0.8s linear infinite" }} />
+            </div>
+          ) : funnelData ? (
+            <>
+              {/* ── 퍼널 차트 ── */}
+              <div style={{ borderRadius: 16, border: "1px solid rgba(255,255,255,0.07)", background: "rgba(255,255,255,0.02)", overflow: "hidden", marginBottom: 20 }}>
+                <div style={{ padding: "14px 20px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+                  <p style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.08em" }}>단계별 현황 · 총 {funnelData.totalUsers}명</p>
+                </div>
+                <div style={{ padding: "8px 20px 16px" }}>
+                  {funnelData.stages.map((stage, i) => {
+                    const colors = [
+                      { bar: ACCENT, text: ACCENT, bg: "rgba(201,100,66,0.15)" },
+                      { bar: BLUE, text: BLUE, bg: "rgba(107,142,255,0.15)" },
+                      { bar: VIOLET, text: VIOLET, bg: "rgba(167,139,250,0.15)" },
+                      { bar: "rgb(251,191,36)", text: "rgb(251,191,36)", bg: "rgba(251,191,36,0.15)" },
+                      { bar: GREEN, text: GREEN, bg: "rgba(74,222,128,0.15)" },
+                    ][i];
+                    const isLast = i === funnelData.stages.length - 1;
+                    return (
+                      <div key={stage.label} style={{ paddingTop: 14 }}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: colors.text, background: colors.bg, borderRadius: 6, padding: "2px 8px" }}>{stage.label}</span>
+                            {!isLast && stage.dropCount > 0 && (
+                              <span style={{ fontSize: 11, color: "rgba(248,113,113,0.7)" }}>여기서 이탈 {stage.dropCount}명</span>
+                            )}
+                          </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                            <span style={{ fontSize: 20, fontWeight: 800, color: colors.text, letterSpacing: "-0.03em" }}>{stage.count}명</span>
+                            <span style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.35)", minWidth: 42, textAlign: "right" }}>{stage.pct}%</span>
+                          </div>
+                        </div>
+                        <div style={{ height: 8, borderRadius: 4, background: "rgba(255,255,255,0.06)", overflow: "hidden" }}>
+                          <div style={{ height: "100%", width: `${stage.pct}%`, background: colors.bar, borderRadius: 4, transition: "width 0.6s ease" }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* ── 유저별 단계 테이블 ── */}
+              <div style={{ borderRadius: 16, border: "1px solid rgba(255,255,255,0.07)", background: "rgba(255,255,255,0.02)", overflow: "hidden" }}>
+                <div style={{ padding: "14px 20px", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", gap: 8 }}>
+                  <p style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.08em" }}>유저별 이탈 단계</p>
+                  <span style={{ fontSize: 11, color: "rgba(255,255,255,0.2)", marginLeft: "auto" }}>최신 가입 순</span>
+                </div>
+                {/* Table header */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 110px 130px", padding: "8px 20px", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                  {["이메일", "가입일", "도달 단계"].map(h => (
+                    <span key={h} style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.25)", textTransform: "uppercase", letterSpacing: "0.07em", textAlign: h === "가입일" ? "center" : h === "도달 단계" ? "right" : "left" }}>{h}</span>
+                  ))}
+                </div>
+                {funnelData.users.map((u, idx) => {
+                  const stagePalette: Record<number, { color: string; bg: string }> = {
+                    0: { color: "rgba(255,255,255,0.3)", bg: "rgba(255,255,255,0.06)" },
+                    1: { color: BLUE, bg: "rgba(107,142,255,0.15)" },
+                    2: { color: VIOLET, bg: "rgba(167,139,250,0.15)" },
+                    3: { color: "rgb(251,191,36)", bg: "rgba(251,191,36,0.15)" },
+                    4: { color: GREEN, bg: "rgba(74,222,128,0.15)" },
+                  };
+                  const p = stagePalette[u.stageIndex];
+                  return (
+                    <div key={u.userId} style={{ display: "grid", gridTemplateColumns: "1fr 110px 130px", padding: "11px 20px", borderBottom: idx < funnelData.users.length - 1 ? "1px solid rgba(255,255,255,0.03)" : "none", alignItems: "center" }}>
+                      <span style={{ fontSize: 13, color: "rgba(255,255,255,0.72)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 12 }}>{u.email}</span>
+                      <span style={{ fontSize: 12, color: "rgba(255,255,255,0.28)", textAlign: "center" }}>{u.createdAt.slice(0, 10)}</span>
+                      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: p.color, background: p.bg, borderRadius: 6, padding: "3px 10px", whiteSpace: "nowrap" }}>
+                          {u.stageIndex === 4 ? "✓ 완주" : u.stageLabel}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          ) : null}
         </div>
       )}
 
