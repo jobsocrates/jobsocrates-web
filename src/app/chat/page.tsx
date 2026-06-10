@@ -1538,15 +1538,15 @@ export default function ChatPage() {
                 </div>
 
                 {/* 초안 작성 가이드 — 데스크탑 우측 컬럼 */}
-                <div className="hidden lg:flex flex-col gap-2.5 flex-shrink-0 lg:sticky lg:top-6" style={{ width: "220px" }}>
+                <div className="hidden lg:flex flex-col gap-3 flex-shrink-0 lg:sticky lg:top-6" style={{ width: "240px" }}>
                   <p className="text-xs font-semibold px-1" style={{ color: "rgba(255,255,255,0.28)", letterSpacing: "0.06em" }}>초안 작성 가이드</p>
                   {[
                     { icon: "📋", text: "지원 직무, 자소서 문항, 글자수 제한은 반드시 입력해주세요." },
                     { icon: "✏️", text: "초안이 글자수 제한을 초과해도 괜찮아요. 수정본은 입력한 글자수에 맞춰 작성돼요." },
                   ].map((item, i) => (
-                    <div key={i} className="flex items-start gap-2.5 px-3 py-3 rounded-xl" style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.055)" }}>
-                      <span className="text-sm flex-shrink-0 leading-none mt-0.5">{item.icon}</span>
-                      <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.45)", wordBreak: "keep-all" }}>{item.text}</p>
+                    <div key={i} className="flex items-start gap-3 px-4 py-3.5 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                      <span className="text-lg flex-shrink-0 leading-none mt-0.5">{item.icon}</span>
+                      <p className="text-sm leading-[1.7]" style={{ color: "rgba(255,255,255,0.6)", wordBreak: "keep-all", overflowWrap: "break-word" }}>{item.text}</p>
                     </div>
                   ))}
                 </div>
