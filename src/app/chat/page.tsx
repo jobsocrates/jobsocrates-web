@@ -434,11 +434,11 @@ function TipPanel({ hasRevision, revisionReady }: { hasRevision: boolean; revisi
         <div className="w-1 h-3 rounded-full" style={{ background: GOLD }} />
         <span className="text-xs font-semibold tracking-wider uppercase" style={{ color: "rgba(255,255,255,0.35)", letterSpacing: "0.08em" }}>답변 팁</span>
       </div>
-      <div className="flex-1 overflow-hidden px-4 py-4 flex flex-col gap-2.5">
+      <div className="flex-1 overflow-hidden px-3 py-4 flex flex-col gap-3">
         {tips.map((tip, i) => (
-          <div key={i} className="flex items-start gap-3 px-3 py-3 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
-            <span className="text-base flex-shrink-0 leading-none mt-0.5">{tip.icon}</span>
-            <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.58)", wordBreak: "keep-all" }}>{tip.text}</p>
+          <div key={i} className="flex items-start gap-3 px-3 py-3.5 rounded-xl" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
+            <span className="text-lg flex-shrink-0 leading-none mt-0.5">{tip.icon}</span>
+            <p className="text-sm leading-[1.7]" style={{ color: "rgba(255,255,255,0.72)", wordBreak: "keep-all" }}>{tip.text}</p>
           </div>
         ))}
       </div>
