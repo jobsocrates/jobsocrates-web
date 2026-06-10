@@ -423,8 +423,8 @@ function InterviewQCard({
 /* ── 답변 팁 패널 ── */
 function TipPanel({ hasRevision, revisionReady }: { hasRevision: boolean; revisionReady: boolean }) {
   const tips = [
-    { icon: "💬", text: "상황 → 내가 한 행동 → 결과, 이 세 가지가 다 들어가게 답해보세요." },
-    { icon: "🎙️", text: "면접 자리에서 예상치 못한 꼬리질문으로 나올 수 있는 질문들이에요. 실제 면접 답변이라 생각하고 작성해보세요. 면접 준비가 함께 돼요." },
+    { icon: "💬", text: "① 상황  ② 내가 한 행동  ③ 결과\n최대한 이 세 가지가 다 들어가게 구체적으로 답해보세요.\n그럼 더 탄탄한 자소서가 탄생합니다." },
+    { icon: "🎙️", text: "실제 면접이라 생각하고 작성해보세요.\n면접 준비가 함께 돼요." },
     { icon: "✅", text: "그래서 어떻게 됐는지, 결과까지 말해보면 자소서 소재가 살아나요." },
   ];
 
@@ -438,7 +438,7 @@ function TipPanel({ hasRevision, revisionReady }: { hasRevision: boolean; revisi
         {tips.map((tip, i) => (
           <div key={i} className="flex items-start gap-3 px-3 py-3.5 rounded-xl" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
             <span className="text-lg flex-shrink-0 leading-none mt-0.5">{tip.icon}</span>
-            <p className="text-sm leading-[1.7]" style={{ color: "rgba(255,255,255,0.72)", wordBreak: "keep-all" }}>{tip.text}</p>
+            <p className="text-sm leading-[1.7]" style={{ color: "rgba(255,255,255,0.72)", wordBreak: "keep-all", whiteSpace: "pre-line" }}>{tip.text}</p>
           </div>
         ))}
       </div>
