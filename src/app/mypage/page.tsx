@@ -50,8 +50,8 @@ export default function MyPage() {
   const [sessions, setSessions] = useState<SessionRecord[]>([]);
   const [pdfLoadingId, setPdfLoadingId] = useState<string | null>(null);
   const [viewLoadingId, setViewLoadingId] = useState<string | null>(null);
-  const [growthAnalysis, setGrowthAnalysis] = useState<string | null>(null);
-  const [growthLoading, setGrowthLoading] = useState(false);
+  const [profileAnalysis, setProfileAnalysis] = useState<string | null>(null);
+  const [profileLoading, setProfileLoading] = useState(false);
 
   // 비밀번호 변경
   const [pwNew, setPwNew] = useState("");
@@ -93,35 +93,36 @@ export default function MyPage() {
 
   useEffect(() => {
     if (sessions.length === 0) return;
-    const completed = sessions
-      .flatMap(s => (s.cover_items || []).map(i => ({ ...i, sDate: s.created_at })))
-      .filter(i => (i.revisions || []).length > 0)
-      .sort((a, b) => a.sDate.localeCompare(b.sDate));
-    if (completed.length < 2) return;
-    const firstId = completed[0].id;
-    const latestId = completed[completed.length - 1].id;
-    if (firstId === latestId) return;
+    const allItemIds = sessions.flatMap(s => s.cover_items || []).map(i => i.id);
+    if (allItemIds.length === 0) return;
+    const totalAnswers = sessions.flatMap(s => s.cover_items || [])
+      .reduce((acc, i) => acc + (i.messages || []).filter(m => m.role === "user").length, 0);
+    if (totalAnswers < 3) return;
 
-    setGrowthLoading(true);
+    setProfileLoading(true);
     (async () => {
       try {
-        const [{ data: fd }, { data: ld }] = await Promise.all([
-          supabase.from("cover_items").select("draft, question").eq("id", firstId).single(),
-          supabase.from("cover_items").select("draft, question").eq("id", latestId).single(),
-        ]);
-        if (!fd?.draft?.trim() || !ld?.draft?.trim()) return;
-        const res = await fetch("/api/growth-analysis", {
+        const { data: msgs } = await supabase
+          .from("messages")
+          .select("content")
+          .eq("role", "user")
+          .in("cover_item_id", allItemIds)
+          .order("created_at", { ascending: false })
+          .limit(20);
+        const userMessages = (msgs || []).map((m: { content: string }) => m.content).filter(Boolean);
+        if (userMessages.length < 3) return;
+        const res = await fetch("/api/user-profile", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ firstDraft: fd.draft, firstQuestion: fd.question || "", latestDraft: ld.draft, latestQuestion: ld.question || "" }),
+          body: JSON.stringify({ messages: userMessages }),
         });
         if (!res.ok) return;
         const { analysis } = await res.json();
-        setGrowthAnalysis(analysis || null);
+        setProfileAnalysis(analysis || null);
       } catch (e) {
-        console.error("[growth-analysis]", e);
+        console.error("[user-profile]", e);
       } finally {
-        setGrowthLoading(false);
+        setProfileLoading(false);
       }
     })();
   }, [sessions]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -399,32 +400,21 @@ export default function MyPage() {
                   </div>
                 )}
 
-                {/* 글쓰기 성장 분석 */}
-                {totalCompleted >= 2 && (growthLoading || growthAnalysis) && (
-                  <div style={{ borderRadius: 14, border: "1px solid rgba(74,222,128,0.2)", background: "rgba(74,222,128,0.04)", padding: "16px 18px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: (growthLoading || !growthAnalysis) ? 0 : 10 }}>
-                      <span style={{ fontSize: 16 }}>🌱</span>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: GREEN }}>글쓰기 성장 분석</span>
-                    </div>
-                    {growthLoading && (
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10 }}>
-                        <div style={{ width: 13, height: 13, borderRadius: "50%", border: "1.5px solid rgba(74,222,128,0.25)", borderTopColor: GREEN, animation: "spin 0.8s linear infinite", flexShrink: 0 }} />
-                        <span style={{ fontSize: 13, color: "rgba(255,255,255,0.35)" }}>첫 번째 초안과 지금 초안을 비교하고 있어요...</span>
+                {/* 취업소크라테스가 본 당신 */}
+                {(profileLoading || profileAnalysis) && (
+                  <div style={{ borderRadius: 14, border: `1px solid ${ACCENT}28`, background: `linear-gradient(135deg, rgba(201,100,66,0.07) 0%, rgba(107,142,255,0.04) 100%)`, padding: "18px 20px" }}>
+                    <p style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.3)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>취업소크라테스가 본 당신</p>
+                    {profileLoading && (
+                      <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                        <div style={{ width: 13, height: 13, borderRadius: "50%", border: `1.5px solid rgba(201,100,66,0.25)`, borderTopColor: ACCENT, animation: "spin 0.8s linear infinite", flexShrink: 0 }} />
+                        <span style={{ fontSize: 13, color: "rgba(255,255,255,0.35)" }}>당신의 이야기를 다시 돌아보고 있어요...</span>
                       </div>
                     )}
-                    {growthAnalysis && !growthLoading && (
-                      <p style={{ fontSize: 14, color: "rgba(255,255,255,0.85)", lineHeight: 1.78, wordBreak: "keep-all", marginTop: 10 }}>
-                        {growthAnalysis}
+                    {profileAnalysis && !profileLoading && (
+                      <p style={{ fontSize: 14, color: "rgba(255,255,255,0.85)", lineHeight: 1.85, wordBreak: "keep-all" }}>
+                        {profileAnalysis}
                       </p>
                     )}
-                  </div>
-                )}
-                {totalCompleted === 1 && (
-                  <div style={{ borderRadius: 14, border: "1px solid rgba(107,142,255,0.15)", background: "rgba(107,142,255,0.03)", padding: "13px 16px", display: "flex", alignItems: "center", gap: 10 }}>
-                    <span style={{ fontSize: 15, flexShrink: 0 }}>✨</span>
-                    <p style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", lineHeight: 1.6, wordBreak: "keep-all" }}>
-                      문항 하나 더 완성하면 <span style={{ color: BLUE, fontWeight: 600 }}>글쓰기 성장 분석</span>을 볼 수 있어요
-                    </p>
                   </div>
                 )}
 
