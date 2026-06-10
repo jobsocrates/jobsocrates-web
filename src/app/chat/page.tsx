@@ -407,16 +407,11 @@ function InterviewQCard({
 
 /* ── 답변 팁 패널 ── */
 function TipPanel({ hasRevision, revisionReady }: { hasRevision: boolean; revisionReady: boolean }) {
-  const tips = hasRevision || revisionReady
-    ? [
-        { icon: "✍️", text: "충분히 대화했다면 수정본을 요청해보세요." },
-        { icon: "💡", text: "수정본이 마음에 들지 않으면 추가로 대화한 뒤 다시 요청할 수 있어요." },
-      ]
-    : [
-        { icon: "💬", text: "상황 → 내가 한 행동 → 결과, 이 세 가지가 다 들어가게 답해보세요." },
-        { icon: "🎙️", text: "면접 자리에서 예상치 못한 꼬리질문으로 나올 수 있는 질문들이에요. 실제 면접 답변이라 생각하고 작성해보세요. 면접 준비가 함께 돼요." },
-        { icon: "✅", text: "그래서 어떻게 됐는지, 결과까지 말해보면 자소서 소재가 살아나요." },
-      ];
+  const tips = [
+    { icon: "💬", text: "상황 → 내가 한 행동 → 결과, 이 세 가지가 다 들어가게 답해보세요." },
+    { icon: "🎙️", text: "면접 자리에서 예상치 못한 꼬리질문으로 나올 수 있는 질문들이에요. 실제 면접 답변이라 생각하고 작성해보세요. 면접 준비가 함께 돼요." },
+    { icon: "✅", text: "그래서 어떻게 됐는지, 결과까지 말해보면 자소서 소재가 살아나요." },
+  ];
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -424,7 +419,7 @@ function TipPanel({ hasRevision, revisionReady }: { hasRevision: boolean; revisi
         <div className="w-1 h-3 rounded-full" style={{ background: GOLD }} />
         <span className="text-xs font-semibold tracking-wider uppercase" style={{ color: "rgba(255,255,255,0.35)", letterSpacing: "0.08em" }}>답변 팁</span>
       </div>
-      <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-2.5">
+      <div className="flex-1 overflow-hidden px-4 py-4 flex flex-col gap-2.5">
         {tips.map((tip, i) => (
           <div key={i} className="flex items-start gap-3 px-3 py-3 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
             <span className="text-base flex-shrink-0 leading-none mt-0.5">{tip.icon}</span>
