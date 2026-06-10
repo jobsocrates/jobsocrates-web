@@ -414,8 +414,7 @@ function TipPanel({ hasRevision, revisionReady }: { hasRevision: boolean; revisi
       ]
     : [
         { icon: "💬", text: "상황 → 내가 한 행동 → 결과, 이 세 가지가 다 들어가게 답해보세요." },
-        { icon: "🎙️", text: "입으로 먼저 말해보세요. 면접 답변한다 생각하면 훨씬 구체적으로 나와요." },
-        { icon: "🔢", text: "\"열심히 했다\" 대신 \"3일 안에 마쳤다\"처럼 수치나 구체적인 맥락을 넣어보세요." },
+        { icon: "🎙️", text: "면접 자리에서 예상치 못한 꼬리질문으로 나올 수 있는 질문들이에요. 실제 면접 답변이라 생각하고 작성해보세요. 면접 준비가 함께 돼요." },
         { icon: "✅", text: "그래서 어떻게 됐는지, 결과까지 말해보면 자소서 소재가 살아나요." },
       ];
 
@@ -1532,10 +1531,8 @@ export default function ChatPage() {
                 <div className="hidden lg:flex flex-col gap-2.5 flex-shrink-0 lg:sticky lg:top-6" style={{ width: "220px" }}>
                   <p className="text-xs font-semibold px-1" style={{ color: "rgba(255,255,255,0.28)", letterSpacing: "0.06em" }}>초안 작성 가이드</p>
                   {[
-                    { icon: "📝", text: "글자수 제한에 맞게 작성된 초안을 붙여넣으면 가장 좋아요." },
-                    { icon: "🧩", text: "경험이 구체적일수록 질문의 깊이가 달라져요." },
-                    { icon: "🎯", text: "완성도보다 솔직하게 쓴 초안이 더 좋은 결과를 만들어요." },
-                    { icon: "💬", text: "\"열심히 했다\" 말고 상황·행동·결과가 드러나도록 써보세요." },
+                    { icon: "📋", text: "지원 직무, 자소서 문항, 글자수 제한은 반드시 입력해주세요." },
+                    { icon: "✏️", text: "초안이 글자수 제한을 초과해도 괜찮아요. 수정본은 입력한 글자수에 맞춰 작성돼요." },
                   ].map((item, i) => (
                     <div key={i} className="flex items-start gap-2.5 px-3 py-3 rounded-xl" style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.055)" }}>
                       <span className="text-sm flex-shrink-0 leading-none mt-0.5">{item.icon}</span>

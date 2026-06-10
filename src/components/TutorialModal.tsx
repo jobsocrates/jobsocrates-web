@@ -47,25 +47,8 @@ export const TUTORIAL_CONTENT = {
       ],
     },
     {
-      id: "draft" as const,
-      chapter: "3장",
-      icon: "📄",
-      title: "내 초안, 실시간으로 봐요",
-      intro: "채팅 중 상단 '내 초안 보기'를 누르면 내 자소서가 하이라이트와 함께 표시돼요.",
-      highlights: [
-        {
-          color: ACCENT,
-          bg: "rgba(201,100,66,0.12)",
-          border: "rgba(201,100,66,0.28)",
-          label: "밝은 주황색",
-          desc: "지금 이 질문이 가리키는 구절이에요. 대화가 진행될수록 자동으로 이동해요.",
-        },
-      ],
-      tip: "대화하면서 '아, 지금 이 부분 얘기하는구나' 확인하면 집중이 훨씬 잘 돼요. 질문이 어렵게 느껴질 때 꼭 열어보세요!",
-    },
-    {
       id: "answer" as const,
-      chapter: "4장",
+      chapter: "3장",
       icon: "💬",
       title: "답변은 이렇게 해주세요",
       intro: "질문에 얼마나 구체적으로 답하느냐가 자소서 품질을 좌우해요.",
@@ -273,69 +256,7 @@ export function TutorialModal({ userId, onClose }: Props) {
             </div>
           )}
 
-          {/* 3장 — 내 초안 보기 */}
-          {current.id === "draft" && (
-            <>
-              <p className="text-base leading-relaxed" style={{ color: "rgba(255,255,255,0.55)", wordBreak: "keep-all" }}>
-                {current.intro}
-              </p>
-
-              {/* 하이라이트 설명 카드 */}
-              <div className="flex flex-col gap-3">
-                {current.highlights.map((h, i) => (
-                  <div
-                    key={i}
-                    className="flex items-start gap-4 rounded-2xl px-5 py-4"
-                    style={{ background: h.bg, border: `1px solid ${h.border}` }}
-                  >
-                    {/* 색상 견본 */}
-                    <div
-                      className="flex-shrink-0 mt-0.5 rounded"
-                      style={{ width: 28, height: 28, background: h.bg, border: `2px solid ${h.color}`, boxShadow: `0 0 10px ${h.color}40`, borderRadius: 6 }}
-                    />
-                    <div>
-                      <p className="text-sm font-bold mb-1" style={{ color: h.color }}>{h.label}</p>
-                      <p className="text-sm leading-relaxed" style={{ color: "rgba(255,255,255,0.7)", wordBreak: "keep-all" }}>{h.desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* 미니 초안 미리보기 */}
-              <div
-                className="rounded-2xl px-5 py-4"
-                style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}
-              >
-                <p className="text-xs font-semibold mb-3 tracking-wider uppercase" style={{ color: "rgba(255,255,255,0.25)", letterSpacing: "0.08em" }}>미리보기</p>
-                <p className="text-sm leading-[1.9]" style={{ color: "rgba(255,255,255,0.42)", wordBreak: "keep-all" }}>
-                  저는 팀 프로젝트에서 팀원들과 소통하며 문제를 해결했습니다. 당시{" "}
-                  <mark style={{ background: "rgba(201,100,66,0.3)", color: "rgba(255,255,255,0.95)", borderRadius: "3px", padding: "2px 4px", border: "1px solid rgba(201,100,66,0.5)", boxShadow: "0 0 10px rgba(201,100,66,0.25)" }}>
-                    일정이 촉박한 상황에서
-                  </mark>
-                  {" "}저는 매일 진행상황을 공유하는 방식으로...
-                </p>
-                <div className="flex gap-4 mt-3">
-                  <div className="flex items-center gap-2">
-                    <div style={{ width: 10, height: 10, borderRadius: 2, background: "rgba(201,100,66,0.3)", border: "1px solid rgba(201,100,66,0.5)" }} />
-                    <span className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>현재 질문 구절</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* 팁 */}
-              <div
-                className="flex items-start gap-3 px-5 py-4 rounded-2xl"
-                style={{ background: "rgba(255,209,102,0.07)", border: "1px solid rgba(255,209,102,0.22)" }}
-              >
-                <span className="text-lg leading-none flex-shrink-0 mt-0.5">💡</span>
-                <p className="text-sm leading-relaxed" style={{ color: "rgba(255,209,102,0.88)", wordBreak: "keep-all" }}>
-                  {current.tip}
-                </p>
-              </div>
-            </>
-          )}
-
-          {/* 4장 — 답변 방법 */}
+          {/* 3장 — 답변 방법 */}
           {current.id === "answer" && (
             <>
               {/* 면접 팁 — 상단 배치 */}
