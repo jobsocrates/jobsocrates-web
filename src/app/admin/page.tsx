@@ -646,8 +646,8 @@ export default function AdminPage() {
                       {item.messages
                         .sort((a, b) => a.created_at.localeCompare(b.created_at))
                         .map((msg) => (
-                          <div key={msg.id} style={{ display: "flex", justifyContent: msg.role === "user" ? "flex-end" : "flex-start", marginBottom: 8 }}>
-                            <div style={{ maxWidth: "78%", padding: "9px 14px", borderRadius: msg.role === "user" ? "14px 4px 14px 14px" : "4px 14px 14px 14px", background: msg.role === "user" ? ACCENT : "rgba(255,255,255,0.07)", fontSize: 12, lineHeight: 1.65, color: "rgba(255,255,255,0.85)", whiteSpace: "pre-wrap" }}>
+                          <div key={msg.id} style={{ display: "flex", justifyContent: msg.role === "user" ? "flex-end" : "flex-start", marginBottom: 10 }}>
+                            <div style={{ maxWidth: "80%", padding: "11px 16px", borderRadius: msg.role === "user" ? "16px 4px 16px 16px" : "4px 16px 16px 16px", background: msg.role === "user" ? ACCENT : "rgba(255,255,255,0.09)", borderLeft: msg.role === "assistant" ? `2px solid ${BLUE}50` : undefined, borderRight: msg.role === "user" ? undefined : undefined, fontSize: 14, lineHeight: 1.85, color: "rgba(255,255,255,0.9)", whiteSpace: "pre-wrap", wordBreak: "keep-all" }}>
                               {msg.role === "assistant" ? stripMsg(msg.content) : msg.content}
                             </div>
                           </div>
@@ -660,14 +660,14 @@ export default function AdminPage() {
                           {item.interview_questions
                             .sort((a, b) => a.order_index - b.order_index)
                             .map((q) => (
-                              <div key={q.id} style={{ marginBottom: 10, padding: "12px 14px", borderRadius: 12, background: "rgba(167,139,250,0.06)", border: "1px solid rgba(167,139,250,0.15)" }}>
-                                <p style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.8)", marginBottom: q.interview_answers.length ? 10 : 0 }}>{q.question}</p>
+                              <div key={q.id} style={{ marginBottom: 10, padding: "14px 16px", borderRadius: 12, background: "rgba(167,139,250,0.06)", border: "1px solid rgba(167,139,250,0.15)" }}>
+                                <p style={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.85)", marginBottom: q.interview_answers.length ? 12 : 0, lineHeight: 1.65, wordBreak: "keep-all" }}>{q.question}</p>
                                 {q.interview_answers.map((a, i) => (
-                                  <div key={i} style={{ paddingTop: 8, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-                                    <p style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", marginBottom: 4 }}>
-                                      <span style={{ color: "rgba(255,255,255,0.3)", fontWeight: 600 }}>유저: </span>{a.user_answer}
+                                  <div key={i} style={{ paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                                    <p style={{ fontSize: 13, color: "rgba(255,255,255,0.6)", marginBottom: 6, lineHeight: 1.7, wordBreak: "keep-all" }}>
+                                      <span style={{ color: "rgba(255,255,255,0.35)", fontWeight: 600 }}>유저: </span>{a.user_answer}
                                     </p>
-                                    <p style={{ fontSize: 11, color: `rgba(107,142,255,0.8)` }}>
+                                    <p style={{ fontSize: 13, color: `rgba(107,142,255,0.85)`, lineHeight: 1.7, wordBreak: "keep-all" }}>
                                       <span style={{ fontWeight: 600 }}>AI: </span>{a.ai_feedback}
                                     </p>
                                   </div>
@@ -921,9 +921,9 @@ export default function AdminPage() {
                     <p style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.08em" }}>유저별 상세</p>
                     <span style={{ fontSize: 11, color: "rgba(255,255,255,0.2)", marginLeft: "auto" }}>최신 가입 순</span>
                   </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 88px 90px 110px 80px", padding: "8px 20px", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-                    {["이메일", "가입일", "디깅 Q/A", "단계", "예상Q"].map((h, hi) => (
-                      <span key={h} style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.22)", textTransform: "uppercase", letterSpacing: "0.07em", textAlign: hi >= 2 ? "center" : "left" }}>{h}</span>
+                  <div style={{ display: "grid", gridTemplateColumns: "110px 1fr 1fr 1fr 1fr", padding: "8px 20px", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                    {["가입일", "이메일", "디깅 Q/A", "예상Q", "단계"].map((h, hi) => (
+                      <span key={h} style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.22)", textTransform: "uppercase", letterSpacing: "0.07em", textAlign: hi === 0 ? "left" : "center" }}>{h}</span>
                     ))}
                   </div>
                   {funnelData.users.length === 0 ? (
@@ -935,31 +935,31 @@ export default function AdminPage() {
                     const hasInterview = u.interviewTotal > 0;
                     const allDone = hasInterview && u.interviewAnswered === u.interviewTotal;
                     return (
-                      <div key={u.userId} style={{ display: "grid", gridTemplateColumns: "1fr 88px 90px 110px 80px", padding: "11px 20px", borderBottom: idx < funnelData.users.length - 1 ? "1px solid rgba(255,255,255,0.03)" : "none", alignItems: "center" }}>
-                        <span style={{ fontSize: 13, color: "rgba(255,255,255,0.7)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 12 }}>{u.email}</span>
-                        <span style={{ fontSize: 11, color: "rgba(255,255,255,0.28)", textAlign: "center" }}>{u.createdAt.slice(0, 10)}</span>
+                      <div key={u.userId} style={{ display: "grid", gridTemplateColumns: "110px 1fr 1fr 1fr 1fr", padding: "12px 20px", borderBottom: idx < funnelData.users.length - 1 ? "1px solid rgba(255,255,255,0.03)" : "none", alignItems: "center" }}>
+                        <span style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", whiteSpace: "nowrap" }}>{u.createdAt.slice(0, 10)}</span>
+                        <span style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 8 }}>{u.email}</span>
                         <div style={{ display: "flex", justifyContent: "center" }}>
                           {hasDigging ? (
-                            <span style={{ fontSize: 12, fontWeight: 700, color: diggingDrop ? "rgba(248,113,113,0.85)" : "rgba(255,255,255,0.55)", background: diggingDrop ? "rgba(248,113,113,0.1)" : "rgba(255,255,255,0.06)", borderRadius: 6, padding: "3px 8px" }}>
+                            <span style={{ fontSize: 12, fontWeight: 700, color: diggingDrop ? "rgba(248,113,113,0.85)" : "rgba(255,255,255,0.55)", background: diggingDrop ? "rgba(248,113,113,0.1)" : "rgba(255,255,255,0.06)", borderRadius: 6, padding: "3px 10px" }}>
                               {diggingDrop ? "⚠ " : ""}{u.diggingAnswered}/{u.diggingAsked}
                             </span>
                           ) : (
-                            <span style={{ fontSize: 12, color: "rgba(255,255,255,0.18)" }}>—</span>
+                            <span style={{ fontSize: 13, color: "rgba(255,255,255,0.18)" }}>—</span>
                           )}
-                        </div>
-                        <div style={{ display: "flex", justifyContent: "center" }}>
-                          <span style={{ fontSize: 11, fontWeight: 700, color: c.color, background: c.bg, borderRadius: 6, padding: "3px 10px", whiteSpace: "nowrap" }}>
-                            {u.stageIndex === 3 ? "✓ 완주" : u.stageLabel}
-                          </span>
                         </div>
                         <div style={{ display: "flex", justifyContent: "center" }}>
                           {hasInterview ? (
-                            <span style={{ fontSize: 12, fontWeight: 700, color: allDone ? GREEN : "rgba(255,255,255,0.45)", background: allDone ? "rgba(74,222,128,0.12)" : "rgba(255,255,255,0.06)", borderRadius: 6, padding: "3px 8px" }}>
+                            <span style={{ fontSize: 12, fontWeight: 700, color: allDone ? GREEN : "rgba(255,255,255,0.45)", background: allDone ? "rgba(74,222,128,0.12)" : "rgba(255,255,255,0.06)", borderRadius: 6, padding: "3px 10px" }}>
                               {u.interviewAnswered}/{u.interviewTotal}
                             </span>
                           ) : (
-                            <span style={{ fontSize: 12, color: "rgba(255,255,255,0.18)" }}>—</span>
+                            <span style={{ fontSize: 13, color: "rgba(255,255,255,0.18)" }}>—</span>
                           )}
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "center" }}>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: c.color, background: c.bg, borderRadius: 6, padding: "3px 12px", whiteSpace: "nowrap" }}>
+                            {u.stageIndex === 3 ? "✓ 완주" : u.stageLabel}
+                          </span>
                         </div>
                       </div>
                     );
