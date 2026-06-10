@@ -117,17 +117,16 @@ export default function MyPage() {
 
       let revision = "";
       let changes = "";
-      let subtitle = "";
       if (revRows) {
         revision = (revRows.content as string) || "";
         const rawChanges = revRows.changes;
         changes = Array.isArray(rawChanges) ? rawChanges.join("\n") : String(rawChanges || "");
         if (revMsgIdx >= 0) {
-          subtitle = parseRevisionMsg(msgs[revMsgIdx].text).subtitle;
+          const { subtitle } = parseRevisionMsg(msgs[revMsgIdx].text);
+          if (subtitle && !revision.startsWith("[")) revision = `[${subtitle}]\n\n${revision}`;
         }
       } else if (revMsgIdx >= 0) {
         const parsed = parseRevisionMsg(msgs[revMsgIdx].text);
-        subtitle = parsed.subtitle;
         revision = parsed.revision;
         changes = parsed.changes;
       }
@@ -150,7 +149,7 @@ export default function MyPage() {
         return { question: iq.question as string, msgs: qMsgs };
       });
 
-      const html = buildPrintHtml(jobTitle, item.question, subtitle, revision, changes, cleanDiag, interviewQs, window.location.origin);
+      const html = buildPrintHtml(jobTitle, item.question, revision, changes, cleanDiag, interviewQs, window.location.origin);
       const win = window.open("", "_blank");
       if (!win) return;
       win.document.write(html);
@@ -192,17 +191,16 @@ export default function MyPage() {
 
       let revision = "";
       let changes = "";
-      let subtitle2 = "";
       if (revRows) {
         revision = (revRows.content as string) || "";
         const rawChanges = revRows.changes;
         changes = Array.isArray(rawChanges) ? rawChanges.join("\n") : String(rawChanges || "");
         if (revMsgIdx >= 0) {
-          subtitle2 = parseRevisionMsg(msgs[revMsgIdx].text).subtitle;
+          const { subtitle } = parseRevisionMsg(msgs[revMsgIdx].text);
+          if (subtitle && !revision.startsWith("[")) revision = `[${subtitle}]\n\n${revision}`;
         }
       } else if (revMsgIdx >= 0) {
         const parsed = parseRevisionMsg(msgs[revMsgIdx].text);
-        subtitle2 = parsed.subtitle;
         revision = parsed.revision;
         changes = parsed.changes;
       }
@@ -219,7 +217,7 @@ export default function MyPage() {
         return { question: iq.question as string, msgs: qMsgs };
       });
 
-      const html = buildPrintHtml(jobTitle, item.question, subtitle2, revision, changes, diagMsgs, interviewQs, window.location.origin);
+      const html = buildPrintHtml(jobTitle, item.question, revision, changes, diagMsgs, interviewQs, window.location.origin);
       const win = window.open("", "_blank");
       if (!win) return;
       win.document.write(html);

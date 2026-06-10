@@ -71,6 +71,7 @@ function stripMd(t: string) {
   return t
     .replace(/\*\*(.*?)\*\*/g, "$1")
     .replace(/\*(.*?)\*/g, "$1")
+    .replace(/\[소제목\][\s\S]*?\[\/소제목\]/g, "")
     .replace(/\[수정본\][\s\S]*?\[\/수정본\]/g, "")
     .replace(/\[변경사항\][\s\S]*?\[\/변경사항\]/g, "")
     .replace(/\[참조\]([\s\S]*?)\[\/참조\]/g, "$1")
@@ -80,21 +81,25 @@ function stripMd(t: string) {
 
 /* 수정본 + 변경사항 마커 파싱 */
 function parseRevisionMsg(text: string) {
+  const subMatch = text.match(/\[소제목\]([\s\S]*?)\[\/소제목\]/);
   const revMatch = text.match(/\[수정본\]([\s\S]*?)\[\/수정본\]/);
   const chgMatch = text.match(/\[변경사항\]([\s\S]*?)\[\/변경사항\]/);
   const partialChgMatch = !chgMatch ? text.match(/\[변경사항\]([\s\S]*)$/) : null;
 
-  const revision = revMatch ? revMatch[1].trim() : "";
+  const subtitle = subMatch ? subMatch[1].trim() : "";
+  const rawRevision = revMatch ? revMatch[1].trim() : "";
+  const revision = subtitle ? `[${subtitle}]\n\n${rawRevision}` : rawRevision;
   const changes = chgMatch ? chgMatch[1].trim() : "";
   const partialChanges = partialChgMatch ? partialChgMatch[1].trim() : "";
 
   const rest = text
+    .replace(/\[소제목\][\s\S]*?\[\/소제목\]/g, "")
     .replace(/\[수정본\][\s\S]*?\[\/수정본\]/g, "")
     .replace(/\[변경사항\][\s\S]*?\[\/변경사항\]/g, "")
     .replace(/\[변경사항\][\s\S]*$/, "")
     .trim();
 
-  return { revision, changes, partialChanges, rest };
+  return { subtitle, revision, changes, partialChanges, rest };
 }
 
 /* ── 진단 카드 (첫 번째 봇 메시지) ── */
@@ -205,9 +210,12 @@ function ChangesCard({ text }: { text: string }) {
 
 /* ── 수정본 스트리밍 카드 ([수정본] 마커 감지 후, 완성 전) ── */
 function StreamingRevisionCard({ text }: { text: string }) {
+  const subMatch = text.match(/\[소제목\]([\s\S]*?)\[\/소제목\]/);
+  const subtitle = subMatch ? subMatch[1].trim() : "";
   const parts = text.split("[수정본]");
   const afterMarker = parts.length > 1 ? parts[1] : "";
-  const partialRevision = afterMarker.replace(/\[\/수정본\][\s\S]*/, "").trim();
+  const rawPartial = afterMarker.replace(/\[\/수정본\][\s\S]*/, "").trim();
+  const partialRevision = subtitle && rawPartial ? `[${subtitle}]\n\n${rawPartial}` : rawPartial;
 
   return (
     <div className="flex flex-col gap-3 w-full">

@@ -45,7 +45,8 @@ export function parseRevisionMsg(text: string) {
   const revMatch = text.match(/\[수정본\]([\s\S]*?)\[\/수정본\]/);
   const chgMatch = text.match(/\[변경사항\]([\s\S]*?)\[\/변경사항\]/);
   const subtitle = subMatch ? subMatch[1].trim() : "";
-  const revision = revMatch ? revMatch[1].trim() : "";
+  const rawRevision = revMatch ? revMatch[1].trim() : "";
+  const revision = subtitle ? `[${subtitle}]\n\n${rawRevision}` : rawRevision;
   const changes = chgMatch ? chgMatch[1].trim() : "";
   const rest = text
     .replace(/\[소제목\][\s\S]*?\[\/소제목\]/g, "")
@@ -67,7 +68,6 @@ export function escHtml(s: string) {
 export function buildPrintHtml(
   jobTitle: string,
   question: string,
-  subtitle: string,
   revision: string,
   changes: string,
   diagMsgs: SummaryMsg[],
@@ -129,7 +129,6 @@ body{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#ff
 .section-num{font-size:10px;font-weight:800;color:#ffffff;background:#111827;padding:3px 9px;border-radius:20px;letter-spacing:.06em}
 .section-title{font-size:15px;font-weight:700;color:#111827}
 
-.subtitle-box{background:#f0fdf4;border:1.5px solid #4ade80;border-radius:10px;padding:10px 18px;margin-bottom:12px;font-size:14px;font-weight:700;color:#166534;word-break:keep-all}
 .revision-box{background:#fff;border:2px solid #111827;border-radius:12px;overflow:hidden;margin-bottom:4px}
 .revision-header{background:#111827;padding:10px 20px;display:flex;align-items:center;gap:8px}
 .revision-header p{font-size:10px;font-weight:700;color:#fff;letter-spacing:.1em;text-transform:uppercase}
@@ -178,7 +177,6 @@ ${revision ? `
     <span class="section-num">01</span>
     <span class="section-title">수정본</span>
   </div>
-  ${subtitle ? `<div class="subtitle-box">${escHtml(subtitle)}</div>` : ""}
   <div class="revision-box">
     <div class="revision-header"><p>수정된 자소서</p></div>
     <div class="revision-body">${escHtml(revision)}</div>
@@ -250,7 +248,7 @@ export function CoverLetterSummary({ jobTitle, question, draft, msgs, interviewQ
 
   function handlePdf() {
     const html = buildPrintHtml(
-      jobTitle, question, subtitle, revision, changes, diagMsgs, interviewQs, window.location.origin
+      jobTitle, question, revision, changes, diagMsgs, interviewQs, window.location.origin
     );
     const win = window.open("", "_blank");
     if (!win) return;
@@ -304,14 +302,6 @@ export function CoverLetterSummary({ jobTitle, question, draft, msgs, interviewQ
           {/* 01 · 수정본 */}
           <Section number="01" title="수정본">
             <div className="flex flex-col gap-4">
-              {subtitle && (
-                <div
-                  className="rounded-xl px-4 py-3 text-sm font-bold"
-                  style={{ background: "rgba(74,222,128,0.08)", border: "1.5px solid rgba(74,222,128,0.3)", color: "#4ade80", wordBreak: "keep-all" }}
-                >
-                  {subtitle}
-                </div>
-              )}
               {revision ? (
                 <DraftBox label="수정된 자소서" text={revision} accent />
               ) : (
