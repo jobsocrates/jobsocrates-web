@@ -561,6 +561,13 @@ export default function ChatPage() {
   const [welcome, setWelcome] = useState("");
   const [showTutorial, setShowTutorial] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [showDuplicateDraft, setShowDuplicateDraft] = useState(false);
+  const [duplicateDraftInfo, setDuplicateDraftInfo] = useState<{
+    sessionId: string;
+    jobTitle: string;
+    question: string;
+    createdAt: string;
+  } | null>(null);
 
   const selected = items.find((it) => it.id === selectedId) ?? null;
 
@@ -814,6 +821,90 @@ export default function ChatPage() {
     } catch { /* 무시 */ }
   }
 
+  async function checkDuplicateDraft(draft: string): Promise<{ sessionId: string; jobTitle: string; question: string; createdAt: string } | null> {
+    if (!currentUser) return null;
+    try {
+      const { data: userSessions } = await supabase
+        .from("sessions")
+        .select("id, job_title, created_at")
+        .eq("user_id", currentUser.id);
+      if (!userSessions?.length) return null;
+
+      const { data: dupes } = await supabase
+        .from("cover_items")
+        .select("id, question, session_id")
+        .in("session_id", userSessions.map((s: { id: string }) => s.id))
+        .eq("draft", draft.trim())
+        .limit(1);
+
+      if (!dupes?.length) return null;
+      const parentSession = userSessions.find((s: { id: string }) => s.id === dupes[0].session_id);
+      if (!parentSession) return null;
+      return {
+        sessionId: parentSession.id,
+        jobTitle: parentSession.job_title || "",
+        question: dupes[0].question || "",
+        createdAt: parentSession.created_at,
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  async function loadSessionById(sessionId: string, sessionJobTitle: string) {
+    try {
+      dbSessionIdRef.current = sessionId;
+      setJobTitle(sessionJobTitle);
+
+      const { data: allItems } = await supabase
+        .from("cover_items")
+        .select("id, question, draft, char_limit, status, order_index")
+        .eq("session_id", sessionId)
+        .order("order_index");
+
+      if (!allItems?.length) return;
+
+      const newItems: CoverItem[] = await Promise.all(
+        allItems.map(async (ci) => {
+          const { data: messages } = await supabase
+            .from("messages")
+            .select("role, content, created_at")
+            .eq("cover_item_id", ci.id)
+            .order("created_at");
+
+          const msgs: ChatMsg[] = (messages || []).map(m => ({
+            id: uid(),
+            role: (m.role === "user" ? "user" : "bot") as "user" | "bot",
+            text: m.content,
+          }));
+          const apiHistory = (messages || []).map(m => ({
+            role: m.role === "user" ? "user" : "assistant",
+            content: m.content,
+          }));
+
+          return {
+            id: uid(),
+            dbId: ci.id,
+            question: ci.question || "",
+            draft: ci.draft || "",
+            charLimit: ci.char_limit ? String(ci.char_limit) : "",
+            status: (msgs.length > 0 ? "chatting" : "idle") as "idle" | "chatting",
+            msgs,
+            apiHistory,
+            interviewQs: [],
+            isLoadingQs: false,
+          };
+        })
+      );
+
+      if (newItems.length > 0) {
+        setItems(newItems);
+        setSelectedId(newItems[0].id);
+        setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 200);
+      }
+    } catch { /* 무시 */ }
+  }
+
   async function fetchCredits(userId: string) {
     if (creditsFetchedRef.current) return;
     creditsFetchedRef.current = true;
@@ -911,7 +1002,16 @@ export default function ChatPage() {
     toastTimer.current = setTimeout(() => { setToast(""); setToastField(""); }, 2500);
   }
 
-  function handleStartClick() {
+  function proceedWithAnalysis() {
+    const isAdmin = currentUser?.email === ADMIN_EMAIL;
+    if (isAdmin || userCredits === null) {
+      startAnalysis();
+    } else {
+      setShowCreditConfirm(true);
+    }
+  }
+
+  async function handleStartClick() {
     if (!selected) return;
     if (!jobTitle.trim()) { showToast("지원 직무를 먼저 입력해주세요", "jobTitle"); return; }
     if (!selected.question.trim()) { showToast("자소서 문항을 먼저 입력해주세요", "question"); return; }
@@ -924,11 +1024,17 @@ export default function ChatPage() {
       showToast("뱃지가 없어요. 관리자에게 문의해주세요", "");
       return;
     }
-    if (isAdmin || userCredits === null) {
-      startAnalysis();
-    } else {
-      setShowCreditConfirm(true);
+
+    if (currentUser) {
+      const duplicate = await checkDuplicateDraft(selected.draft);
+      if (duplicate) {
+        setDuplicateDraftInfo(duplicate);
+        setShowDuplicateDraft(true);
+        return;
+      }
     }
+
+    proceedWithAnalysis();
   }
 
   async function startAnalysis() {
@@ -2157,6 +2263,58 @@ export default function ChatPage() {
               <button onClick={async () => { await supabase.auth.signOut(); window.location.href = "/"; }}
                 style={{ flex: 1, padding: "11px 0", borderRadius: 12, background: "rgba(201,100,66,0.15)", border: "1px solid rgba(201,100,66,0.4)", color: "#C96442", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
                 로그아웃
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 중복 초안 경고 모달 */}
+      {showDuplicateDraft && duplicateDraftInfo && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-5"
+          style={{ background: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)" }}
+        >
+          <div
+            className="w-full flex flex-col gap-5 rounded-2xl p-6"
+            style={{ maxWidth: "380px", background: "#0D0D18", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 24px 60px rgba(0,0,0,0.7)" }}
+          >
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-2.5">
+                <span style={{ fontSize: 20 }}>📋</span>
+                <p className="text-sm font-semibold" style={{ color: "rgba(255,255,255,0.88)" }}>이전에 같은 초안을 분석한 기록이 있어요</p>
+              </div>
+              <div className="px-3 py-2.5 rounded-xl" style={{ background: "rgba(107,142,255,0.08)", border: "1px solid rgba(107,142,255,0.2)" }}>
+                <p className="text-xs leading-relaxed" style={{ color: "rgba(107,142,255,0.85)" }}>
+                  새로 분석하면 질문이 완전히 달라질 수 있어요.
+                </p>
+              </div>
+              <div className="flex flex-col gap-1 px-1">
+                <p className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>이전 분석</p>
+                <p className="text-sm font-medium" style={{ color: "rgba(255,255,255,0.75)", wordBreak: "keep-all" }}>
+                  {duplicateDraftInfo.jobTitle && <span style={{ color: ACCENT }}>【{duplicateDraftInfo.jobTitle}】</span>}{" "}
+                  {duplicateDraftInfo.question || "문항 미입력"}
+                </p>
+                <p className="text-xs" style={{ color: "rgba(255,255,255,0.25)" }}>{formatRelativeTime(duplicateDraftInfo.createdAt)}</p>
+              </div>
+            </div>
+            <div className="flex gap-2.5">
+              <button
+                onClick={async () => {
+                  setShowDuplicateDraft(false);
+                  await loadSessionById(duplicateDraftInfo.sessionId, duplicateDraftInfo.jobTitle);
+                }}
+                className="flex-1 py-3 rounded-xl text-sm font-semibold text-white transition-all hover:scale-[1.02] active:scale-[0.98]"
+                style={{ background: ACCENT, boxShadow: `0 4px 16px ${ACCENT}30` }}
+              >
+                이전 기록 보기
+              </button>
+              <button
+                onClick={() => { setShowDuplicateDraft(false); proceedWithAnalysis(); }}
+                className="flex-1 py-3 rounded-xl text-sm transition-all hover:opacity-70"
+                style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.45)", border: "1px solid rgba(255,255,255,0.08)" }}
+              >
+                새로 분석하기
               </button>
             </div>
           </div>
