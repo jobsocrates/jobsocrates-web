@@ -410,20 +410,29 @@ type HighlightLevel = "none" | "faint" | "bright";
 function buildDraftSegments(
   draft: string,
   faintTexts: string[],
-  brightText: string | null
+  brightText: string | null,
+  faintAll = false
 ): { text: string; level: HighlightLevel }[] {
-  const tags: HighlightLevel[] = new Array(draft.length).fill("none");
-  for (const ft of faintTexts) {
-    if (!ft) continue;
-    let s = draft.indexOf(ft);
-    while (s !== -1) {
-      for (let i = s; i < s + ft.length; i++) tags[i] = "faint";
-      s = draft.indexOf(ft, s + 1);
+  const tags: HighlightLevel[] = new Array(draft.length).fill(faintAll ? "faint" : "none");
+  if (!faintAll) {
+    for (const ft of faintTexts) {
+      if (!ft) continue;
+      const norm = (s: string) => s.replace(/\s+/g, " ").trim();
+      const needle = norm(ft);
+      const hay = norm(draft);
+      let s = hay.indexOf(needle);
+      while (s !== -1) {
+        for (let i = s; i < s + needle.length; i++) tags[i] = "faint";
+        s = hay.indexOf(needle, s + 1);
+      }
     }
   }
   if (brightText) {
-    const s = draft.indexOf(brightText);
-    if (s !== -1) for (let i = s; i < s + brightText.length; i++) tags[i] = "bright";
+    const norm = (s: string) => s.replace(/\s+/g, " ").trim();
+    const needle = norm(brightText);
+    const hay = norm(draft);
+    const s = hay.indexOf(needle);
+    if (s !== -1) for (let i = s; i < s + needle.length; i++) tags[i] = "bright";
   }
   const segs: { text: string; level: HighlightLevel }[] = [];
   let i = 0;
@@ -442,11 +451,13 @@ function DraftViewer({
   draft,
   currentRef,
   allRefs,
+  faintAll,
   onClose,
 }: {
   draft: string;
   currentRef: string | null;
   allRefs: string[];
+  faintAll: boolean;
   onClose: () => void;
 }) {
   const markRef = useRef<HTMLElement>(null);
@@ -458,7 +469,7 @@ function DraftViewer({
   }, [currentRef]);
 
   const faintTexts = allRefs.filter(r => r !== currentRef);
-  const segments = buildDraftSegments(draft, faintTexts, currentRef);
+  const segments = buildDraftSegments(draft, faintTexts, currentRef, faintAll);
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -1197,7 +1208,7 @@ export default function ChatPage() {
   const showInterviewButton = hasAnyRevision && interviewQs.length === 0 && !isLoadingQs;
   const showSummaryButton = hasAnyRevision && interviewQs.length > 0;
 
-  // 가장 최근 봇 메시지의 마지막 [참조] — 현재 포커스 (밝은 하이라이트)
+  // 가장 최근 [참조]가 있는 봇 메시지의 마지막 참조 — 현재 포커스 (밝은 하이라이트)
   const currentReference: string | null = (() => {
     if (!selected) return null;
     for (let i = selected.msgs.length - 1; i >= 0; i--) {
@@ -1205,11 +1216,13 @@ export default function ChatPage() {
       if (msg.role === "bot") {
         const matches = [...msg.text.matchAll(/\[참조\]([\s\S]*?)\[\/참조\]/g)];
         if (matches.length > 0) return matches[matches.length - 1][1].trim();
-        return null;
       }
     }
     return null;
   })();
+
+  // 분석이 시작됐으면 초안 전체를 연한 하이라이트
+  const draftFaintAll = !!selected && selected.msgs.some(m => m.role === "bot");
 
   // 전체 봇 메시지에서 수집한 모든 [참조] — 연한 하이라이트 (첫 진단의 ①②③ 포함)
   const allReferences: string[] = (() => {
@@ -1905,6 +1918,7 @@ export default function ChatPage() {
                     draft={selected.draft}
                     currentRef={currentReference}
                     allRefs={allReferences}
+                    faintAll={draftFaintAll}
                     onClose={() => setShowDraftPanel(false)}
                   />
                 </div>
@@ -1929,6 +1943,7 @@ export default function ChatPage() {
                       draft={selected.draft}
                       currentRef={currentReference}
                       allRefs={allReferences}
+                      faintAll={draftFaintAll}
                       onClose={() => setShowDraftPanel(false)}
                     />
                   </div>
