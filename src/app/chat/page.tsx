@@ -349,11 +349,11 @@ function InterviewQCard({
                     <img src="/ai-avatar.webp" alt="" className="w-6 h-6 rounded-full object-cover flex-shrink-0 mb-0.5" />
                   )}
                   <div
-                    className="max-w-[85%] px-3.5 py-2.5 text-sm lg:text-base leading-relaxed whitespace-pre-wrap"
+                    className="max-w-[85%] px-4 py-3 text-sm lg:text-[15px] leading-[1.8] whitespace-pre-wrap"
                     style={
                       msg.role === "user"
-                        ? { background: ACCENT, color: "#fff", borderRadius: "14px 4px 14px 14px", wordBreak: "keep-all" }
-                        : { background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.85)", borderRadius: "4px 14px 14px 14px", wordBreak: "keep-all" }
+                        ? { background: ACCENT, color: "#fff", borderRadius: "16px 4px 16px 16px", wordBreak: "keep-all" }
+                        : { background: "rgba(255,255,255,0.09)", color: "rgba(255,255,255,0.92)", borderRadius: "4px 16px 16px 16px", wordBreak: "keep-all", borderLeft: `2px solid ${VIOLET}55` }
                     }
                   >
                     {msg.role === "bot" && msg.text === "" ? (
@@ -362,7 +362,7 @@ function InterviewQCard({
                           <span key={delay} className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: color, animationDelay: `${delay}ms` }} />
                         ))}
                       </div>
-                    ) : msg.text}
+                    ) : msg.role === "bot" ? msg.text.replace(/^AI:\s*/i, "") : msg.text}
                   </div>
                 </div>
               ))}
