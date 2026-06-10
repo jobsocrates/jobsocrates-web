@@ -402,8 +402,11 @@ export default function MyPage() {
 
                 {/* 취업소크라테스가 본 당신 */}
                 {(profileLoading || profileAnalysis) && (
-                  <div style={{ borderRadius: 14, border: `1px solid ${ACCENT}28`, background: `linear-gradient(135deg, rgba(201,100,66,0.07) 0%, rgba(107,142,255,0.04) 100%)`, padding: "18px 20px" }}>
-                    <p style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.3)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 10 }}>취업소크라테스가 본 당신</p>
+                  <div style={{ borderRadius: 14, border: "1px solid rgba(255,255,255,0.09)", background: "rgba(255,255,255,0.03)", padding: "18px 20px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                      <img src="/ai-avatar.webp" alt="" style={{ width: 20, height: 20, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+                      <p style={{ fontSize: 14, fontWeight: 700, color: "rgba(255,255,255,0.88)" }}>취업소크라테스가 본 당신</p>
+                    </div>
                     {profileLoading && (
                       <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
                         <div style={{ width: 13, height: 13, borderRadius: "50%", border: `1.5px solid rgba(201,100,66,0.25)`, borderTopColor: ACCENT, animation: "spin 0.8s linear infinite", flexShrink: 0 }} />
