@@ -24,6 +24,9 @@ interface CoverItemRecord {
   id: string;
   question: string;
   status: string;
+  messages?: { id: string; role: string }[];
+  revisions?: { id: string }[];
+  interview_questions?: { id: string; interview_answers?: { id: string }[] }[];
 }
 
 interface SessionRecord {
@@ -73,7 +76,7 @@ export default function MyPage() {
           .order("created_at", { ascending: false })
           .limit(50),
         supabase.from("sessions")
-          .select("id, job_title, created_at, cover_items(id, question, status)")
+          .select("id, job_title, created_at, cover_items(id, question, status, messages(id, role), revisions(id), interview_questions(id, interview_answers(id)))")
           .eq("user_id", data.user.id)
           .order("created_at", { ascending: false })
           .limit(20),
@@ -321,65 +324,141 @@ export default function MyPage() {
       <div className="mypage-grid" style={{ maxWidth: 900, margin: "0 auto", padding: "16px 20px 40px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, alignItems: "start" }}>
 
         {/* 왼쪽: 이전 기록 */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          {sessions.length > 0 ? (
-            <div className="card-depth-sm" style={{ borderRadius: 16, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.025)", overflow: "hidden" }}>
-              <div style={{ padding: "14px 18px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-                <p style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.55)" }}>이전 기록</p>
-              </div>
-              {sessions.map(session => (
-                <div key={session.id} style={{ padding: "14px 18px", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: session.cover_items?.length ? 8 : 0 }}>
-                    <p style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.75)" }}>
-                      {session.job_title || "직무 미입력"}
-                    </p>
-                    <span style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", flexShrink: 0, marginLeft: 8 }}>{formatDate(session.created_at)}</span>
-                  </div>
-                  {session.cover_items?.length > 0 && (
-                    <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-                      {session.cover_items.map(item => (
-                        <div key={item.id} style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", paddingLeft: 8, gap: 8 }}>
-                          <p style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", flex: 1, minWidth: 0, lineHeight: 1.6, display: "flex", gap: 5 }}>
-                            <span style={{ color: item.status === "done" ? "rgba(74,222,128,0.6)" : BLUE, fontSize: 10, flexShrink: 0, marginTop: 2 }}>
-                              {item.status === "done" ? "✓" : "·"}
-                            </span>
-                            <span style={{ wordBreak: "keep-all", overflowWrap: "break-word" }}>
-                              {item.question || "문항 미입력"}
-                            </span>
-                          </p>
-                          {item.status === "done" && (
-                            <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
-                              <button
-                                onClick={() => handleViewHtml(session.job_title, item)}
-                                disabled={viewLoadingId === item.id || pdfLoadingId === item.id}
-                                style={{ fontSize: 10, fontWeight: 600, color: "rgba(107,142,255,0.7)", background: "rgba(107,142,255,0.08)", border: "1px solid rgba(107,142,255,0.2)", borderRadius: 8, padding: "3px 8px", cursor: viewLoadingId === item.id ? "default" : "pointer", opacity: viewLoadingId === item.id ? 0.5 : 1 }}
-                              >
-                                {viewLoadingId === item.id ? "..." : "바로 보기"}
-                              </button>
-                              <button
-                                onClick={() => handleDownloadPdf(session.job_title, item)}
-                                disabled={pdfLoadingId === item.id || viewLoadingId === item.id}
-                                style={{ fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,0.3)", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, padding: "3px 8px", cursor: pdfLoadingId === item.id ? "default" : "pointer", opacity: pdfLoadingId === item.id ? 0.5 : 1 }}
-                              >
-                                {pdfLoadingId === item.id ? "..." : "PDF"}
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {(() => {
+            const allItems = sessions.flatMap(s => s.cover_items || []);
+            const totalCompleted = allItems.filter(i => (i.revisions || []).length > 0).length;
+            const totalDigging = allItems.reduce((acc, i) => acc + (i.messages || []).filter(m => m.role === "user").length, 0);
+            const totalInterviewDone = allItems.reduce((acc, i) => acc + (i.interview_questions || []).filter(q => (q.interview_answers || []).length > 0).length, 0);
+            const firstSession = sessions[0];
+            const firstHasIncomplete = firstSession?.cover_items?.some(i => (i.revisions || []).length === 0);
+
+            if (sessions.length === 0) {
+              return (
+                <div className="card-depth-sm" style={{ borderRadius: 16, border: "1px solid rgba(255,255,255,0.07)", background: "rgba(255,255,255,0.02)", padding: "36px 20px", textAlign: "center" }}>
+                  <p style={{ fontSize: 15, color: "rgba(255,255,255,0.35)", marginBottom: 16 }}>아직 기록이 없어요</p>
+                  <Link href="/chat" style={{ display: "inline-block", fontSize: 14, fontWeight: 600, color: ACCENT, textDecoration: "none", padding: "10px 22px", borderRadius: 12, background: `rgba(201,100,66,0.12)`, border: `1px solid rgba(201,100,66,0.25)` }}>
+                    자소서 분석 시작하기 →
+                  </Link>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="card-depth-sm" style={{ borderRadius: 16, border: "1px solid rgba(255,255,255,0.07)", background: "rgba(255,255,255,0.02)", padding: "32px 20px", textAlign: "center" }}>
-              <p style={{ fontSize: 14, color: "rgba(255,255,255,0.25)", marginBottom: 14 }}>아직 기록이 없어요</p>
-              <Link href="/chat" style={{ display: "inline-block", fontSize: 13, fontWeight: 600, color: ACCENT, textDecoration: "none", padding: "9px 20px", borderRadius: 10, background: `rgba(201,100,66,0.12)`, border: `1px solid rgba(201,100,66,0.25)` }}>
-                자소서 분석 시작하기 →
-              </Link>
-            </div>
-          )}
+              );
+            }
+
+            return (
+              <>
+                {/* 성과 요약 */}
+                {totalCompleted > 0 && (
+                  <div style={{ borderRadius: 14, border: "1px solid rgba(255,255,255,0.07)", background: "rgba(255,255,255,0.02)", padding: "16px", display: "grid", gridTemplateColumns: "1fr 1fr 1fr" }}>
+                    {[
+                      { label: "완성 문항", value: totalCompleted, color: GREEN },
+                      { label: "디깅 답변", value: totalDigging, color: BLUE },
+                      { label: "면접 답변", value: totalInterviewDone, color: GOLD },
+                    ].map(stat => (
+                      <div key={stat.label} style={{ textAlign: "center" }}>
+                        <div style={{ fontSize: 28, fontWeight: 800, color: stat.color, letterSpacing: "-0.03em", lineHeight: 1.1 }}>{stat.value}</div>
+                        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 4, fontWeight: 600 }}>{stat.label}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* 이어하기 CTA */}
+                {firstHasIncomplete && (
+                  <Link href="/chat" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 18px", borderRadius: 14, background: `rgba(201,100,66,0.1)`, border: `1px solid rgba(201,100,66,0.3)`, textDecoration: "none" }}>
+                    <div>
+                      <p style={{ fontSize: 14, fontWeight: 700, color: "rgba(255,255,255,0.92)", marginBottom: 3 }}>작성 중인 자소서가 있어요</p>
+                      <p style={{ fontSize: 13, color: "rgba(255,255,255,0.5)" }}>{firstSession.job_title || "직무 미입력"} · 이어서 완성해보세요</p>
+                    </div>
+                    <span style={{ fontSize: 22, color: ACCENT, flexShrink: 0, marginLeft: 12, fontWeight: 700 }}>→</span>
+                  </Link>
+                )}
+
+                <p style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.28)", letterSpacing: "0.08em", textTransform: "uppercase", paddingLeft: 2, marginBottom: -4 }}>이전 기록</p>
+
+                {sessions.map(session => {
+                  const items = session.cover_items || [];
+                  const completedItems = items.filter(i => (i.revisions || []).length > 0).length;
+                  const hasAnyMessages = items.some(i => (i.messages || []).length > 0);
+                  const isFullyDone = items.length > 0 && completedItems === items.length;
+
+                  return (
+                    <div key={session.id} className="card-depth-sm" style={{ borderRadius: 14, border: `1px solid ${isFullyDone ? "rgba(74,222,128,0.12)" : "rgba(255,255,255,0.07)"}`, background: "rgba(255,255,255,0.025)", overflow: "hidden" }}>
+                      {/* 세션 헤더 */}
+                      <div style={{ padding: "12px 16px", borderBottom: items.length > 0 ? "1px solid rgba(255,255,255,0.05)" : "none", display: "flex", alignItems: "center", gap: 8 }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{ fontSize: 14, fontWeight: 700, color: "rgba(255,255,255,0.88)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                            {session.job_title || "직무 미입력"}
+                          </p>
+                          <p style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", marginTop: 2 }}>{formatDate(session.created_at)}</p>
+                        </div>
+                        {items.length > 0 && (
+                          <span style={{
+                            fontSize: 11, fontWeight: 700, flexShrink: 0, padding: "3px 10px", borderRadius: 6,
+                            color: isFullyDone ? GREEN : hasAnyMessages ? BLUE : "rgba(255,255,255,0.28)",
+                            background: isFullyDone ? "rgba(74,222,128,0.1)" : hasAnyMessages ? "rgba(107,142,255,0.1)" : "rgba(255,255,255,0.05)",
+                          }}>
+                            {isFullyDone ? `✓ ${completedItems}/${items.length} 완성` : hasAnyMessages ? `${completedItems}/${items.length} 진행` : "미시작"}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* 아이템 목록 */}
+                      {items.map(item => {
+                        const diggingCount = (item.messages || []).filter(m => m.role === "user").length;
+                        const hasRevision = (item.revisions || []).length > 0;
+                        const interviewTotal = (item.interview_questions || []).length;
+                        const interviewDone = (item.interview_questions || []).filter(q => (q.interview_answers || []).length > 0).length;
+
+                        return (
+                          <div key={item.id} style={{ padding: "10px 16px", borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
+                            <div style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 6 }}>
+                              <span style={{ color: hasRevision ? GREEN : diggingCount > 0 ? BLUE : "rgba(255,255,255,0.2)", fontSize: 11, flexShrink: 0, marginTop: 3 }}>
+                                {hasRevision ? "✓" : diggingCount > 0 ? "◐" : "○"}
+                              </span>
+                              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", lineHeight: 1.55, wordBreak: "keep-all", flex: 1, minWidth: 0 }}>
+                                {item.question || "문항 미입력"}
+                              </p>
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingLeft: 19 }}>
+                              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                                {diggingCount > 0 && (
+                                  <span style={{ fontSize: 11, color: "rgba(107,142,255,0.85)", fontWeight: 600 }}>💬 {diggingCount}회</span>
+                                )}
+                                {hasRevision && (
+                                  <span style={{ fontSize: 11, color: "rgba(74,222,128,0.85)", fontWeight: 600 }}>✏️ 수정본</span>
+                                )}
+                                {interviewTotal > 0 && (
+                                  <span style={{ fontSize: 11, color: interviewDone === interviewTotal ? "rgba(74,222,128,0.85)" : "rgba(255,209,102,0.75)", fontWeight: 600 }}>🎤 {interviewDone}/{interviewTotal}</span>
+                                )}
+                              </div>
+                              {hasRevision && (
+                                <div style={{ display: "flex", gap: 5, flexShrink: 0 }}>
+                                  <button
+                                    onClick={() => handleViewHtml(session.job_title, item)}
+                                    disabled={viewLoadingId === item.id || pdfLoadingId === item.id}
+                                    style={{ fontSize: 11, fontWeight: 600, color: "rgba(107,142,255,0.85)", background: "rgba(107,142,255,0.08)", border: "1px solid rgba(107,142,255,0.2)", borderRadius: 7, padding: "4px 10px", cursor: viewLoadingId === item.id ? "default" : "pointer", opacity: viewLoadingId === item.id ? 0.5 : 1 }}
+                                  >
+                                    {viewLoadingId === item.id ? "..." : "바로 보기"}
+                                  </button>
+                                  <button
+                                    onClick={() => handleDownloadPdf(session.job_title, item)}
+                                    disabled={pdfLoadingId === item.id || viewLoadingId === item.id}
+                                    style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.4)", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 7, padding: "4px 10px", cursor: pdfLoadingId === item.id ? "default" : "pointer", opacity: pdfLoadingId === item.id ? 0.5 : 1 }}
+                                  >
+                                    {pdfLoadingId === item.id ? "..." : "PDF"}
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
+              </>
+            );
+          })()}
         </div>
 
         {/* 오른쪽: 뱃지 내역 + 계정 설정 */}

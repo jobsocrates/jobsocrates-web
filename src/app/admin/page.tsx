@@ -50,7 +50,7 @@ interface CoverItemFull {
 }
 
 interface UserProfile { id: string; email: string; credits: number; created_at?: string; }
-interface FunnelRow { userId: string; email: string; createdAt: string; stageIndex: number; stageLabel: string; diggingAsked: number; diggingAnswered: number; interviewAnswered: number; interviewTotal: number; }
+interface FunnelRow { userId: string; email: string; createdAt: string; stageIndex: number; stageLabel: string; diggingAsked: number; diggingAnswered: number; interviewAnswered: number; interviewTotal: number; dropReason: string; }
 interface FunnelData {
   totalUsers: number;
   stages: { label: string; count: number; pct: number; dropCount: number }[];
@@ -364,7 +364,16 @@ export default function AdminPage() {
         }
       }
 
-      return { userId: p.id, email: p.email, createdAt: p.created_at || "", stageIndex: idx, stageLabel: STAGE_LABELS[idx], diggingAsked, diggingAnswered, interviewAnswered, interviewTotal };
+      const hasSessions = (sessionByUser[p.id] || []).length > 0;
+      let dropReason: string;
+      if (idx === 3) dropReason = "complete";
+      else if (!hasSessions) dropReason = "no_session";
+      else if (items.length === 0) dropReason = "no_items";
+      else if (diggingAsked === 0) dropReason = "no_analysis";
+      else if (idx === 1) dropReason = "digging_no_revision";
+      else dropReason = "no_interview";
+
+      return { userId: p.id, email: p.email, createdAt: p.created_at || "", stageIndex: idx, stageLabel: STAGE_LABELS[idx], diggingAsked, diggingAnswered, interviewAnswered, interviewTotal, dropReason };
     });
 
     const totalUsers = userRows.length;
@@ -921,6 +930,47 @@ export default function AdminPage() {
                         </div>
                       );
                     })}
+                  </div>
+                </div>
+
+                {/* ── 이탈 원인 분석 ── */}
+                <div style={{ borderRadius: 16, border: "1px solid rgba(255,255,255,0.07)", background: "rgba(255,255,255,0.02)", overflow: "hidden", marginBottom: 16 }}>
+                  <div style={{ padding: "13px 20px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+                    <p style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.08em" }}>이탈 원인 분석</p>
+                  </div>
+                  <div style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: 12 }}>
+                    {(() => {
+                      const reasons = [
+                        { key: "no_session", label: "방문 없음", sub: "가입 후 채팅 미방문", color: "rgba(255,255,255,0.28)", bg: "rgba(255,255,255,0.05)" },
+                        { key: "no_items", label: "항목 미입력", sub: "채팅 방문 후 자소서 미입력", color: "rgba(255,165,0,0.75)", bg: "rgba(255,165,0,0.08)" },
+                        { key: "no_analysis", label: "분석 안 함", sub: "항목 입력 후 분석 미시작", color: "rgba(255,209,102,0.88)", bg: "rgba(255,209,102,0.08)" },
+                        { key: "digging_no_revision", label: "수정본 미요청", sub: "디깅 후 수정본 요청 안 함", color: BLUE, bg: "rgba(107,142,255,0.1)" },
+                        { key: "no_interview", label: "면접 미진행", sub: "수정본 완성 후 면접 Q&A 안 함", color: VIOLET, bg: "rgba(167,139,250,0.1)" },
+                        { key: "complete", label: "완주", sub: "면접 Q&A까지 완료", color: GREEN, bg: "rgba(74,222,128,0.1)" },
+                      ];
+                      const total = funnelData.users.length;
+                      return reasons.map(r => {
+                        const count = funnelData.users.filter(u => u.dropReason === r.key).length;
+                        const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+                        return (
+                          <div key={r.key}>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 5 }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <span style={{ fontSize: 12, fontWeight: 700, color: r.color, background: r.bg, borderRadius: 6, padding: "2px 9px", whiteSpace: "nowrap" }}>{r.label}</span>
+                                <span style={{ fontSize: 11, color: "rgba(255,255,255,0.28)" }}>{r.sub}</span>
+                              </div>
+                              <div style={{ display: "flex", alignItems: "baseline", gap: 5, flexShrink: 0 }}>
+                                <span style={{ fontSize: 17, fontWeight: 800, color: r.color, letterSpacing: "-0.02em" }}>{count}</span>
+                                <span style={{ fontSize: 11, color: "rgba(255,255,255,0.22)" }}>{pct}%</span>
+                              </div>
+                            </div>
+                            <div style={{ height: 5, borderRadius: 3, background: "rgba(255,255,255,0.04)", overflow: "hidden" }}>
+                              <div style={{ height: "100%", width: `${pct}%`, background: r.color, borderRadius: 3, transition: "width 0.6s ease", opacity: 0.65 }} />
+                            </div>
+                          </div>
+                        );
+                      });
+                    })()}
                   </div>
                 </div>
 
