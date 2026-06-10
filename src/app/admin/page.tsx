@@ -51,7 +51,15 @@ interface CoverItemFull {
 
 interface UserProfile { id: string; email: string; credits: number; created_at?: string; }
 interface FunnelRow { userId: string; email: string; createdAt: string; stageIndex: number; stageLabel: string; }
-interface FunnelData { totalUsers: number; stages: { label: string; count: number; pct: number; dropCount: number }[]; users: FunnelRow[]; }
+interface FunnelSession { sessionId: string; userId: string; email: string; jobTitle: string; sessionDate: string; stageIndex: number; stageLabel: string; minutesSpent: number | null; }
+interface FunnelData {
+  totalUsers: number;
+  totalSessions: number;
+  userStages: { label: string; count: number; pct: number; dropCount: number }[];
+  sessionDropouts: { label: string; droppedHere: number; pct: number; avgMinutes: number | null }[];
+  users: FunnelRow[];
+  sessions: FunnelSession[];
+}
 interface Breakdown { today: number; week: number; month: number; total: number; }
 interface DashStats {
   users: Breakdown;
@@ -305,9 +313,15 @@ export default function AdminPage() {
     setFunnelLoading(true);
     const [{ data: profiles }, { data: sesData }, { data: ciData }] = await Promise.all([
       supabase.from("profiles").select("id, email, created_at").order("created_at", { ascending: false }),
-      supabase.from("sessions").select("id, user_id"),
-      supabase.from("cover_items").select("id, session_id, messages(id), revisions(id), interview_questions(id, interview_answers(id))"),
+      supabase.from("sessions").select("id, user_id, job_title, created_at").order("created_at", { ascending: false }),
+      supabase.from("cover_items").select("id, session_id, messages(id, created_at), revisions(id, created_at), interview_questions(id, interview_answers(id, created_at))"),
     ]);
+
+    const STAGE_LABELS = ["가입만", "문항 생성", "대화 시작", "수정본 완성", "완주"];
+    const FUNNEL_NAMES = ["가입", "문항 생성", "대화 시작", "수정본 완성", "완주"];
+
+    const profileMap: Record<string, any> = {};
+    (profiles || []).forEach((p: any) => { profileMap[p.id] = p; });
 
     const sessionByUser: Record<string, string[]> = {};
     (sesData || []).forEach((s: any) => {
@@ -321,36 +335,75 @@ export default function AdminPage() {
       coverBySession[ci.session_id].push(ci);
     });
 
-    const STAGE_LABELS = ["가입만", "문항 생성", "대화 시작", "수정본 완성", "완주"];
+    function getStageIdx(items: any[]): number {
+      if (items.length === 0) return 0;
+      if (!items.some((ci: any) => (ci.messages || []).length > 0)) return 1;
+      if (!items.some((ci: any) => (ci.revisions || []).length > 0)) return 2;
+      if (!items.some((ci: any) => (ci.interview_questions || []).some((iq: any) => (iq.interview_answers || []).length > 0))) return 3;
+      return 4;
+    }
+
+    // ── 세션별 분석 ──
+    const sessionRows: FunnelSession[] = (sesData || []).map((s: any) => {
+      const items = coverBySession[s.id] || [];
+      const idx = items.length === 0 ? 0 : getStageIdx(items);
+
+      // 소요시간 계산: 세션 시작 ~ 마지막 활동
+      const timestamps: number[] = [new Date(s.created_at).getTime()];
+      items.forEach((ci: any) => {
+        (ci.messages || []).forEach((m: any) => { if (m.created_at) timestamps.push(new Date(m.created_at).getTime()); });
+        (ci.revisions || []).forEach((r: any) => { if (r.created_at) timestamps.push(new Date(r.created_at).getTime()); });
+        (ci.interview_questions || []).forEach((iq: any) => {
+          (iq.interview_answers || []).forEach((ia: any) => { if (ia.created_at) timestamps.push(new Date(ia.created_at).getTime()); });
+        });
+      });
+      const validTs = timestamps.filter(t => !isNaN(t));
+      const minutesSpent = validTs.length >= 2
+        ? Math.round((Math.max(...validTs) - Math.min(...validTs)) / 60000)
+        : null;
+
+      const profile = profileMap[s.user_id];
+      return {
+        sessionId: s.id,
+        userId: s.user_id,
+        email: profile?.email || s.user_id.slice(0, 8),
+        jobTitle: s.job_title || "직무 미입력",
+        sessionDate: s.created_at || "",
+        stageIndex: idx,
+        stageLabel: STAGE_LABELS[idx],
+        minutesSpent,
+      };
+    });
+
+    // ── 유저별 분석 (최고 도달 단계) ──
     const userRows: FunnelRow[] = (profiles || []).map((p: any) => {
       const sids = sessionByUser[p.id] || [];
       const items = sids.flatMap(sid => coverBySession[sid] || []);
-      let idx = 0;
-      if (items.length > 0) {
-        idx = 1;
-        if (items.some((ci: any) => (ci.messages || []).length > 0)) {
-          idx = 2;
-          if (items.some((ci: any) => (ci.revisions || []).length > 0)) {
-            idx = 3;
-            if (items.some((ci: any) => (ci.interview_questions || []).some((iq: any) => (iq.interview_answers || []).length > 0))) {
-              idx = 4;
-            }
-          }
-        }
-      }
+      const idx = items.length === 0 && sids.length === 0 ? 0 : getStageIdx(items);
       return { userId: p.id, email: p.email, createdAt: p.created_at || "", stageIndex: idx, stageLabel: STAGE_LABELS[idx] };
     });
 
-    const total = userRows.length;
-    const FUNNEL_NAMES = ["가입", "문항 생성", "대화 시작", "수정본 완성", "완주"];
-    const stages = FUNNEL_NAMES.map((label, i) => {
+    const totalUsers = userRows.length;
+    const totalSessions = sessionRows.length;
+
+    const userStages = FUNNEL_NAMES.map((label, i) => {
       const count = userRows.filter(u => u.stageIndex >= i).length;
       const dropCount = userRows.filter(u => u.stageIndex === i).length;
-      const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+      const pct = totalUsers > 0 ? Math.round((count / totalUsers) * 100) : 0;
       return { label, count, pct, dropCount };
     });
 
-    setFunnelData({ totalUsers: total, stages, users: userRows });
+    const sessionDropouts = FUNNEL_NAMES.map((label, i) => {
+      const droppedHere = sessionRows.filter(s => s.stageIndex === i).length;
+      const pct = totalSessions > 0 ? Math.round((droppedHere / totalSessions) * 100) : 0;
+      const timeSessions = sessionRows.filter(s => s.stageIndex === i && s.minutesSpent !== null && s.minutesSpent > 0);
+      const avgMinutes = timeSessions.length > 0
+        ? Math.round(timeSessions.reduce((sum, s) => sum + (s.minutesSpent || 0), 0) / timeSessions.length)
+        : null;
+      return { label, droppedHere, pct, avgMinutes };
+    });
+
+    setFunnelData({ totalUsers, totalSessions, userStages, sessionDropouts, users: userRows, sessions: sessionRows });
     setFunnelLoading(false);
   }
 
@@ -842,82 +895,111 @@ export default function AdminPage() {
             <div style={{ display: "flex", justifyContent: "center", padding: 60 }}>
               <div style={{ width: 24, height: 24, borderRadius: "50%", border: `2px solid rgba(201,100,66,0.3)`, borderTopColor: ACCENT, animation: "spin 0.8s linear infinite" }} />
             </div>
-          ) : funnelData ? (
-            <>
-              {/* ── 퍼널 차트 ── */}
-              <div style={{ borderRadius: 16, border: "1px solid rgba(255,255,255,0.07)", background: "rgba(255,255,255,0.02)", overflow: "hidden", marginBottom: 20 }}>
-                <div style={{ padding: "14px 20px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-                  <p style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.08em" }}>단계별 현황 · 총 {funnelData.totalUsers}명</p>
-                </div>
-                <div style={{ padding: "8px 20px 16px" }}>
-                  {funnelData.stages.map((stage, i) => {
-                    const colors = [
-                      { bar: ACCENT, text: ACCENT, bg: "rgba(201,100,66,0.15)" },
-                      { bar: BLUE, text: BLUE, bg: "rgba(107,142,255,0.15)" },
-                      { bar: VIOLET, text: VIOLET, bg: "rgba(167,139,250,0.15)" },
-                      { bar: "rgb(251,191,36)", text: "rgb(251,191,36)", bg: "rgba(251,191,36,0.15)" },
-                      { bar: GREEN, text: GREEN, bg: "rgba(74,222,128,0.15)" },
-                    ][i];
-                    const isLast = i === funnelData.stages.length - 1;
-                    return (
-                      <div key={stage.label} style={{ paddingTop: 14 }}>
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                            <span style={{ fontSize: 11, fontWeight: 700, color: colors.text, background: colors.bg, borderRadius: 6, padding: "2px 8px" }}>{stage.label}</span>
-                            {!isLast && stage.dropCount > 0 && (
-                              <span style={{ fontSize: 11, color: "rgba(248,113,113,0.7)" }}>여기서 이탈 {stage.dropCount}명</span>
-                            )}
+          ) : funnelData ? (() => {
+            const stagePalette: Record<number, { color: string; bg: string; bar: string }> = {
+              0: { color: "rgba(255,255,255,0.35)", bg: "rgba(255,255,255,0.06)", bar: "rgba(255,255,255,0.2)" },
+              1: { color: BLUE, bg: "rgba(107,142,255,0.15)", bar: BLUE },
+              2: { color: VIOLET, bg: "rgba(167,139,250,0.15)", bar: VIOLET },
+              3: { color: "rgb(251,191,36)", bg: "rgba(251,191,36,0.15)", bar: "rgb(251,191,36)" },
+              4: { color: GREEN, bg: "rgba(74,222,128,0.15)", bar: GREEN },
+            };
+            const fmtMin = (m: number | null) => m === null ? "—" : m < 60 ? `${m}분` : `${Math.floor(m / 60)}시간 ${m % 60}분`;
+            return (
+              <>
+                {/* ── 섹션 1: 유저 퍼널 ── */}
+                <div style={{ borderRadius: 16, border: "1px solid rgba(255,255,255,0.07)", background: "rgba(255,255,255,0.02)", overflow: "hidden", marginBottom: 16 }}>
+                  <div style={{ padding: "13px 20px", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", gap: 10 }}>
+                    <p style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.08em" }}>유저 완주 퍼널</p>
+                    <span style={{ fontSize: 11, color: "rgba(255,255,255,0.2)" }}>총 {funnelData.totalUsers}명 기준 · 최고 도달 단계</span>
+                  </div>
+                  <div style={{ padding: "8px 20px 16px" }}>
+                    {funnelData.userStages.map((stage, i) => {
+                      const c = stagePalette[i];
+                      return (
+                        <div key={stage.label} style={{ paddingTop: 14 }}>
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                              <span style={{ fontSize: 11, fontWeight: 700, color: c.color, background: c.bg, borderRadius: 6, padding: "2px 8px" }}>{stage.label}</span>
+                              {i < 4 && stage.dropCount > 0 && <span style={{ fontSize: 11, color: "rgba(248,113,113,0.65)" }}>여기서 멈춤 {stage.dropCount}명</span>}
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                              <span style={{ fontSize: 20, fontWeight: 800, color: c.color, letterSpacing: "-0.03em" }}>{stage.count}명</span>
+                              <span style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.3)", minWidth: 38, textAlign: "right" }}>{stage.pct}%</span>
+                            </div>
                           </div>
-                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                            <span style={{ fontSize: 20, fontWeight: 800, color: colors.text, letterSpacing: "-0.03em" }}>{stage.count}명</span>
-                            <span style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.35)", minWidth: 42, textAlign: "right" }}>{stage.pct}%</span>
+                          <div style={{ height: 7, borderRadius: 4, background: "rgba(255,255,255,0.05)", overflow: "hidden" }}>
+                            <div style={{ height: "100%", width: `${stage.pct}%`, background: c.bar, borderRadius: 4, transition: "width 0.6s ease" }} />
                           </div>
                         </div>
-                        <div style={{ height: 8, borderRadius: 4, background: "rgba(255,255,255,0.06)", overflow: "hidden" }}>
-                          <div style={{ height: "100%", width: `${stage.pct}%`, background: colors.bar, borderRadius: 4, transition: "width 0.6s ease" }} />
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* ── 섹션 2: 이탈 구간 분석 (세션 기준) ── */}
+                <div style={{ borderRadius: 16, border: "1px solid rgba(248,113,113,0.2)", background: "rgba(248,113,113,0.03)", overflow: "hidden", marginBottom: 16 }}>
+                  <div style={{ padding: "13px 20px", borderBottom: "1px solid rgba(248,113,113,0.1)", display: "flex", alignItems: "center", gap: 10 }}>
+                    <p style={{ fontSize: 12, fontWeight: 700, color: "rgba(248,113,113,0.8)", textTransform: "uppercase", letterSpacing: "0.08em" }}>이탈 구간 분석</p>
+                    <span style={{ fontSize: 11, color: "rgba(255,255,255,0.2)" }}>총 {funnelData.totalSessions}세션 기준 · 단계별 이탈 수 + 평균 소요시간</span>
+                  </div>
+                  <div style={{ padding: "6px 0 4px" }}>
+                    {funnelData.sessionDropouts.map((d, i) => {
+                      const c = stagePalette[i];
+                      const maxDrop = Math.max(...funnelData.sessionDropouts.map(x => x.droppedHere), 1);
+                      return (
+                        <div key={d.label} style={{ display: "grid", gridTemplateColumns: "110px 1fr 70px 110px", alignItems: "center", gap: 12, padding: "10px 20px", borderBottom: i < 4 ? "1px solid rgba(255,255,255,0.03)" : "none" }}>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: c.color, background: c.bg, borderRadius: 6, padding: "3px 9px", textAlign: "center" }}>{d.label}</span>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <div style={{ flex: 1, height: 6, borderRadius: 3, background: "rgba(255,255,255,0.05)", overflow: "hidden" }}>
+                              <div style={{ height: "100%", width: `${(d.droppedHere / maxDrop) * 100}%`, background: d.droppedHere > 0 ? "rgba(248,113,113,0.6)" : "transparent", borderRadius: 3, transition: "width 0.5s ease" }} />
+                            </div>
+                          </div>
+                          <span style={{ fontSize: 14, fontWeight: 700, color: d.droppedHere > 0 ? "rgb(248,113,113)" : "rgba(255,255,255,0.2)", textAlign: "right" }}>
+                            {d.droppedHere > 0 ? `${d.droppedHere}명 (${d.pct}%)` : "—"}
+                          </span>
+                          <div style={{ textAlign: "right" }}>
+                            <span style={{ fontSize: 11, color: "rgba(255,255,255,0.28)" }}>평균 </span>
+                            <span style={{ fontSize: 12, fontWeight: 600, color: d.avgMinutes ? "rgba(255,255,255,0.6)" : "rgba(255,255,255,0.2)" }}>{fmtMin(d.avgMinutes)}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* ── 섹션 3: 세션별 상세 ── */}
+                <div style={{ borderRadius: 16, border: "1px solid rgba(255,255,255,0.07)", background: "rgba(255,255,255,0.02)", overflow: "hidden" }}>
+                  <div style={{ padding: "13px 20px", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", gap: 8 }}>
+                    <p style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.08em" }}>세션별 상세</p>
+                    <span style={{ fontSize: 11, color: "rgba(255,255,255,0.2)", marginLeft: "auto" }}>최신순</span>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 130px 100px 90px 110px", padding: "8px 20px", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                    {["이메일", "직무", "세션 날짜", "소요시간", "이탈 단계"].map((h, hi) => (
+                      <span key={h} style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.22)", textTransform: "uppercase", letterSpacing: "0.07em", textAlign: hi >= 2 ? "center" : "left" }}>{h}</span>
+                    ))}
+                  </div>
+                  {funnelData.sessions.length === 0 ? (
+                    <p style={{ padding: "20px", fontSize: 12, color: "rgba(255,255,255,0.2)", textAlign: "center" }}>세션 없음</p>
+                  ) : funnelData.sessions.map((s, idx) => {
+                    const c = stagePalette[s.stageIndex];
+                    return (
+                      <div key={s.sessionId} style={{ display: "grid", gridTemplateColumns: "1fr 130px 100px 90px 110px", padding: "11px 20px", borderBottom: idx < funnelData.sessions.length - 1 ? "1px solid rgba(255,255,255,0.03)" : "none", alignItems: "center" }}>
+                        <span style={{ fontSize: 12, color: "rgba(255,255,255,0.65)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 10 }}>{s.email}</span>
+                        <span style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 8 }}>{s.jobTitle}</span>
+                        <span style={{ fontSize: 11, color: "rgba(255,255,255,0.28)", textAlign: "center" }}>{s.sessionDate.slice(0, 10)}</span>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: s.minutesSpent ? "rgba(255,255,255,0.5)" : "rgba(255,255,255,0.18)", textAlign: "center" }}>{fmtMin(s.minutesSpent)}</span>
+                        <div style={{ display: "flex", justifyContent: "center" }}>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: c.color, background: c.bg, borderRadius: 6, padding: "3px 9px", whiteSpace: "nowrap" }}>
+                            {s.stageIndex === 4 ? "✓ 완주" : s.stageLabel}
+                          </span>
                         </div>
                       </div>
                     );
                   })}
                 </div>
-              </div>
-
-              {/* ── 유저별 단계 테이블 ── */}
-              <div style={{ borderRadius: 16, border: "1px solid rgba(255,255,255,0.07)", background: "rgba(255,255,255,0.02)", overflow: "hidden" }}>
-                <div style={{ padding: "14px 20px", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", gap: 8 }}>
-                  <p style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.08em" }}>유저별 이탈 단계</p>
-                  <span style={{ fontSize: 11, color: "rgba(255,255,255,0.2)", marginLeft: "auto" }}>최신 가입 순</span>
-                </div>
-                {/* Table header */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 110px 130px", padding: "8px 20px", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-                  {["이메일", "가입일", "도달 단계"].map(h => (
-                    <span key={h} style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.25)", textTransform: "uppercase", letterSpacing: "0.07em", textAlign: h === "가입일" ? "center" : h === "도달 단계" ? "right" : "left" }}>{h}</span>
-                  ))}
-                </div>
-                {funnelData.users.map((u, idx) => {
-                  const stagePalette: Record<number, { color: string; bg: string }> = {
-                    0: { color: "rgba(255,255,255,0.3)", bg: "rgba(255,255,255,0.06)" },
-                    1: { color: BLUE, bg: "rgba(107,142,255,0.15)" },
-                    2: { color: VIOLET, bg: "rgba(167,139,250,0.15)" },
-                    3: { color: "rgb(251,191,36)", bg: "rgba(251,191,36,0.15)" },
-                    4: { color: GREEN, bg: "rgba(74,222,128,0.15)" },
-                  };
-                  const p = stagePalette[u.stageIndex];
-                  return (
-                    <div key={u.userId} style={{ display: "grid", gridTemplateColumns: "1fr 110px 130px", padding: "11px 20px", borderBottom: idx < funnelData.users.length - 1 ? "1px solid rgba(255,255,255,0.03)" : "none", alignItems: "center" }}>
-                      <span style={{ fontSize: 13, color: "rgba(255,255,255,0.72)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 12 }}>{u.email}</span>
-                      <span style={{ fontSize: 12, color: "rgba(255,255,255,0.28)", textAlign: "center" }}>{u.createdAt.slice(0, 10)}</span>
-                      <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: p.color, background: p.bg, borderRadius: 6, padding: "3px 10px", whiteSpace: "nowrap" }}>
-                          {u.stageIndex === 4 ? "✓ 완주" : u.stageLabel}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </>
-          ) : null}
+              </>
+            );
+          })() : null}
         </div>
       )}
 
