@@ -302,7 +302,7 @@ export default function MyPage() {
               {credits === 0 && (
                 <p style={{ fontSize: 13, color: "rgba(248,113,113,0.8)", marginTop: 8, fontWeight: 500 }}>뱃지가 없어요. 관리자에게 문의해주세요.</p>
               )}
-              <p style={{ fontSize: 12, color: "rgba(255,255,255,0.25)", marginTop: 10 }}>뱃지 1개 = 자소서 문항 분석 1회 · 분석 시작 시 차감</p>
+              <p style={{ fontSize: 12, color: "rgba(255,255,255,0.25)", marginTop: 10 }}>뱃지 1개 = 완성 자소서 문항 1개 완성 · 분석 시작 시 차감</p>
             </div>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 12 }}>
               <span style={{ fontSize: 52 }}>🏅</span>
