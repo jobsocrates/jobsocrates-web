@@ -612,11 +612,25 @@ export default function AdminPage() {
                     </div>
                   ) : coverItems.length === 0 ? (
                     <p style={{ fontSize: 12, color: "rgba(255,255,255,0.2)", textAlign: "center", paddingTop: 40 }}>대화 기록이 없습니다</p>
-                  ) : coverItems.map((item, idx) => (
+                  ) : coverItems.map((item, idx) => {
+                    const aiMsgs = item.messages.filter(m => m.role === "assistant").length;
+                    const userMsgs = item.messages.filter(m => m.role === "user").length;
+                    const dropped = aiMsgs > 0 && userMsgs < aiMsgs - 1;
+                    const notStarted = aiMsgs === 0;
+                    return (
                     <div key={item.id} style={{ marginBottom: 36 }}>
                       {/* Cover letter question + draft */}
                       <div style={{ padding: "12px 16px", borderRadius: 12, background: `rgba(107,142,255,0.06)`, border: `1px solid rgba(107,142,255,0.15)`, marginBottom: 16 }}>
-                        <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: BLUE, marginBottom: 7 }}>문항 {idx + 1}</p>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 7 }}>
+                          <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: BLUE }}>문항 {idx + 1}</p>
+                          {notStarted ? (
+                            <span style={{ fontSize: 11, color: "rgba(255,255,255,0.22)", background: "rgba(255,255,255,0.06)", borderRadius: 6, padding: "2px 8px" }}>미시작</span>
+                          ) : (
+                            <span style={{ fontSize: 11, fontWeight: 600, color: dropped ? "rgb(248,113,113)" : "rgba(74,222,128,0.85)", background: dropped ? "rgba(248,113,113,0.1)" : "rgba(74,222,128,0.1)", borderRadius: 6, padding: "2px 8px", border: `1px solid ${dropped ? "rgba(248,113,113,0.25)" : "rgba(74,222,128,0.2)"}` }}>
+                              {dropped ? `⚠ 중간 이탈 · ` : "✓ "}질문 {aiMsgs}개 · 답변 {userMsgs}개
+                            </span>
+                          )}
+                        </div>
                         <p style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.82)", marginBottom: 8, lineHeight: 1.55 }}>{item.question}</p>
                         {item.draft && (
                           <p style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", lineHeight: 1.65, whiteSpace: "pre-wrap" }}>{item.draft}</p>
@@ -658,7 +672,8 @@ export default function AdminPage() {
                         </div>
                       )}
                     </div>
-                  ))}
+                  );
+                  })}
                 </div>
 
                 {/* Rating + comment footer */}
