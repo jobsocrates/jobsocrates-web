@@ -490,8 +490,8 @@ function SummaryMsgRow({
         <div className="px-4 py-2.5 border-b" style={{ borderColor: `${BLUE}18` }}>
           <p className="text-xs font-semibold" style={{ color: BLUE }}>초안 진단</p>
         </div>
-        <div className="px-4 py-4">
-          <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: "rgba(255,255,255,0.82)", wordBreak: "keep-all" }}>
+        <div className="px-5 py-4">
+          <p className="text-sm lg:text-base leading-[1.85] whitespace-pre-wrap" style={{ color: "rgba(255,255,255,0.85)", wordBreak: "keep-all" }}>
             {stripMd(msg.text)}
           </p>
         </div>
@@ -505,22 +505,24 @@ function SummaryMsgRow({
   return (
     <div className={`flex gap-3 ${isBot ? "" : "flex-row-reverse"}`}>
       {isBot ? (
-        <img src="/ai-avatar.webp" alt="" className="w-7 h-7 rounded-full object-cover flex-shrink-0 mt-0.5" />
+        <img src="/ai-avatar.webp" alt="" className="w-7 h-7 rounded-full object-cover flex-shrink-0 mt-1" />
       ) : (
         <div
-          className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5"
+          className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-1"
           style={{ background: ACCENT, color: "#fff" }}
         >
           나
         </div>
       )}
       <div
-        className="flex-1 rounded-xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap"
+        className="rounded-2xl px-4 py-3.5 text-sm lg:text-base leading-[1.85] whitespace-pre-wrap"
         style={{
-          background: isBot ? "rgba(255,255,255,0.05)" : `${ACCENT}14`,
-          color: "rgba(255,255,255,0.82)",
+          background: isBot ? "rgba(255,255,255,0.07)" : `${ACCENT}18`,
+          borderLeft: isBot ? `2px solid ${BLUE}50` : undefined,
+          borderRight: isBot ? undefined : `2px solid ${ACCENT}60`,
+          color: "rgba(255,255,255,0.88)",
           wordBreak: "keep-all",
-          maxWidth: "88%",
+          maxWidth: "86%",
         }}
       >
         {stripMd(msg.text)}

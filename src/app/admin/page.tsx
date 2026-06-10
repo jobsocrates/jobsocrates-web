@@ -50,7 +50,7 @@ interface CoverItemFull {
 }
 
 interface UserProfile { id: string; email: string; credits: number; created_at?: string; }
-interface FunnelRow { userId: string; email: string; createdAt: string; stageIndex: number; stageLabel: string; interviewAnswered: number; interviewTotal: number; }
+interface FunnelRow { userId: string; email: string; createdAt: string; stageIndex: number; stageLabel: string; diggingAsked: number; diggingAnswered: number; interviewAnswered: number; interviewTotal: number; }
 interface FunnelData {
   totalUsers: number;
   stages: { label: string; count: number; pct: number; dropCount: number }[];
@@ -310,7 +310,7 @@ export default function AdminPage() {
     const [{ data: profiles }, { data: sesData }, { data: ciData }] = await Promise.all([
       supabase.from("profiles").select("id, email, created_at").order("created_at", { ascending: false }),
       supabase.from("sessions").select("id, user_id"),
-      supabase.from("cover_items").select("id, session_id, revisions(id), interview_questions(id, interview_answers(id))"),
+      supabase.from("cover_items").select("id, session_id, messages(id, role), revisions(id), interview_questions(id, interview_answers(id))"),
     ]);
 
     const sessionByUser: Record<string, string[]> = {};
@@ -332,9 +332,14 @@ export default function AdminPage() {
       const sids = sessionByUser[p.id] || [];
       const items = sids.flatMap(sid => coverBySession[sid] || []);
 
+      let diggingAsked = 0;
+      let diggingAnswered = 0;
       let interviewAnswered = 0;
       let interviewTotal = 0;
       items.forEach((ci: any) => {
+        const msgs = ci.messages || [];
+        diggingAsked += msgs.filter((m: any) => m.role === "assistant").length;
+        diggingAnswered += msgs.filter((m: any) => m.role === "user").length;
         (ci.interview_questions || []).forEach((iq: any) => {
           interviewTotal++;
           if ((iq.interview_answers || []).length > 0) interviewAnswered++;
@@ -350,7 +355,7 @@ export default function AdminPage() {
         }
       }
 
-      return { userId: p.id, email: p.email, createdAt: p.created_at || "", stageIndex: idx, stageLabel: STAGE_LABELS[idx], interviewAnswered, interviewTotal };
+      return { userId: p.id, email: p.email, createdAt: p.created_at || "", stageIndex: idx, stageLabel: STAGE_LABELS[idx], diggingAsked, diggingAnswered, interviewAnswered, interviewTotal };
     });
 
     const totalUsers = userRows.length;
@@ -916,8 +921,8 @@ export default function AdminPage() {
                     <p style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.08em" }}>유저별 상세</p>
                     <span style={{ fontSize: 11, color: "rgba(255,255,255,0.2)", marginLeft: "auto" }}>최신 가입 순</span>
                   </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 120px 80px", padding: "8px 20px", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-                    {["이메일", "가입일", "단계", "예상질문"].map((h, hi) => (
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 88px 90px 110px 80px", padding: "8px 20px", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                    {["이메일", "가입일", "디깅 Q/A", "단계", "예상Q"].map((h, hi) => (
                       <span key={h} style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.22)", textTransform: "uppercase", letterSpacing: "0.07em", textAlign: hi >= 2 ? "center" : "left" }}>{h}</span>
                     ))}
                   </div>
@@ -925,12 +930,23 @@ export default function AdminPage() {
                     <p style={{ padding: 20, fontSize: 12, color: "rgba(255,255,255,0.2)", textAlign: "center" }}>유저 없음</p>
                   ) : funnelData.users.map((u, idx) => {
                     const c = stagePalette[u.stageIndex];
+                    const hasDigging = u.diggingAsked > 0;
+                    const diggingDrop = hasDigging && u.diggingAnswered < u.diggingAsked - 1;
                     const hasInterview = u.interviewTotal > 0;
                     const allDone = hasInterview && u.interviewAnswered === u.interviewTotal;
                     return (
-                      <div key={u.userId} style={{ display: "grid", gridTemplateColumns: "1fr 100px 120px 80px", padding: "11px 20px", borderBottom: idx < funnelData.users.length - 1 ? "1px solid rgba(255,255,255,0.03)" : "none", alignItems: "center" }}>
+                      <div key={u.userId} style={{ display: "grid", gridTemplateColumns: "1fr 88px 90px 110px 80px", padding: "11px 20px", borderBottom: idx < funnelData.users.length - 1 ? "1px solid rgba(255,255,255,0.03)" : "none", alignItems: "center" }}>
                         <span style={{ fontSize: 13, color: "rgba(255,255,255,0.7)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 12 }}>{u.email}</span>
                         <span style={{ fontSize: 11, color: "rgba(255,255,255,0.28)", textAlign: "center" }}>{u.createdAt.slice(0, 10)}</span>
+                        <div style={{ display: "flex", justifyContent: "center" }}>
+                          {hasDigging ? (
+                            <span style={{ fontSize: 12, fontWeight: 700, color: diggingDrop ? "rgba(248,113,113,0.85)" : "rgba(255,255,255,0.55)", background: diggingDrop ? "rgba(248,113,113,0.1)" : "rgba(255,255,255,0.06)", borderRadius: 6, padding: "3px 8px" }}>
+                              {diggingDrop ? "⚠ " : ""}{u.diggingAnswered}/{u.diggingAsked}
+                            </span>
+                          ) : (
+                            <span style={{ fontSize: 12, color: "rgba(255,255,255,0.18)" }}>—</span>
+                          )}
+                        </div>
                         <div style={{ display: "flex", justifyContent: "center" }}>
                           <span style={{ fontSize: 11, fontWeight: 700, color: c.color, background: c.bg, borderRadius: 6, padding: "3px 10px", whiteSpace: "nowrap" }}>
                             {u.stageIndex === 3 ? "✓ 완주" : u.stageLabel}
