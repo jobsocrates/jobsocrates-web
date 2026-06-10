@@ -425,7 +425,6 @@ function TipPanel({ hasRevision, revisionReady }: { hasRevision: boolean; revisi
   const tips = [
     { icon: "💬", text: "① 상황  ② 내가 한 행동  ③ 결과\n최대한 이 세 가지가 다 들어가게 구체적으로 답해보세요.\n그럼 더 탄탄한 자소서가 탄생합니다." },
     { icon: "🎙️", text: "실제 면접이라 생각하고 작성해보세요.\n면접 준비가 함께 돼요." },
-    { icon: "✅", text: "그래서 어떻게 됐는지, 결과까지 말해보면 자소서 소재가 살아나요." },
   ];
 
   return (
