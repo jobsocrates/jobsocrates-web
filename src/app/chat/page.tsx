@@ -108,20 +108,19 @@ function DiagnosisCard({ text, streaming }: { text: string; streaming: boolean }
   const splitIdx = stripped.indexOf("이 중에서");
   const mainText = splitIdx !== -1 ? stripped.slice(0, splitIdx).trim() : stripped;
   const followText = splitIdx !== -1 ? stripped.slice(splitIdx).trim() : null;
-  const lines = mainText.split("\n").filter(Boolean);
+  const lines = mainText.split("\n").filter((l) => l.trim() !== "");
 
   return (
     <div className="flex flex-col gap-3 w-full">
-      {/* ①②③ 진단 카드 */}
       <div
         className="w-full rounded-2xl overflow-hidden"
-        style={{ background: `${BLUE}09`, border: `1px solid ${BLUE}1C` }}
+        style={{ background: `${BLUE}0A`, border: `1px solid ${BLUE}22` }}
       >
-        <div className="flex items-center gap-2 px-4 py-2.5 border-b" style={{ borderColor: `${BLUE}16` }}>
+        <div className="flex items-center gap-2 px-4 py-2.5 border-b" style={{ borderColor: `${BLUE}1A` }}>
           <img src="/ai-avatar.webp" alt="" className="w-5 h-5 rounded-full object-cover flex-shrink-0" />
           <span className="text-xs lg:text-[15px] font-semibold" style={{ color: BLUE }}>초안 진단</span>
         </div>
-        <div className="px-4 py-3.5">
+        <div className="px-5 py-4">
           {streaming && text === "" ? (
             <div className="flex gap-1.5 items-center h-5">
               {DOTS.map(({ delay, color }) => (
@@ -129,19 +128,35 @@ function DiagnosisCard({ text, streaming }: { text: string; streaming: boolean }
               ))}
             </div>
           ) : (
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-0">
               {lines.map((line, i) => {
-                const isSection = line.startsWith("①") || line.startsWith("②") || line.startsWith("③");
+                if (line === "---" || line === "——" || line === "──────────") {
+                  return <div key={i} className="my-3" style={{ height: 1, background: `${BLUE}18` }} />;
+                }
+                const isCircled = line.startsWith("①") || line.startsWith("②") || line.startsWith("③");
+                const isShortHeader = !isCircled && line.length <= 14 && !/[요다요다,。？！]$/.test(line) && !/\.\.\.$/.test(line);
+                if (isCircled || isShortHeader) {
+                  return (
+                    <p
+                      key={i}
+                      className="text-sm lg:text-base font-semibold"
+                      style={{
+                        color: "rgba(255,255,255,0.92)",
+                        marginTop: i !== 0 ? "18px" : 0,
+                        marginBottom: "6px",
+                        wordBreak: "keep-all",
+                        letterSpacing: "-0.01em",
+                      }}
+                    >
+                      {line}
+                    </p>
+                  );
+                }
                 return (
                   <p
                     key={i}
-                    className="text-sm lg:text-base leading-relaxed"
-                    style={{
-                      color: isSection ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.62)",
-                      fontWeight: isSection ? 500 : 400,
-                      marginTop: isSection && i !== 0 ? "8px" : undefined,
-                      wordBreak: "keep-all",
-                    }}
+                    className="text-sm lg:text-[15px] leading-[1.85]"
+                    style={{ color: "rgba(255,255,255,0.72)", wordBreak: "keep-all" }}
                   >
                     {line}
                   </p>
@@ -164,8 +179,8 @@ function DiagnosisCard({ text, streaming }: { text: string; streaming: boolean }
         <div className="flex items-end gap-2.5">
           <img src="/ai-avatar.webp" alt="" className="w-7 h-7 rounded-full object-cover flex-shrink-0 mb-0.5" />
           <div
-            className="max-w-[82%] px-4 py-3 text-sm lg:text-base leading-relaxed whitespace-pre-wrap"
-            style={{ background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.88)", borderRadius: "4px 16px 16px 16px", wordBreak: "keep-all" }}
+            className="max-w-[82%] px-4 py-3.5 text-sm lg:text-base leading-[1.85] whitespace-pre-wrap"
+            style={{ background: "rgba(255,255,255,0.09)", color: "rgba(255,255,255,0.92)", borderRadius: "4px 16px 16px 16px", wordBreak: "keep-all", borderLeft: `2px solid ${BLUE}55` }}
           >
             {followText}
             {streaming && (
@@ -1589,7 +1604,7 @@ export default function ChatPage() {
                 </div>
 
                 {/* 메시지 영역 */}
-                <div className="flex-1 overflow-y-auto px-5 py-5">
+                <div className="flex-1 overflow-y-auto hide-scrollbar px-5 py-5">
                   <div className="max-w-2xl lg:max-w-3xl mx-auto flex flex-col gap-4">
                     {selected.msgs.map((msg, msgIdx) => {
                       const isDiagnosis = msgIdx === 0 && msg.role === "bot";
@@ -1617,10 +1632,10 @@ export default function ChatPage() {
                         <div key={msg.id} className={`flex items-end gap-2.5 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                           {msg.role === "bot" && <BotBubbleAvatar />}
                           <div
-                            className="max-w-[80%] px-4 py-3 text-sm lg:text-base leading-relaxed whitespace-pre-wrap"
+                            className="max-w-[80%] px-4 py-3.5 text-sm lg:text-[15px] leading-[1.85] whitespace-pre-wrap"
                             style={
                               msg.role === "bot"
-                                ? { background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.88)", borderRadius: "4px 16px 16px 16px", wordBreak: "keep-all" }
+                                ? { background: "rgba(255,255,255,0.09)", color: "rgba(255,255,255,0.92)", borderRadius: "4px 16px 16px 16px", wordBreak: "keep-all", borderLeft: `2px solid ${BLUE}50` }
                                 : { background: ACCENT, color: "#fff", borderRadius: "16px 4px 16px 16px", wordBreak: "keep-all" }
                             }
                           >
