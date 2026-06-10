@@ -405,111 +405,33 @@ function InterviewQCard({
   );
 }
 
-/* ── 초안 하이라이트 세그먼트 빌더 ── */
-type HighlightLevel = "none" | "faint" | "bright";
-function buildDraftSegments(
-  draft: string,
-  brightText: string | null
-): { text: string; level: HighlightLevel }[] {
-  const tags: HighlightLevel[] = new Array(draft.length).fill("none");
-  if (brightText) {
-    const norm = (s: string) => s.replace(/\s+/g, " ").trim();
-    const needle = norm(brightText);
-    const hay = norm(draft);
-    const s = hay.indexOf(needle);
-    if (s !== -1) for (let i = s; i < s + needle.length; i++) tags[i] = "bright";
-  }
-  const segs: { text: string; level: HighlightLevel }[] = [];
-  let i = 0;
-  while (i < draft.length) {
-    const lv = tags[i];
-    let j = i;
-    while (j < draft.length && tags[j] === lv) j++;
-    segs.push({ text: draft.slice(i, j), level: lv });
-    i = j;
-  }
-  return segs;
-}
-
-/* ── 초안 뷰어 (다중 하이라이팅) ── */
-function DraftViewer({
-  draft,
-  currentRef,
-  onClose,
-}: {
-  draft: string;
-  currentRef: string | null;
-  onClose: () => void;
-}) {
-  const markRef = useRef<HTMLElement>(null);
-
-  useEffect(() => {
-    if (currentRef && markRef.current) {
-      markRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
-    }
-  }, [currentRef]);
-
-  const segments = buildDraftSegments(draft, currentRef);
+/* ── 답변 팁 패널 ── */
+function TipPanel({ hasRevision, revisionReady }: { hasRevision: boolean; revisionReady: boolean }) {
+  const tips = hasRevision || revisionReady
+    ? [
+        { icon: "✍️", text: "충분히 대화했다면 수정본을 요청해보세요." },
+        { icon: "💡", text: "수정본이 마음에 들지 않으면 추가로 대화한 뒤 다시 요청할 수 있어요." },
+      ]
+    : [
+        { icon: "💬", text: "상황 → 내가 한 행동 → 결과, 이 세 가지가 다 들어가게 답해보세요." },
+        { icon: "🎙️", text: "입으로 먼저 말해보세요. 면접 답변한다 생각하면 훨씬 구체적으로 나와요." },
+        { icon: "🔢", text: "\"열심히 했다\" 대신 \"3일 안에 마쳤다\"처럼 수치나 구체적인 맥락을 넣어보세요." },
+        { icon: "✅", text: "그래서 어떻게 됐는지, 결과까지 말해보면 자소서 소재가 살아나요." },
+      ];
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-3 flex-shrink-0 border-b" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
-        <div className="flex items-center gap-2">
-          <div className="w-1 h-3 rounded-full" style={{ background: BLUE }} />
-          <span className="text-xs font-semibold tracking-wider uppercase" style={{ color: "rgba(255,255,255,0.35)", letterSpacing: "0.08em" }}>내 초안</span>
-          {currentRef && (
-            <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: `${ACCENT}18`, color: ACCENT, fontSize: "10px" }}>참조 중</span>
-          )}
-        </div>
-        <button
-          onClick={onClose}
-          className="w-6 h-6 flex items-center justify-center rounded-lg transition-opacity hover:opacity-70"
-          style={{ color: "rgba(255,255,255,0.3)", background: "rgba(255,255,255,0.05)" }}
-        >✕</button>
+      <div className="flex items-center gap-2 px-4 py-3 flex-shrink-0 border-b" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+        <div className="w-1 h-3 rounded-full" style={{ background: GOLD }} />
+        <span className="text-xs font-semibold tracking-wider uppercase" style={{ color: "rgba(255,255,255,0.35)", letterSpacing: "0.08em" }}>답변 팁</span>
       </div>
-      <div className="flex-1 overflow-y-auto px-4 py-4">
-        <p className="text-sm leading-[1.9] whitespace-pre-wrap" style={{ color: "rgba(255,255,255,0.48)", wordBreak: "keep-all" }}>
-          {segments.map((seg, i) => {
-            if (seg.level === "bright") {
-              return (
-                <mark
-                  key={i}
-                  ref={markRef as React.RefObject<HTMLElement>}
-                  style={{
-                    background: `${ACCENT}30`,
-                    color: "rgba(255,255,255,0.96)",
-                    borderRadius: "3px",
-                    padding: "2px 4px",
-                    border: `1px solid ${ACCENT}55`,
-                    boxShadow: `0 0 12px ${ACCENT}28`,
-                    display: "inline",
-                    transition: "all 0.3s ease",
-                  }}
-                >
-                  {seg.text}
-                </mark>
-              );
-            }
-            if (seg.level === "faint") {
-              return (
-                <mark
-                  key={i}
-                  style={{
-                    background: `${BLUE}18`,
-                    color: "rgba(255,255,255,0.72)",
-                    borderRadius: "2px",
-                    padding: "1px 2px",
-                    border: `1px solid ${BLUE}22`,
-                    display: "inline",
-                  }}
-                >
-                  {seg.text}
-                </mark>
-              );
-            }
-            return <span key={i}>{seg.text}</span>;
-          })}
-        </p>
+      <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-2.5">
+        {tips.map((tip, i) => (
+          <div key={i} className="flex items-start gap-3 px-3 py-3 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+            <span className="text-base flex-shrink-0 leading-none mt-0.5">{tip.icon}</span>
+            <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.58)", wordBreak: "keep-all" }}>{tip.text}</p>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -536,7 +458,6 @@ export default function ChatPage() {
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
-  const [showDraftPanel, setShowDraftPanel] = useState(false);
   const [toast, setToast] = useState("");
   const [toastField, setToastField] = useState<"jobTitle" | "question" | "charLimit" | "draft" | "">("");
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1259,18 +1180,6 @@ export default function ChatPage() {
   const showInterviewButton = hasAnyRevision && interviewQs.length === 0 && !isLoadingQs;
   const showSummaryButton = hasAnyRevision && interviewQs.length > 0;
 
-  // 가장 최근 [참조]가 있는 봇 메시지의 마지막 참조 — 현재 포커스 (밝은 하이라이트)
-  const currentReference: string | null = (() => {
-    if (!selected) return null;
-    for (let i = selected.msgs.length - 1; i >= 0; i--) {
-      const msg = selected.msgs[i];
-      if (msg.role === "bot") {
-        const matches = [...msg.text.matchAll(/\[참조\]([\s\S]*?)\[\/참조\]/g)];
-        if (matches.length > 0) return matches[matches.length - 1][1].trim();
-      }
-    }
-    return null;
-  })();
 
 
   return (
@@ -1619,6 +1528,22 @@ export default function ChatPage() {
 
                 </div>
 
+                {/* 초안 작성 가이드 — 데스크탑 우측 컬럼 */}
+                <div className="hidden lg:flex flex-col gap-2.5 flex-shrink-0 lg:sticky lg:top-6" style={{ width: "220px" }}>
+                  <p className="text-xs font-semibold px-1" style={{ color: "rgba(255,255,255,0.28)", letterSpacing: "0.06em" }}>초안 작성 가이드</p>
+                  {[
+                    { icon: "📝", text: "글자수 제한에 맞게 작성된 초안을 붙여넣으면 가장 좋아요." },
+                    { icon: "🧩", text: "경험이 구체적일수록 질문의 깊이가 달라져요." },
+                    { icon: "🎯", text: "완성도보다 솔직하게 쓴 초안이 더 좋은 결과를 만들어요." },
+                    { icon: "💬", text: "\"열심히 했다\" 말고 상황·행동·결과가 드러나도록 써보세요." },
+                  ].map((item, i) => (
+                    <div key={i} className="flex items-start gap-2.5 px-3 py-3 rounded-xl" style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.055)" }}>
+                      <span className="text-sm flex-shrink-0 leading-none mt-0.5">{item.icon}</span>
+                      <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.45)", wordBreak: "keep-all" }}>{item.text}</p>
+                    </div>
+                  ))}
+                </div>
+
                 </div>
                 </div>
               </div>
@@ -1673,29 +1598,6 @@ export default function ChatPage() {
 
                 {/* 메시지 영역 */}
                 <div className="flex-1 overflow-y-auto px-5 py-5">
-                  {/* 초안 보기 — sticky 상단 고정 */}
-                  <div className="sticky top-0 z-10 pb-3 pt-1 flex justify-end pointer-events-none">
-                    <button
-                      onClick={() => setShowDraftPanel(v => !v)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all relative pointer-events-auto"
-                      style={{
-                        background: showDraftPanel ? `${BLUE}22` : "rgba(13,13,24,0.82)",
-                        border: `1px solid ${showDraftPanel ? `${BLUE}45` : "rgba(255,255,255,0.12)"}`,
-                        color: showDraftPanel ? BLUE : "rgba(255,255,255,0.55)",
-                        backdropFilter: "blur(10px)",
-                        WebkitBackdropFilter: "blur(10px)",
-                        boxShadow: showDraftPanel ? `0 0 12px ${BLUE}18` : "none",
-                      }}
-                    >
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
-                      </svg>
-                      <span>내 초안 보기</span>
-                      {currentReference && !showDraftPanel && (
-                        <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: ACCENT }} />
-                      )}
-                    </button>
-                  </div>
                   <div className="max-w-2xl lg:max-w-3xl mx-auto flex flex-col gap-4">
                     {selected.msgs.map((msg, msgIdx) => {
                       const isDiagnosis = msgIdx === 0 && msg.role === "bot";
@@ -1880,43 +1782,13 @@ export default function ChatPage() {
                 </div>
               </div>
 
-              {/* ── 오른쪽 초안 패널 — 데스크탑 ── */}
-              {showDraftPanel && (
-                <div
-                  className="hidden lg:flex flex-shrink-0 flex-col border-l"
-                  style={{ width: "288px", borderColor: "rgba(255,255,255,0.06)", background: "rgba(9,9,22,0.55)" }}
-                >
-                  <DraftViewer
-                    draft={selected.draft}
-                    currentRef={currentReference}
-                    onClose={() => setShowDraftPanel(false)}
-                  />
-                </div>
-              )}
-
-              {/* ── 모바일 바텀시트 ── */}
-              {showDraftPanel && (
-                <div className="lg:hidden fixed inset-0 z-50 flex flex-col justify-end">
-                  <div
-                    className="absolute inset-0"
-                    style={{ background: "rgba(0,0,0,0.65)" }}
-                    onClick={() => setShowDraftPanel(false)}
-                  />
-                  <div
-                    className="relative flex flex-col rounded-t-2xl overflow-hidden"
-                    style={{ height: "72vh", background: "#0C0C1E", border: "1px solid rgba(255,255,255,0.09)", borderBottom: "none" }}
-                  >
-                    <div className="flex justify-center pt-2.5 pb-1 flex-shrink-0">
-                      <div className="w-8 h-1 rounded-full" style={{ background: "rgba(255,255,255,0.15)" }} />
-                    </div>
-                    <DraftViewer
-                      draft={selected.draft}
-                      currentRef={currentReference}
-                      onClose={() => setShowDraftPanel(false)}
-                    />
-                  </div>
-                </div>
-              )}
+              {/* ── 오른쪽 팁 패널 — 데스크탑 ── */}
+              <div
+                className="hidden lg:flex flex-shrink-0 flex-col border-l"
+                style={{ width: "264px", borderColor: "rgba(255,255,255,0.06)", background: "rgba(9,9,22,0.55)" }}
+              >
+                <TipPanel hasRevision={hasAnyRevision} revisionReady={revisionReady} />
+              </div>
 
               </div>
             )}
