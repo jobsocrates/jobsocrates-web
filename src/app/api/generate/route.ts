@@ -16,7 +16,6 @@ function buildCtx(ctx: DiggingContext): string {
     `\n\n## 세션 정보\n` +
     `직무: ${ctx.jobTitle}\n` +
     `문항: ${ctx.question}\n` +
-    `JD 키워드: ${ctx.jdKeywords.join(", ") || "없음"}\n` +
     `경험:\n${ctx.experiences.map((e, i) => `  ${i + 1}. [${e.type}] ${e.text}`).join("\n")}`
   );
 }
@@ -101,25 +100,6 @@ export async function POST(req: Request) {
       return stream(sys, msgs);
     }
 
-    case "jd-extract": {
-      const messages: MsgParam[] = [
-        {
-          role: "user",
-          content: [
-            {
-              type: "image",
-              source: { type: "base64", media_type: body.mediaType, data: body.imageData },
-            },
-            {
-              type: "text",
-              text: 'JD 이미지에서 핵심 요구 역량/키워드 5개를 추출해줘. 반드시 JSON 배열만 출력: ["키워드1","키워드2","키워드3","키워드4","키워드5"]',
-            },
-          ],
-        },
-      ];
-      return generate("JD 분석 전문가. JSON 배열만 반환.", messages);
-    }
-
     case "bridge": {
       const sys = prompt("bridge") + buildCtx(body.context);
       const history: MsgParam[] = body.history ?? [];
@@ -154,35 +134,14 @@ export async function POST(req: Request) {
     }
 
     case "analyze": {
-      const jdSection = body.jdImageData
-        ? `JD: 첫 메시지 이미지로 제공됨 (이미지 전체를 읽고 분석에 활용해라)`
-        : `JD 키워드: ${(body.jdKeywords ?? []).join(", ") || "없음"}`;
       const sysText = prompt("analyze_v2") +
-        `\n\n## 세션 정보\n직무: ${body.jobTitle}\n문항: ${body.question || "미입력"}\n${jdSection}\n글자 수 제한: ${body.charLimit ? `${body.charLimit}자 (수정본 작성 시 이 글자 수에 맞춰야 함)` : "미입력"}\n\n## 자소서 초안\n${body.draft}`;
+        `\n\n## 세션 정보\n직무: ${body.jobTitle}\n문항: ${body.question || "미입력"}\n글자 수 제한: ${body.charLimit ? `${body.charLimit}자 (수정본 작성 시 이 글자 수에 맞춰야 함)` : "미입력"}\n\n## 자소서 초안\n${body.draft}`;
       const sys: Anthropic.Messages.TextBlockParam[] = [
         { type: "text", text: sysText, cache_control: { type: "ephemeral" } },
       ];
-      let msgs: MsgParam[] = body.messages?.length > 0
+      const msgs: MsgParam[] = body.messages?.length > 0
         ? body.messages
         : [{ role: "user", content: "자소서 초안을 분석하고 첫 질문을 시작해줘." }];
-      // JD 이미지가 있으면 첫 번째 user 메시지에 이미지 블록 삽입
-      if (body.jdImageData && msgs.length > 0 && msgs[0].role === "user" && typeof msgs[0].content === "string") {
-        const mediaType = (body.jdMediaType ?? "image/jpeg") as "image/jpeg" | "image/png" | "image/gif" | "image/webp";
-        msgs = [
-          {
-            role: "user",
-            content: [
-              {
-                type: "image",
-                source: { type: "base64", media_type: mediaType, data: body.jdImageData },
-                cache_control: { type: "ephemeral" },
-              },
-              { type: "text", text: msgs[0].content },
-            ],
-          },
-          ...msgs.slice(1),
-        ];
-      }
       return stream(sys, msgs);
     }
 

@@ -6,7 +6,6 @@ export interface Experience {
 export interface DiggingContext {
   jobTitle: string;
   question: string;
-  jdKeywords: string[];
   experiences: Experience[];
 }
 

@@ -24,8 +24,8 @@ const DOTS = [
 const FIRST_MSG =
   "안녕하세요. 취업소크라테스에요 🏛️\n우리 같이 내 이야기로 자소서 만들어봐요!\n\n먼저 지원 직무가 어떻게 돼요?";
 
-type SubStage = "greeting" | "question" | "jd" | "expType" | "expInput" | "digging";
-type MsgUI = "jd-upload" | "chips";
+type SubStage = "greeting" | "question" | "expType" | "expInput" | "digging";
+type MsgUI = "chips";
 
 interface ChatMsg {
   id: number;
@@ -88,17 +88,10 @@ export function Step1Digging({
   // context
   const [jobTitle, setJobTitle] = useState("");
   const [question, setQuestion] = useState("");
-  const [jdKeywords, setJdKeywords] = useState<string[]>([]);
   const [experiences, setExperiences] = useState<Experience[]>([]);
   const [currentExpType, setCurrentExpType] = useState<string | null>(null);
   const [etcMode, setEtcMode] = useState(false);
   const [etcText, setEtcText] = useState("");
-
-  // JD upload
-  const [jdFile, setJdFile] = useState<File | null>(null);
-  const [jdPreview, setJdPreview] = useState("");
-  const [isExtractingJD, setIsExtractingJD] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
 
   // digging
   const [digHistory, setDigHistory] = useState<ApiMessage[]>([]);
@@ -141,63 +134,10 @@ export function Step1Digging({
     } else if (stage === "question") {
       setQuestion(t);
       pushUser(t);
-      pushBot("JD를 올리면 회사에 맞는 입체적인 분석이 가능해요. PNG나 JPG 파일로 올려줘요.", "jd-upload");
-      setStage("jd");
+      goToExpType();
     } else if (stage === "digging") {
       handleDiggingInput(t);
     }
-  }
-
-  // ── JD upload ──────────────────────────────────────────────────────────────
-
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0];
-    if (!f) return;
-    setJdFile(f);
-    setJdPreview(URL.createObjectURL(f));
-  }
-
-  function handleDrop(e: React.DragEvent) {
-    e.preventDefault();
-    const f = e.dataTransfer.files?.[0];
-    if (!f || !f.type.startsWith("image/")) return;
-    setJdFile(f);
-    setJdPreview(URL.createObjectURL(f));
-  }
-
-  async function handleJDUpload() {
-    if (!jdFile) return;
-    setIsExtractingJD(true);
-    try {
-      const base64 = await toBase64(jdFile);
-      const res = await fetch("/api/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "jd-extract", imageData: base64, mediaType: jdFile.type }),
-      });
-      const data = await res.json();
-      const kw: string[] = Array.isArray(data) ? data : [];
-      setJdKeywords(kw);
-      pushUser(`JD 업로드 완료 (키워드: ${kw.join(", ")})`);
-    } catch {
-      pushUser("JD 업로드 (키워드 추출 실패)");
-    } finally {
-      setIsExtractingJD(false);
-      goToExpType();
-    }
-  }
-
-  function handleSkipJD() {
-    pushUser("(스킵)");
-    goToExpType();
-  }
-
-  function toBase64(f: File): Promise<string> {
-    return new Promise((res) => {
-      const r = new FileReader();
-      r.onload = () => res((r.result as string).split(",")[1]);
-      r.readAsDataURL(f);
-    });
   }
 
   // ── experience ─────────────────────────────────────────────────────────────
@@ -246,7 +186,7 @@ export function Step1Digging({
 
   async function startDigging(exps: Experience[]) {
     setStage("digging");
-    const ctx: DiggingContext = { jobTitle, question, jdKeywords, experiences: exps };
+    const ctx: DiggingContext = { jobTitle, question, experiences: exps };
     const seed: ApiMessage[] = [{ role: "user", content: "첫 번째 질문을 시작해줘." }];
     setDigHistory(seed);
     setDigCount(0);
@@ -262,10 +202,10 @@ export function Step1Digging({
 
     if (next >= 6) {
       pushBot("충분히 이야기 나눴어요. 이제 분석해드릴게요!");
-      const ctx: DiggingContext = { jobTitle, question, jdKeywords, experiences };
+      const ctx: DiggingContext = { jobTitle, question, experiences };
       setCompletionData({ history: newHistory, ctx });
     } else {
-      const ctx: DiggingContext = { jobTitle, question, jdKeywords, experiences };
+      const ctx: DiggingContext = { jobTitle, question, experiences };
       await fetchDigQuestion(newHistory, ctx);
     }
   }
@@ -366,63 +306,6 @@ export function Step1Digging({
                 {/* UI elements — last bot msg only, not streaming */}
                 {msg.ui && msg.id === lastMsgId && !isStreaming && !completionData && (
                   <div className="mt-3 ml-9">
-                    {/* JD upload */}
-                    {msg.ui === "jd-upload" && (
-                      <div className="flex flex-col gap-3">
-                        <div
-                          className="rounded-2xl p-5 flex flex-col items-center gap-3 cursor-pointer"
-                          style={{
-                            border: `1.5px dashed ${jdFile ? ACCENT : "rgba(255,255,255,0.15)"}`,
-                            background: "rgba(255,255,255,0.03)",
-                            transition: "border-color 0.2s",
-                          }}
-                          onDragOver={(e) => e.preventDefault()}
-                          onDrop={handleDrop}
-                          onClick={() => !jdFile && fileRef.current?.click()}
-                        >
-                          <input ref={fileRef} type="file" accept=".png,.jpg,.jpeg" className="hidden" onChange={handleFileChange} />
-                          {jdFile && jdPreview ? (
-                            <img src={jdPreview} alt="JD" className="max-h-32 rounded-xl object-contain" />
-                          ) : (
-                            <>
-                              <div className="text-2xl">📄</div>
-                              <p className="text-xs text-center text-white/50 leading-relaxed">
-                                JD를 올리면 회사에 맞는<br />입체적인 분석이 가능해요
-                              </p>
-                              <p className="text-xs text-white/30">PNG, JPG · 클릭 또는 드래그</p>
-                            </>
-                          )}
-                        </div>
-                        {isExtractingJD && (
-                          <div className="flex gap-1.5 items-center px-1">
-                            {DOTS.map(({ delay, color }) => (
-                              <span key={delay} className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: color, animationDelay: `${delay}ms` }} />
-                            ))}
-                            <span className="text-xs text-white/40 ml-1">키워드 추출중...</span>
-                          </div>
-                        )}
-                        <div className="flex gap-2">
-                          {jdFile && !isExtractingJD && (
-                            <button
-                              onClick={handleJDUpload}
-                              className="flex-1 py-2.5 rounded-xl text-sm font-medium text-white"
-                              style={{ background: ACCENT }}
-                            >
-                              JD 분석하기
-                            </button>
-                          )}
-                          <button
-                            onClick={handleSkipJD}
-                            disabled={isExtractingJD}
-                            className="flex-1 py-2.5 rounded-xl text-sm border disabled:opacity-30"
-                            style={{ borderColor: "rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.5)" }}
-                          >
-                            스킵할게요
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
                     {/* chips */}
                     {msg.ui === "chips" && (
                       <div className="flex flex-col gap-3">

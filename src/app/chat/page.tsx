@@ -53,7 +53,7 @@ let _id = 0;
 const uid = () => ++_id;
 
 interface ResumeSession {
-  session: { id: string; job_title: string; jd_keywords: string[] | null; created_at: string };
+  session: { id: string; job_title: string; created_at: string };
   items: { id: string; question: string; draft: string; char_limit: number | null; status: string; order_index: number }[];
 }
 
@@ -530,10 +530,6 @@ const initItem: CoverItem = {
 
 export default function ChatPage() {
   const [jobTitle, setJobTitle] = useState("");
-  const [jdKeywords, setJdKeywords] = useState<string[]>([]);
-  const [jdFile, setJdFile] = useState<File | null>(null);
-  const [jdImageData, setJdImageData] = useState<string | null>(null);
-  const [isExtractingJD, setIsExtractingJD] = useState(false);
 
   const [items, setItems] = useState<CoverItem[]>([initItem]);
   const [selectedId, setSelectedId] = useState<number>(initItem.id);
@@ -545,7 +541,6 @@ export default function ChatPage() {
   const [toastField, setToastField] = useState<"jobTitle" | "question" | "charLimit" | "draft" | "">("");
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const fileRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const dbSessionIdRef = useRef<string | null>(null);
   const chatInputRef = useRef<HTMLTextAreaElement>(null);
@@ -662,12 +657,12 @@ export default function ChatPage() {
     if (profileErr) console.error("[DB] profile upsert error:", profileErr);
     if (dbSessionIdRef.current) {
       await supabase.from("sessions")
-        .update({ job_title: jobTitle, jd_keywords: jdKeywords, updated_at: new Date().toISOString() })
+        .update({ job_title: jobTitle, updated_at: new Date().toISOString() })
         .eq("id", dbSessionIdRef.current);
       return dbSessionIdRef.current;
     }
     const { data, error } = await supabase.from("sessions")
-      .insert({ user_id: currentUser.id, job_title: jobTitle, jd_keywords: jdKeywords })
+      .insert({ user_id: currentUser.id, job_title: jobTitle })
       .select("id").single();
     if (error) console.error("[DB] sessions insert error:", error);
     if (!data) return null;
@@ -697,35 +692,6 @@ export default function ChatPage() {
 
   // ─────────────────────────────────────────────────────────────────
 
-  function toBase64(f: File): Promise<string> {
-    return new Promise((res) => {
-      const r = new FileReader();
-      r.onload = () => res((r.result as string).split(",")[1]);
-      r.readAsDataURL(f);
-    });
-  }
-
-  async function handleJDUpload(f: File) {
-    setJdFile(f);
-    setIsExtractingJD(true);
-    try {
-      const base64 = await toBase64(f);
-      setJdImageData(base64);
-      const res = await fetch("/api/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "jd-extract", imageData: base64, mediaType: f.type }),
-      });
-      const data = await res.json();
-      setJdKeywords(Array.isArray(data) ? data : []);
-    } catch {
-      setJdImageData(null);
-      setJdKeywords([]);
-    } finally {
-      setIsExtractingJD(false);
-    }
-  }
-
   async function fetchBotReply(
     history: { role: string; content: string }[],
     itemId: number,
@@ -750,7 +716,7 @@ export default function ChatPage() {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "analyze", jobTitle, question, jdKeywords, draft, charLimit, messages: history, jdImageData: jdImageData || undefined, jdMediaType: jdFile?.type || "image/jpeg" }),
+        body: JSON.stringify({ type: "analyze", jobTitle, question, draft, charLimit, messages: history }),
       });
       if (!res.body) throw new Error();
       const reader = res.body.getReader();
@@ -817,7 +783,7 @@ export default function ChatPage() {
     try {
       const { data: sessions } = await supabase
         .from("sessions")
-        .select("id, job_title, jd_keywords, created_at")
+        .select("id, job_title, created_at")
         .eq("user_id", userId)
         .order("created_at", { ascending: false })
         .limit(10);
@@ -865,7 +831,6 @@ export default function ChatPage() {
     setIsLoadingResume(true);
     try {
       setJobTitle(resumeSession.session.job_title || "");
-      setJdKeywords(Array.isArray(resumeSession.session.jd_keywords) ? resumeSession.session.jd_keywords : []);
       dbSessionIdRef.current = resumeSession.session.id;
 
       const newItems: CoverItem[] = await Promise.all(
@@ -1326,46 +1291,6 @@ export default function ChatPage() {
                 />
               </div>
 
-              {/* JD 업로드 */}
-              <div className="flex flex-col gap-1">
-                <label className="text-xs lg:text-[15px]" style={{ color: "rgba(255,255,255,0.45)" }}>
-                  JD 업로드 <span style={{ color: "rgba(255,255,255,0.25)" }}>선택</span>
-                </label>
-                <div
-                  className="rounded-xl px-3 py-2.5 flex items-center gap-2 cursor-pointer transition-all hover:opacity-80"
-                  style={{
-                    background: jdFile ? `${ACCENT}10` : "rgba(255,255,255,0.05)",
-                    border: `1px solid ${jdFile ? `${ACCENT}40` : "rgba(255,255,255,0.1)"}`,
-                  }}
-                  onClick={() => fileRef.current?.click()}
-                >
-                  <input ref={fileRef} type="file" accept=".png,.jpg,.jpeg" className="hidden"
-                    onChange={(e) => { const f = e.target.files?.[0]; if (f) handleJDUpload(f); }} />
-                  {isExtractingJD ? (
-                    <div className="flex gap-1 items-center">
-                      {DOTS.map(({ delay, color }) => (
-                        <span key={delay} className="w-1 h-1 rounded-full animate-bounce" style={{ background: color, animationDelay: `${delay}ms` }} />
-                      ))}
-                      <span className="text-xs ml-1.5" style={{ color: "rgba(255,255,255,0.4)" }}>추출중...</span>
-                    </div>
-                  ) : jdFile ? (
-                    <div className="flex items-center gap-1.5 w-full">
-                      <span className="text-sm">📄</span>
-                      <span className="text-xs truncate flex-1" style={{ color: "rgba(255,255,255,0.7)" }}>{jdFile.name}</span>
-                      {jdKeywords.length > 0 && (
-                        <span className="text-xs font-semibold px-1.5 py-0.5 rounded-full" style={{ background: `${ACCENT}20`, color: ACCENT }}>
-                          {jdKeywords.length}개
-                        </span>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm">📎</span>
-                      <span className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>PNG / JPG 업로드</span>
-                    </div>
-                  )}
-                </div>
-              </div>
             </div>
 
             {/* 항목 목록 */}
@@ -1429,39 +1354,14 @@ export default function ChatPage() {
 
                 {/* ── 모바일 전용: 지원정보 + 항목 탭 ── */}
                 <div className="lg:hidden flex flex-col gap-3 px-4 py-4 border-b flex-shrink-0" style={{ borderColor: "rgba(255,255,255,0.06)", background: "rgba(9,9,22,0.55)" }}>
-                  {/* 직무 + JD */}
-                  <div className="flex gap-2">
-                    <input
-                      value={jobTitle}
-                      onChange={(e) => setJobTitle(e.target.value)}
-                      placeholder="예: 연구개발"
-                      className="glow-input flex-1 px-3 py-2.5 rounded-xl text-sm"
-                      style={{ background: "rgba(255,255,255,0.05)", border: `1px solid ${toastField === "jobTitle" ? "rgba(201,100,66,0.5)" : "rgba(255,255,255,0.09)"}`, boxShadow: toastField === "jobTitle" ? "0 0 0 2px rgba(201,100,66,0.15)" : "none", color: "rgba(255,255,255,0.9)" }}
-                    />
-                    <div
-                      onClick={() => fileRef.current?.click()}
-                      className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl cursor-pointer transition-all"
-                      style={{ background: jdFile ? `${ACCENT}15` : "rgba(255,255,255,0.05)", border: `1px solid ${jdFile ? `${ACCENT}40` : "rgba(255,255,255,0.09)"}` }}
-                    >
-                      {isExtractingJD ? (
-                        <div className="flex gap-0.5 items-center">
-                          {DOTS.map(({ delay, color }) => (
-                            <span key={delay} className="w-1 h-1 rounded-full animate-bounce" style={{ background: color, animationDelay: `${delay}ms` }} />
-                          ))}
-                        </div>
-                      ) : jdFile ? (
-                        <div className="flex items-center gap-1">
-                          <span className="text-sm">📄</span>
-                          {jdKeywords.length > 0 && <span className="text-xs font-bold" style={{ color: ACCENT }}>{jdKeywords.length}</span>}
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-sm">📎</span>
-                          <span className="text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>JD</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                  {/* 직무 */}
+                  <input
+                    value={jobTitle}
+                    onChange={(e) => setJobTitle(e.target.value)}
+                    placeholder="예: 연구개발"
+                    className="glow-input w-full px-3 py-2.5 rounded-xl text-sm"
+                    style={{ background: "rgba(255,255,255,0.05)", border: `1px solid ${toastField === "jobTitle" ? "rgba(201,100,66,0.5)" : "rgba(255,255,255,0.09)"}`, boxShadow: toastField === "jobTitle" ? "0 0 0 2px rgba(201,100,66,0.15)" : "none", color: "rgba(255,255,255,0.9)" }}
+                  />
                   {/* 항목 탭 */}
                   <div className="flex items-center gap-1.5 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
                     {items.map((item, idx) => {
