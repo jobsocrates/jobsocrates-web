@@ -3,16 +3,24 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
   try {
-    const { messages } = await req.json() as { messages: string[] };
+    const { messages, interviewAnswers } = await req.json() as { messages: string[]; interviewAnswers?: string[] };
     if (!messages?.length) {
       return NextResponse.json({ error: "messages required" }, { status: 400 });
     }
 
-    const joined = messages
+    const diggingSection = messages
       .filter(m => m?.trim())
       .slice(0, 20)
       .map((m, i) => `[${i + 1}] ${m.trim()}`)
       .join("\n\n");
+
+    const interviewSection = (interviewAnswers || []).filter(a => a?.trim()).length > 0
+      ? `\n\n[면접 연습 답변]\n` + (interviewAnswers || [])
+          .filter(a => a?.trim())
+          .slice(0, 12)
+          .map((a, i) => `[${i + 1}] ${a.trim()}`)
+          .join("\n\n")
+      : "";
 
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -23,9 +31,10 @@ export async function POST(req: NextRequest) {
       messages: [
         {
           role: "user",
-          content: `당신은 취업소크라테스입니다. 아래는 한 구직자가 자소서 디깅 과정에서 직접 쓴 답변들이에요.
+          content: `당신은 취업소크라테스입니다. 아래는 한 구직자가 자소서 디깅과 면접 연습 과정에서 직접 쓴 내용들이에요.
 
-${joined}
+[자소서 디깅 답변]
+${diggingSection}${interviewSection}
 
 이 사람에 대해 직관적으로 느낀 것을 3~4문장으로 써주세요.
 - 경험이나 행동을 직접 짚거나 분석하지 마세요. 그 사람에게서 느껴지는 에너지, 본질, 감각을 담아주세요.

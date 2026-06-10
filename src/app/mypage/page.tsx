@@ -102,19 +102,39 @@ export default function MyPage() {
     setProfileLoading(true);
     (async () => {
       try {
-        const { data: msgs } = await supabase
-          .from("messages")
-          .select("content")
-          .eq("role", "user")
-          .in("cover_item_id", allItemIds)
-          .order("created_at", { ascending: false })
-          .limit(20);
+        const [{ data: msgs }, { data: iqRows }] = await Promise.all([
+          supabase
+            .from("messages")
+            .select("content")
+            .eq("role", "user")
+            .in("cover_item_id", allItemIds)
+            .order("created_at", { ascending: false })
+            .limit(20),
+          supabase
+            .from("interview_questions")
+            .select("id")
+            .in("cover_item_id", allItemIds),
+        ]);
+
         const userMessages = (msgs || []).map((m: { content: string }) => m.content).filter(Boolean);
         if (userMessages.length < 3) return;
+
+        let interviewAnswers: string[] = [];
+        const iqIds = (iqRows || []).map((q: { id: string }) => q.id);
+        if (iqIds.length > 0) {
+          const { data: iaRows } = await supabase
+            .from("interview_answers")
+            .select("user_answer")
+            .in("interview_question_id", iqIds)
+            .not("user_answer", "is", null)
+            .limit(12);
+          interviewAnswers = (iaRows || []).map((a: { user_answer: string }) => a.user_answer).filter(Boolean);
+        }
+
         const res = await fetch("/api/user-profile", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages: userMessages }),
+          body: JSON.stringify({ messages: userMessages, interviewAnswers }),
         });
         if (!res.ok) return;
         const { analysis } = await res.json();
