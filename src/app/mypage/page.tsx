@@ -304,9 +304,6 @@ export default function MyPage() {
                 <span style={{ fontSize: 56, fontWeight: 800, color: credits > 0 ? GOLD : "rgb(248,113,113)", letterSpacing: "-0.03em", lineHeight: 1 }}>{credits}</span>
                 <span style={{ fontSize: 18, color: credits > 0 ? "rgba(255,209,102,0.55)" : "rgba(248,113,113,0.55)" }}>개</span>
               </div>
-              {credits === 0 && (
-                <p style={{ fontSize: 13, color: "rgba(248,113,113,0.8)", marginTop: 8, fontWeight: 500 }}>뱃지가 없어요. 관리자에게 문의해주세요.</p>
-              )}
               <p style={{ fontSize: 12, color: "rgba(255,255,255,0.25)", marginTop: 10 }}>뱃지 1개 = 완성 자소서 문항 1개 완성 · 분석 시작 시 차감</p>
             </div>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 12 }}>
@@ -485,8 +482,8 @@ export default function MyPage() {
                 <p style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.32)", letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 14 }}>뱃지 내역</p>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                   {[
-                    { label: "총 지급", value: totalGranted, color: GOLD },
                     { label: "사용", value: totalUsed, color: "rgba(255,255,255,0.45)" },
+                    { label: "총 지급", value: totalGranted, color: GOLD },
                   ].map(stat => (
                     <div key={stat.label} style={{ background: "rgba(255,255,255,0.04)", borderRadius: 10, padding: "14px 16px" }}>
                       <div style={{ fontSize: 28, fontWeight: 800, color: stat.color, letterSpacing: "-0.03em", lineHeight: 1.1 }}>{stat.value}</div>
