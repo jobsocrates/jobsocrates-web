@@ -435,9 +435,9 @@ function TipPanel({ hasRevision, revisionReady }: { hasRevision: boolean; revisi
       </div>
       <div className="flex-1 overflow-hidden px-3 py-4 flex flex-col gap-3">
         {tips.map((tip, i) => (
-          <div key={i} className="flex items-start gap-3 px-3 py-3.5 rounded-xl" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
-            <span className="text-lg flex-shrink-0 leading-none mt-0.5">{tip.icon}</span>
-            <p className="text-sm leading-[1.7]" style={{ color: "rgba(255,255,255,0.72)", wordBreak: "keep-all", whiteSpace: "pre-line" }}>{tip.text}</p>
+          <div key={i} className="flex items-start gap-3 px-4 py-4 rounded-xl" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
+            <span className="text-xl flex-shrink-0 leading-none mt-0.5">{tip.icon}</span>
+            <p className="text-[15px] leading-[1.8]" style={{ color: "rgba(255,255,255,0.78)", wordBreak: "keep-all", whiteSpace: "pre-line" }}>{tip.text}</p>
           </div>
         ))}
       </div>
