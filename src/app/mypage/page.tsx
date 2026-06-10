@@ -50,6 +50,7 @@ export default function MyPage() {
   const [sessions, setSessions] = useState<SessionRecord[]>([]);
   const [pdfLoadingId, setPdfLoadingId] = useState<string | null>(null);
   const [viewLoadingId, setViewLoadingId] = useState<string | null>(null);
+  const [showAllSessions, setShowAllSessions] = useState(false);
   const [profileAnalysis, setProfileAnalysis] = useState<string | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
 
@@ -461,7 +462,7 @@ export default function MyPage() {
 
                 <p style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.28)", letterSpacing: "0.08em", textTransform: "uppercase", paddingLeft: 2, marginBottom: -4 }}>이전 기록</p>
 
-                {sessions.map(session => {
+                {(showAllSessions ? sessions : sessions.slice(0, 3)).map(session => {
                   const items = session.cover_items || [];
                   const completedItems = items.filter(i => (i.revisions || []).length > 0).length;
                   const hasAnyMessages = items.some(i => (i.messages || []).length > 0);
@@ -542,6 +543,16 @@ export default function MyPage() {
                     </div>
                   );
                 })}
+
+                {/* 펼쳐보기 / 접기 버튼 */}
+                {sessions.length > 3 && (
+                  <button
+                    onClick={() => setShowAllSessions(v => !v)}
+                    style={{ width: "100%", padding: "10px 0", borderRadius: 10, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.45)", cursor: "pointer" }}
+                  >
+                    {showAllSessions ? "접기" : `펼쳐보기 (${sessions.length - 3}개 더)`}
+                  </button>
+                )}
               </>
             );
           })()}
@@ -551,24 +562,26 @@ export default function MyPage() {
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
 
           {/* 뱃지 내역 */}
-          {transactions.length > 0 && (
-            <div className="card-depth-sm" style={{ borderRadius: 16, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.025)", overflow: "hidden" }}>
-              <div style={{ padding: "14px 18px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-                <p style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.55)" }}>뱃지 내역</p>
-              </div>
-              {transactions.slice(0, 8).map(txn => (
-                <div key={txn.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 18px", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-                  <div>
-                    <p style={{ fontSize: 13, color: "rgba(255,255,255,0.72)" }}>{txn.reason || (txn.amount > 0 ? "지급" : "차감")}</p>
-                    <p style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", marginTop: 2 }}>{formatDate(txn.created_at)}</p>
-                  </div>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: txn.amount > 0 ? GREEN : RED }}>
-                    {txn.amount > 0 ? "+" : ""}{txn.amount}
-                  </span>
+          {transactions.length > 0 && (() => {
+            const totalGranted = transactions.filter(t => t.amount > 0).reduce((a, t) => a + t.amount, 0);
+            const totalUsed = transactions.filter(t => t.amount < 0).reduce((a, t) => a + Math.abs(t.amount), 0);
+            return (
+              <div className="card-depth-sm" style={{ borderRadius: 16, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.025)", padding: "16px 18px" }}>
+                <p style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.32)", letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 14 }}>뱃지 내역</p>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                  {[
+                    { label: "총 지급", value: totalGranted, color: GOLD },
+                    { label: "사용", value: totalUsed, color: "rgba(255,255,255,0.45)" },
+                  ].map(stat => (
+                    <div key={stat.label} style={{ background: "rgba(255,255,255,0.04)", borderRadius: 10, padding: "14px 16px" }}>
+                      <div style={{ fontSize: 28, fontWeight: 800, color: stat.color, letterSpacing: "-0.03em", lineHeight: 1.1 }}>{stat.value}</div>
+                      <div style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginTop: 5, fontWeight: 600 }}>{stat.label}</div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          )}
+              </div>
+            );
+          })()}
 
           {/* 비밀번호 변경 */}
           <div className="card-depth-sm" style={{ borderRadius: 16, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.025)", padding: "20px" }}>
