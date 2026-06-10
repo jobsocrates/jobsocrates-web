@@ -300,7 +300,7 @@ export function CoverLetterSummary({ jobTitle, question, draft, msgs, interviewQ
         <div className="max-w-4xl mx-auto flex flex-col gap-12">
 
           {/* 01 · 수정본 */}
-          <Section number="01" title="수정본">
+          <Section number="01" title="수정본" numColor={`${GOLD}99`}>
             <div className="flex flex-col gap-4">
               {revision ? (
                 <DraftBox label="수정된 자소서" text={revision} accent />
@@ -338,7 +338,7 @@ export function CoverLetterSummary({ jobTitle, question, draft, msgs, interviewQ
           </Section>
 
           {/* 02 · 진단 & 첨삭 대화 */}
-          <Section number="02" title="진단 & 첨삭 대화">
+          <Section number="02" title="진단 & 첨삭 대화" numColor={`${BLUE}99`}>
             <div className="flex flex-col gap-3">
               {diagMsgs.map((msg, i) => {
                 if (!stripMd(msg.text).trim() && !msg.text.includes("[수정본]")) return null;
@@ -357,7 +357,7 @@ export function CoverLetterSummary({ jobTitle, question, draft, msgs, interviewQ
 
           {/* 03 · 면접 Q&A */}
           {interviewQs.length > 0 && (
-            <Section number="03" title="면접 예상 Q&A">
+            <Section number="03" title="면접 예상 Q&A" numColor={`${ACCENT}99`}>
               <div className="flex flex-col gap-6">
                 {interviewQs.map((q, i) => (
                   <div key={i}>
@@ -440,11 +440,11 @@ export function CoverLetterSummary({ jobTitle, question, draft, msgs, interviewQ
 
 /* ── 하위 컴포넌트 ── */
 
-function Section({ number, title, children }: { number: string; title: string; children: ReactNode }) {
+function Section({ number, title, numColor, children }: { number: string; title: string; numColor: string; children: ReactNode }) {
   return (
     <section>
       <div className="flex items-center gap-3 mb-5">
-        <span className="text-2xl font-black" style={{ color: "rgba(255,255,255,0.06)", lineHeight: 1 }}>{number}</span>
+        <span className="text-2xl font-black" style={{ color: numColor, lineHeight: 1, letterSpacing: "-0.02em" }}>{number}</span>
         <span className="text-base font-semibold text-white">{title}</span>
       </div>
       {children}
