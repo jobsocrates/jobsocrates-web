@@ -338,9 +338,16 @@ export function TutorialModal({ userId, onClose }: Props) {
           {/* 4장 — 답변 방법 */}
           {current.id === "answer" && (
             <>
-              <p className="text-lg leading-relaxed" style={{ color: "rgba(255,255,255,0.6)", wordBreak: "keep-all" }}>
-                {current.intro}
-              </p>
+              {/* 면접 팁 — 상단 배치 */}
+              <div
+                className="flex items-start gap-3 px-5 py-4 rounded-2xl"
+                style={{ background: "rgba(107,142,255,0.08)", border: "1px solid rgba(107,142,255,0.25)" }}
+              >
+                <span className="text-2xl leading-none flex-shrink-0 mt-0.5">🎙️</span>
+                <p className="text-base leading-relaxed font-semibold" style={{ color: "rgba(107,142,255,0.95)", wordBreak: "keep-all" }}>
+                  {current.tip}
+                </p>
+              </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div
@@ -382,17 +389,6 @@ export function TutorialModal({ userId, onClose }: Props) {
                     </p>
                   </div>
                 </div>
-              </div>
-
-              {/* 면접 팁 */}
-              <div
-                className="flex items-start gap-3 px-5 py-4 rounded-2xl"
-                style={{ background: "rgba(107,142,255,0.08)", border: "1px solid rgba(107,142,255,0.25)" }}
-              >
-                <span className="text-xl leading-none flex-shrink-0 mt-0.5">🎙️</span>
-                <p className="text-sm leading-relaxed font-medium" style={{ color: "rgba(107,142,255,0.95)", wordBreak: "keep-all" }}>
-                  {current.tip}
-                </p>
               </div>
             </>
           )}
