@@ -51,6 +51,7 @@ export default function MyPage() {
   const [pdfLoadingId, setPdfLoadingId] = useState<string | null>(null);
   const [viewLoadingId, setViewLoadingId] = useState<string | null>(null);
   const [showAllSessions, setShowAllSessions] = useState(false);
+  const [dismissedSessionId, setDismissedSessionId] = useState<string | null>(null);
 
   // 비밀번호 변경
   const [pwNew, setPwNew] = useState("");
@@ -65,6 +66,7 @@ export default function MyPage() {
   const [deletePwError, setDeletePwError] = useState("");
 
   useEffect(() => {
+    setDismissedSessionId(sessionStorage.getItem("lastDismissedSessionId"));
     supabase.auth.getUser().then(async ({ data }) => {
       if (!data.user) { setLoading(false); return; }
       setUser({ id: data.user.id, email: data.user.email ?? "" });
@@ -330,7 +332,10 @@ export default function MyPage() {
             const totalDigging = allItems.reduce((acc, i) => acc + (i.messages || []).filter(m => m.role === "user").length, 0);
             const totalInterviewDone = allItems.reduce((acc, i) => acc + (i.interview_questions || []).filter(q => (q.interview_answers || []).length > 0).length, 0);
             const firstSession = sessions[0];
-            const firstHasIncomplete = firstSession?.cover_items?.some(i => (i.revisions || []).length === 0);
+            const firstHasIncomplete = firstSession?.id !== dismissedSessionId &&
+              firstSession?.cover_items?.some(i =>
+                (i.revisions || []).length === 0 && (i.messages || []).length > 0
+              );
 
             if (sessions.length === 0) {
               return (
