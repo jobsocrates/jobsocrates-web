@@ -196,7 +196,7 @@ ${revision ? `
     <span class="section-title">진단 &amp; 첨삭 대화</span>
   </div>
   <div class="legend">
-    <div class="legend-item"><div class="legend-dot" style="background:#4338ca"></div> AI 소크라테스</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#4338ca"></div> 취업소크라테스</div>
     <div class="legend-item"><div class="legend-dot" style="background:#c2410c"></div> 나의 답변</div>
   </div>
   ${diagMsgs.map((m, i) => {

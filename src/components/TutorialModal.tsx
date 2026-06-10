@@ -54,13 +54,6 @@ export const TUTORIAL_CONTENT = {
       intro: "채팅 중 상단 '내 초안 보기'를 누르면 내 자소서가 하이라이트와 함께 표시돼요.",
       highlights: [
         {
-          color: BLUE,
-          bg: "rgba(107,142,255,0.12)",
-          border: "rgba(107,142,255,0.28)",
-          label: "연한 파란색",
-          desc: "취업소크라테스가 처음 진단에서 문제라고 짚은 부분이에요. 대화 시작부터 전체가 한눈에 표시돼요.",
-        },
-        {
           color: ACCENT,
           bg: "rgba(201,100,66,0.12)",
           border: "rgba(201,100,66,0.28)",
@@ -315,21 +308,13 @@ export function TutorialModal({ userId, onClose }: Props) {
               >
                 <p className="text-xs font-semibold mb-3 tracking-wider uppercase" style={{ color: "rgba(255,255,255,0.25)", letterSpacing: "0.08em" }}>미리보기</p>
                 <p className="text-sm leading-[1.9]" style={{ color: "rgba(255,255,255,0.42)", wordBreak: "keep-all" }}>
-                  저는 팀 프로젝트에서{" "}
-                  <mark style={{ background: "rgba(107,142,255,0.18)", color: "rgba(255,255,255,0.72)", borderRadius: "2px", padding: "1px 3px", border: "1px solid rgba(107,142,255,0.22)" }}>
-                    팀원들과 소통하며 문제를 해결했습니다
-                  </mark>
-                  . 당시{" "}
+                  저는 팀 프로젝트에서 팀원들과 소통하며 문제를 해결했습니다. 당시{" "}
                   <mark style={{ background: "rgba(201,100,66,0.3)", color: "rgba(255,255,255,0.95)", borderRadius: "3px", padding: "2px 4px", border: "1px solid rgba(201,100,66,0.5)", boxShadow: "0 0 10px rgba(201,100,66,0.25)" }}>
                     일정이 촉박한 상황에서
                   </mark>
                   {" "}저는 매일 진행상황을 공유하는 방식으로...
                 </p>
                 <div className="flex gap-4 mt-3">
-                  <div className="flex items-center gap-2">
-                    <div style={{ width: 10, height: 10, borderRadius: 2, background: "rgba(107,142,255,0.18)", border: "1px solid rgba(107,142,255,0.3)" }} />
-                    <span className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>문제 구절</span>
-                  </div>
                   <div className="flex items-center gap-2">
                     <div style={{ width: 10, height: 10, borderRadius: 2, background: "rgba(201,100,66,0.3)", border: "1px solid rgba(201,100,66,0.5)" }} />
                     <span className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>현재 질문 구절</span>

@@ -409,24 +409,9 @@ function InterviewQCard({
 type HighlightLevel = "none" | "faint" | "bright";
 function buildDraftSegments(
   draft: string,
-  faintTexts: string[],
-  brightText: string | null,
-  faintAll = false
+  brightText: string | null
 ): { text: string; level: HighlightLevel }[] {
-  const tags: HighlightLevel[] = new Array(draft.length).fill(faintAll ? "faint" : "none");
-  if (!faintAll) {
-    for (const ft of faintTexts) {
-      if (!ft) continue;
-      const norm = (s: string) => s.replace(/\s+/g, " ").trim();
-      const needle = norm(ft);
-      const hay = norm(draft);
-      let s = hay.indexOf(needle);
-      while (s !== -1) {
-        for (let i = s; i < s + needle.length; i++) tags[i] = "faint";
-        s = hay.indexOf(needle, s + 1);
-      }
-    }
-  }
+  const tags: HighlightLevel[] = new Array(draft.length).fill("none");
   if (brightText) {
     const norm = (s: string) => s.replace(/\s+/g, " ").trim();
     const needle = norm(brightText);
@@ -450,14 +435,10 @@ function buildDraftSegments(
 function DraftViewer({
   draft,
   currentRef,
-  allRefs,
-  faintAll,
   onClose,
 }: {
   draft: string;
   currentRef: string | null;
-  allRefs: string[];
-  faintAll: boolean;
   onClose: () => void;
 }) {
   const markRef = useRef<HTMLElement>(null);
@@ -468,8 +449,7 @@ function DraftViewer({
     }
   }, [currentRef]);
 
-  const faintTexts = allRefs.filter(r => r !== currentRef);
-  const segments = buildDraftSegments(draft, faintTexts, currentRef, faintAll);
+  const segments = buildDraftSegments(draft, currentRef);
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -1221,20 +1201,6 @@ export default function ChatPage() {
     return null;
   })();
 
-  // 분석이 시작됐으면 초안 전체를 연한 하이라이트
-  const draftFaintAll = !!selected && selected.msgs.some(m => m.role === "bot");
-
-  // 전체 봇 메시지에서 수집한 모든 [참조] — 연한 하이라이트 (첫 진단의 ①②③ 포함)
-  const allReferences: string[] = (() => {
-    if (!selected) return [];
-    const seen = new Set<string>();
-    selected.msgs.forEach(msg => {
-      if (msg.role === "bot") {
-        [...msg.text.matchAll(/\[참조\]([\s\S]*?)\[\/참조\]/g)].forEach(m => seen.add(m[1].trim()));
-      }
-    });
-    return Array.from(seen);
-  })();
 
   return (
     <>
@@ -1719,8 +1685,8 @@ export default function ChatPage() {
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
                       </svg>
                       <span>내 초안 보기</span>
-                      {(currentReference || allReferences.length > 0) && !showDraftPanel && (
-                        <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: currentReference ? ACCENT : BLUE }} />
+                      {currentReference && !showDraftPanel && (
+                        <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: ACCENT }} />
                       )}
                     </button>
                   </div>
@@ -1917,8 +1883,6 @@ export default function ChatPage() {
                   <DraftViewer
                     draft={selected.draft}
                     currentRef={currentReference}
-                    allRefs={allReferences}
-                    faintAll={draftFaintAll}
                     onClose={() => setShowDraftPanel(false)}
                   />
                 </div>
@@ -1942,8 +1906,6 @@ export default function ChatPage() {
                     <DraftViewer
                       draft={selected.draft}
                       currentRef={currentReference}
-                      allRefs={allReferences}
-                      faintAll={draftFaintAll}
                       onClose={() => setShowDraftPanel(false)}
                     />
                   </div>
