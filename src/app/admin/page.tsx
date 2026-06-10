@@ -307,10 +307,11 @@ export default function AdminPage() {
 
   async function fetchFunnel() {
     setFunnelLoading(true);
-    const [{ data: profiles }, { data: sesData }, { data: ciData }] = await Promise.all([
+    const [{ data: profiles }, { data: sesData }, { data: ciData }, { data: msgData }] = await Promise.all([
       supabase.from("profiles").select("id, email, created_at").order("created_at", { ascending: false }),
       supabase.from("sessions").select("id, user_id"),
-      supabase.from("cover_items").select("id, session_id, messages(id, role), revisions(id), interview_questions(id, interview_answers(id))"),
+      supabase.from("cover_items").select("id, session_id, revisions(id), interview_questions(id, interview_answers(id))"),
+      supabase.from("messages").select("cover_item_id, role"),
     ]);
 
     const sessionByUser: Record<string, string[]> = {};
@@ -325,6 +326,14 @@ export default function AdminPage() {
       coverBySession[ci.session_id].push(ci);
     });
 
+    // cover_item별 메시지 카운트 별도 집계 (nested select는 RLS로 오염될 수 있음)
+    const msgCountByCi: Record<string, { asked: number; answered: number }> = {};
+    (msgData || []).forEach((m: any) => {
+      if (!msgCountByCi[m.cover_item_id]) msgCountByCi[m.cover_item_id] = { asked: 0, answered: 0 };
+      if (m.role === "assistant") msgCountByCi[m.cover_item_id].asked++;
+      if (m.role === "user") msgCountByCi[m.cover_item_id].answered++;
+    });
+
     const STAGE_LABELS = ["가입만", "분석 시작", "완성본 작성", "완주"];
     const FUNNEL_NAMES = ["가입", "분석 시작", "완성본 작성", "완주"];
 
@@ -337,9 +346,9 @@ export default function AdminPage() {
       let interviewAnswered = 0;
       let interviewTotal = 0;
       items.forEach((ci: any) => {
-        const msgs = ci.messages || [];
-        diggingAsked += msgs.filter((m: any) => m.role === "assistant").length;
-        diggingAnswered += msgs.filter((m: any) => m.role === "user").length;
+        const counts = msgCountByCi[ci.id] || { asked: 0, answered: 0 };
+        diggingAsked += counts.asked;
+        diggingAnswered += counts.answered;
         (ci.interview_questions || []).forEach((iq: any) => {
           interviewTotal++;
           if ((iq.interview_answers || []).length > 0) interviewAnswered++;
