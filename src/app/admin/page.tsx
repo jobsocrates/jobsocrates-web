@@ -121,6 +121,7 @@ export default function AdminPage() {
   const [writeContent, setWriteContent] = useState("");
   const [writeSaving, setWriteSaving] = useState(false);
   const [writeOpen, setWriteOpen] = useState(false);
+  const [boardCategory, setBoardCategory] = useState("전체");
 
   // Notes
   const [goodNotes, setGoodNotes] = useState("");
@@ -1158,97 +1159,101 @@ export default function AdminPage() {
 
       {/* ─── BOARD ─── */}
       {tab === "board" && (
-        <div style={{ padding: "28px 24px", maxWidth: 1000, margin: "0 auto" }}>
-          {/* 상단 액션 바 */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <span style={{ fontSize: 14, fontWeight: 700, color: boardVisible ? "rgb(74,222,128)" : "rgba(255,255,255,0.4)" }}>
-                {boardVisible ? "● 공개 중" : "○ 비공개"}
-              </span>
-              <button
-                onClick={toggleBoardVisible}
-                disabled={boardVisibleSaving}
-                style={{ padding: "6px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: boardVisibleSaving ? "default" : "pointer", border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.55)", fontFamily: "inherit", opacity: boardVisibleSaving ? 0.5 : 1 }}
-              >
-                {boardVisible ? "비공개로" : "공개로"}
-              </button>
-            </div>
-            <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={fetchBoard} disabled={boardPostsLoading} style={{ padding: "7px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer", border: "1px solid rgba(255,255,255,0.1)", background: "transparent", color: "rgba(255,255,255,0.45)", fontFamily: "inherit" }}>
-                새로고침
-              </button>
-              <button
-                onClick={() => setWriteOpen((v) => !v)}
-                style={{ padding: "7px 18px", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer", border: "1px solid rgba(201,100,66,0.4)", background: "rgba(201,100,66,0.12)", color: "#C96442", fontFamily: "inherit" }}
-              >
-                {writeOpen ? "취소" : "+ 글쓰기"}
-              </button>
-            </div>
-          </div>
+        <div style={{ display: "flex", height: "calc(100vh - 48px)" }}>
 
-          {/* 글쓰기 폼 */}
-          {writeOpen && (
-            <div style={{ marginBottom: 24, padding: "22px 24px", borderRadius: 12, border: "1px solid rgba(201,100,66,0.25)", background: "rgba(201,100,66,0.05)" }}>
-              <p style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.7)", marginBottom: 16 }}>새 글 작성</p>
-              <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
-                <select
-                  value={writeCategory}
-                  onChange={(e) => setWriteCategory(e.target.value)}
-                  style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: "#1a1a2e", color: "rgba(255,255,255,0.8)", fontSize: 13, fontFamily: "inherit", cursor: "pointer", flexShrink: 0 }}
-                >
-                  {["쥔장 잡담","자소서 팁","면접 팁","공지·업데이트","뉴스","경제","기술","시사","쥔장에게 묻고 바란다"].map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
-                <input
-                  value={writeTitle}
-                  onChange={(e) => setWriteTitle(e.target.value)}
-                  placeholder="제목을 입력하세요"
-                  style={{ flex: 1, padding: "8px 14px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: "#1a1a2e", color: "rgba(255,255,255,0.88)", fontSize: 14, fontFamily: "inherit", outline: "none" }}
-                />
-              </div>
-              <textarea
-                value={writeContent}
-                onChange={(e) => setWriteContent(e.target.value)}
-                placeholder="본문을 입력하세요"
-                rows={8}
-                style={{ width: "100%", padding: "12px 14px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: "#1a1a2e", color: "rgba(255,255,255,0.82)", fontSize: 14, fontFamily: "inherit", resize: "vertical", outline: "none", lineHeight: 1.7 }}
-              />
-              <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 10 }}>
+          {/* 좌측 카테고리 사이드바 */}
+          <aside style={{ width: 190, flexShrink: 0, borderRight: "1px solid rgba(255,255,255,0.07)", paddingTop: 20, overflowY: "auto" }}>
+            {(["전체", "쥔장 잡담", "자소서 팁", "면접 팁", "공지·업데이트", "뉴스", "경제", "기술", "시사", "쥔장에게 묻고 바란다"] as const).map((cat, idx) => (
+              <>
+                {idx === 1 && <div key="divider" style={{ height: 1, background: "rgba(255,255,255,0.07)", margin: "8px 16px" }} />}
                 <button
-                  onClick={submitPost}
-                  disabled={writeSaving || !writeTitle.trim() || !writeContent.trim()}
-                  style={{ padding: "9px 24px", borderRadius: 9, fontSize: 13, fontWeight: 700, cursor: writeSaving || !writeTitle.trim() || !writeContent.trim() ? "default" : "pointer", border: "1px solid rgba(201,100,66,0.5)", background: "rgba(201,100,66,0.18)", color: "#C96442", fontFamily: "inherit", opacity: writeSaving || !writeTitle.trim() || !writeContent.trim() ? 0.5 : 1 }}
+                  key={cat}
+                  onClick={() => setBoardCategory(cat)}
+                  style={{
+                    width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
+                    padding: "10px 18px", background: boardCategory === cat ? "rgba(255,255,255,0.06)" : "transparent",
+                    border: "none", borderLeft: `3px solid ${boardCategory === cat ? ACCENT : "transparent"}`,
+                    color: boardCategory === cat ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.42)",
+                    fontSize: 13, fontWeight: boardCategory === cat ? 600 : 400, cursor: "pointer", textAlign: "left", fontFamily: "inherit",
+                  }}
                 >
-                  {writeSaving ? "등록 중..." : "등록"}
+                  <span>{cat}</span>
+                  <span style={{ fontSize: 11, color: "rgba(255,255,255,0.2)" }}>
+                    {cat === "전체" ? boardPosts.length : boardPosts.filter(p => p.category === cat).length || ""}
+                  </span>
+                </button>
+              </>
+            ))}
+          </aside>
+
+          {/* 우측 메인 */}
+          <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+            {/* 상단 액션 바 */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 24px", borderBottom: "1px solid rgba(255,255,255,0.07)", flexShrink: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ fontSize: 16, fontWeight: 700, color: "rgba(255,255,255,0.88)" }}>{boardCategory}</span>
+                <span style={{ fontSize: 13, color: "rgba(255,255,255,0.28)" }}>
+                  {boardCategory === "전체" ? boardPosts.length : boardPosts.filter(p => p.category === boardCategory).length}개
+                </span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: boardVisible ? GREEN : "rgba(255,255,255,0.3)", marginLeft: 8 }}>
+                  {boardVisible ? "● 공개 중" : "○ 비공개"}
+                </span>
+                <button onClick={toggleBoardVisible} disabled={boardVisibleSaving} style={{ padding: "4px 12px", borderRadius: 7, fontSize: 11, fontWeight: 600, cursor: "pointer", border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.45)", fontFamily: "inherit" }}>
+                  {boardVisible ? "비공개로" : "공개로"}
+                </button>
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={fetchBoard} disabled={boardPostsLoading} style={{ padding: "6px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer", border: "1px solid rgba(255,255,255,0.1)", background: "transparent", color: "rgba(255,255,255,0.4)", fontFamily: "inherit" }}>새로고침</button>
+                <button onClick={() => setWriteOpen(v => !v)} style={{ padding: "6px 18px", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer", border: "1px solid rgba(201,100,66,0.4)", background: "rgba(201,100,66,0.12)", color: ACCENT, fontFamily: "inherit" }}>
+                  {writeOpen ? "취소" : "+ 글쓰기"}
                 </button>
               </div>
             </div>
-          )}
 
-          <p style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.38)", marginBottom: 10 }}>게시글 목록 ({boardPosts.length}개)</p>
+            {/* 글쓰기 폼 */}
+            {writeOpen && (
+              <div style={{ padding: "16px 24px", borderBottom: "1px solid rgba(255,255,255,0.07)", background: "rgba(201,100,66,0.04)", flexShrink: 0 }}>
+                <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
+                  <select value={writeCategory} onChange={e => setWriteCategory(e.target.value)}
+                    style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: "#1a1a2e", color: "rgba(255,255,255,0.8)", fontSize: 13, fontFamily: "inherit", cursor: "pointer", flexShrink: 0 }}>
+                    {["쥔장 잡담","자소서 팁","면접 팁","공지·업데이트","뉴스","경제","기술","시사","쥔장에게 묻고 바란다"].map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                  <input value={writeTitle} onChange={e => setWriteTitle(e.target.value)} placeholder="제목"
+                    style={{ flex: 1, padding: "8px 14px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: "#1a1a2e", color: "rgba(255,255,255,0.88)", fontSize: 14, fontFamily: "inherit", outline: "none" }} />
+                </div>
+                <textarea value={writeContent} onChange={e => setWriteContent(e.target.value)} placeholder="본문" rows={6}
+                  style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: "#1a1a2e", color: "rgba(255,255,255,0.82)", fontSize: 14, fontFamily: "inherit", resize: "vertical", outline: "none", lineHeight: 1.7 }} />
+                <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
+                  <button onClick={submitPost} disabled={writeSaving || !writeTitle.trim() || !writeContent.trim()}
+                    style={{ padding: "8px 24px", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer", border: "1px solid rgba(201,100,66,0.5)", background: "rgba(201,100,66,0.18)", color: ACCENT, fontFamily: "inherit", opacity: writeSaving || !writeTitle.trim() || !writeContent.trim() ? 0.5 : 1 }}>
+                    {writeSaving ? "등록 중..." : "등록"}
+                  </button>
+                </div>
+              </div>
+            )}
 
-          {/* 글 목록 */}
+            {/* 글 목록 */}
+            <div style={{ flex: 1, overflowY: "auto" }}>
           {boardPostsLoading ? (
             <div style={{ display: "flex", justifyContent: "center", padding: 60 }}>
               <div style={{ width: 24, height: 24, borderRadius: "50%", border: `2px solid rgba(201,100,66,0.3)`, borderTopColor: ACCENT, animation: "spin 0.8s linear infinite" }} />
             </div>
-          ) : boardPosts.length === 0 ? (
+          ) : boardPosts.filter(p => boardCategory === "전체" || p.category === boardCategory).length === 0 ? (
             <div style={{ textAlign: "center", padding: "60px 0", color: "rgba(255,255,255,0.28)", fontSize: 14 }}>
-              글이 없어요. <code style={{ fontSize: 13, background: "rgba(255,255,255,0.06)", padding: "2px 8px", borderRadius: 6 }}>node scripts/generate-post.mjs</code> 실행해서 생성해보세요.
+              글이 없어요
             </div>
           ) : (
-            <div style={{ border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, overflow: "hidden" }}>
+            <div style={{ border: "none" }}>
               {/* 테이블 헤더 */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 80px 90px 140px", gap: 0, padding: "10px 16px", background: "rgba(255,255,255,0.04)", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 80px 90px 140px", padding: "10px 24px", background: "rgba(255,255,255,0.03)", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
                 {["제목", "카테고리", "날짜", "상태", ""].map((h) => (
                   <span key={h} style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.3)", letterSpacing: "0.05em" }}>{h}</span>
                 ))}
               </div>
-              {boardPosts.map((post, i) => (
+              {boardPosts.filter(p => boardCategory === "전체" || p.category === boardCategory).map((post, i, arr) => (
                 <div
                   key={post.id}
-                  style={{ display: "grid", gridTemplateColumns: "1fr 100px 80px 90px 140px", gap: 0, padding: "12px 16px", borderBottom: i < boardPosts.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none", alignItems: "center", background: post.is_published ? "rgba(74,222,128,0.02)" : "transparent" }}
+                  style={{ display: "grid", gridTemplateColumns: "1fr 100px 80px 90px 140px", padding: "12px 24px", borderBottom: i < arr.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none", alignItems: "center", background: post.is_published ? "rgba(74,222,128,0.02)" : "transparent" }}
                 >
                   <span style={{ fontSize: 13, color: "rgba(255,255,255,0.82)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 12 }}>
                     {post.title || <span style={{ color: "rgba(255,255,255,0.25)", fontStyle: "italic" }}>(제목 없음)</span>}
@@ -1274,6 +1279,8 @@ export default function AdminPage() {
               ))}
             </div>
           )}
+            </div>
+          </div>
         </div>
       )}
 
