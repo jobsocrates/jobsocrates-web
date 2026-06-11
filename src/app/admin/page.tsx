@@ -1428,17 +1428,20 @@ export default function AdminPage() {
                     ))}
                   </div>
                   {visiblePosts.map((post, i, arr) => (
-                    <div key={post.id} style={{ display: "grid", gridTemplateColumns: "1fr 120px 90px 96px 156px", padding: "15px 28px", borderBottom: i < arr.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none", alignItems: "center" }}>
-                      <span
-                        onClick={() => openViewPost(post)}
-                        style={{ fontSize: 16, color: "rgba(255,255,255,0.85)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 16, cursor: "pointer", textDecoration: "underline", textDecorationColor: "rgba(255,255,255,0.2)" }}
-                      >
+                    <div
+                      key={post.id}
+                      onClick={() => openViewPost(post)}
+                      style={{ display: "grid", gridTemplateColumns: "1fr 120px 90px 96px 156px", padding: "15px 28px", borderBottom: i < arr.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none", alignItems: "center", cursor: "pointer" }}
+                      onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.03)")}
+                      onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+                    >
+                      <span style={{ fontSize: 16, color: "rgba(255,255,255,0.88)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 16 }}>
                         {post.title || <span style={{ color: "rgba(255,255,255,0.25)", fontStyle: "italic" }}>(제목 없음)</span>}
                       </span>
                       <span style={{ fontSize: 13, padding: "3px 10px", borderRadius: 20, background: `${ACCENT}22`, border: `1px solid ${ACCENT}44`, color: ACCENT, fontWeight: 600, justifySelf: "start" }}>{post.category}</span>
                       <span style={{ fontSize: 14, color: "rgba(255,255,255,0.32)" }}>{new Date(post.created_at).toLocaleDateString("ko-KR", { month: "2-digit", day: "2-digit" })}</span>
                       <span style={{ fontSize: 14, fontWeight: 600, color: post.is_published ? GREEN : "rgba(255,255,255,0.35)" }}>{post.is_published ? "공개" : "비공개"}</span>
-                      <div style={{ display: "flex", gap: 6 }}>
+                      <div onClick={e => e.stopPropagation()} style={{ display: "flex", gap: 6 }}>
                         <button onClick={() => togglePostPublish(post.id, post.is_published)}
                           style={{ padding: "6px 14px", borderRadius: 7, fontSize: 13, fontWeight: 600, cursor: "pointer", border: post.is_published ? `1px solid ${GREEN}55` : "1px solid rgba(255,255,255,0.15)", background: post.is_published ? `${GREEN}18` : "rgba(255,255,255,0.07)", color: post.is_published ? GREEN : "rgba(255,255,255,0.5)", whiteSpace: "nowrap", fontFamily: "inherit" }}>
                           {post.is_published ? "비공개로" : "공개로"}
