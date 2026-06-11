@@ -656,6 +656,20 @@ export default function AdminPage() {
           /* ─ 게시판 ─ */
           .admin-board-sidebar { display: none !important; }
           .admin-board-cat-select { display: flex !important; }
+          .admin-board-header-row { display: none !important; }
+          .admin-board-action-bar { flex-wrap: wrap !important; gap: 8px !important; padding: 12px 14px !important; }
+          .admin-board-action-left { flex-wrap: wrap !important; gap: 6px !important; }
+          .admin-board-write-form { padding: 14px !important; }
+          .admin-board-write-top { flex-direction: column !important; }
+          .admin-board-item-row {
+            display: flex !important;
+            flex-direction: column !important;
+            padding: 14px 16px !important;
+            gap: 8px !important;
+          }
+          .admin-board-item-title { font-size: 15px !important; white-space: normal !important; padding-right: 0 !important; }
+          .admin-board-item-meta { display: flex !important; align-items: center !important; gap: 8px !important; flex-wrap: wrap !important; }
+          .admin-board-item-actions { display: flex !important; gap: 6px !important; }
           /* ─ 유저 관리 ─ */
           .admin-users-container { padding: 16px !important; }
           .admin-users-header { display: none !important; }
@@ -1428,8 +1442,8 @@ export default function AdminPage() {
               </select>
             </div>
             {/* 액션 바 */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 28px", borderBottom: "1px solid rgba(255,255,255,0.07)", flexShrink: 0 }}>
-              <div style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
+            <div className="admin-board-action-bar" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 28px", borderBottom: "1px solid rgba(255,255,255,0.07)", flexShrink: 0 }}>
+              <div className="admin-board-action-left" style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
                 <span style={{ fontSize: 22, fontWeight: 700, color: "rgba(255,255,255,0.92)" }}>{boardCategory}</span>
                 <span style={{ fontSize: 15, color: "rgba(255,255,255,0.3)" }}>{visiblePosts.length}개</span>
                 <span style={{ fontSize: 14, fontWeight: 600, color: boardVisible ? GREEN : "rgba(255,255,255,0.32)", marginLeft: 6 }}>
@@ -1449,8 +1463,8 @@ export default function AdminPage() {
 
             {/* 글쓰기 폼 */}
             {writeOpen && (
-              <div style={{ padding: "18px 28px", borderBottom: "1px solid rgba(255,255,255,0.07)", background: `${ACCENT}08`, flexShrink: 0 }}>
-                <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
+              <div className="admin-board-write-form" style={{ padding: "18px 28px", borderBottom: "1px solid rgba(255,255,255,0.07)", background: `${ACCENT}08`, flexShrink: 0 }}>
+                <div className="admin-board-write-top" style={{ display: "flex", gap: 10, marginBottom: 10 }}>
                   <select value={writeCategory} onChange={e => setWriteCategory(e.target.value)}
                     style={{ padding: "9px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: "#1a1a2e", color: "rgba(255,255,255,0.8)", fontSize: 15, fontFamily: "inherit", cursor: "pointer", flexShrink: 0 }}>
                     {["쥔장 잡담","자소서 팁","면접 팁","공지·업데이트","뉴스","경제","기술","사회","글로벌","쥔장에게 묻고 바란다"].map(c => <option key={c} value={c}>{c}</option>)}
@@ -1479,7 +1493,7 @@ export default function AdminPage() {
                 <div style={{ textAlign: "center", padding: "60px 0", color: "rgba(255,255,255,0.28)", fontSize: 16 }}>글이 없어요</div>
               ) : (
                 <>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 120px 90px 96px 156px", padding: "10px 28px", background: "rgba(255,255,255,0.03)", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+                  <div className="admin-board-header-row" style={{ display: "grid", gridTemplateColumns: "1fr 120px 90px 96px 156px", padding: "10px 28px", background: "rgba(255,255,255,0.03)", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
                     {["제목", "카테고리", "날짜", "상태", ""].map(h => (
                       <span key={h} style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.3)", letterSpacing: "0.04em" }}>{h}</span>
                     ))}
@@ -1487,19 +1501,22 @@ export default function AdminPage() {
                   {visiblePosts.map((post, i, arr) => (
                     <div
                       key={post.id}
+                      className="admin-board-item-row"
                       onClick={() => openViewPost(post)}
                       style={{ display: "grid", gridTemplateColumns: "1fr 120px 90px 96px 156px", padding: "15px 28px", borderBottom: i < arr.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none", alignItems: "center", cursor: "pointer" }}
                       onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.03)")}
                       onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
                     >
-                      <span style={{ fontSize: 16, color: "rgba(255,255,255,0.88)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 16, display: "flex", alignItems: "center", gap: 6 }}>
+                      <span className="admin-board-item-title" style={{ fontSize: 16, color: "rgba(255,255,255,0.88)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 16, display: "flex", alignItems: "center", gap: 6 }}>
                         {post.is_pinned && <span style={{ fontSize: 13, flexShrink: 0 }}>📌</span>}
                         {post.title || <span style={{ color: "rgba(255,255,255,0.25)", fontStyle: "italic" }}>(제목 없음)</span>}
                       </span>
-                      <span style={{ fontSize: 13, padding: "3px 10px", borderRadius: 20, background: `${ACCENT}22`, border: `1px solid ${ACCENT}44`, color: ACCENT, fontWeight: 600, justifySelf: "start" }}>{post.category}</span>
-                      <span style={{ fontSize: 14, color: "rgba(255,255,255,0.32)" }}>{new Date(post.created_at).toLocaleDateString("ko-KR", { month: "2-digit", day: "2-digit" })}</span>
-                      <span style={{ fontSize: 14, fontWeight: 600, color: post.is_published ? GREEN : "rgba(255,255,255,0.35)" }}>{post.is_published ? "공개" : "비공개"}</span>
-                      <div onClick={e => e.stopPropagation()} style={{ display: "flex", gap: 6 }}>
+                      <div className="admin-board-item-meta" style={{ display: "contents" }}>
+                        <span style={{ fontSize: 13, padding: "3px 10px", borderRadius: 20, background: `${ACCENT}22`, border: `1px solid ${ACCENT}44`, color: ACCENT, fontWeight: 600, justifySelf: "start", whiteSpace: "nowrap" }}>{post.category}</span>
+                        <span style={{ fontSize: 14, color: "rgba(255,255,255,0.32)", whiteSpace: "nowrap" }}>{new Date(post.created_at).toLocaleDateString("ko-KR", { month: "2-digit", day: "2-digit" })}</span>
+                        <span style={{ fontSize: 14, fontWeight: 600, color: post.is_published ? GREEN : "rgba(255,255,255,0.35)", whiteSpace: "nowrap" }}>{post.is_published ? "공개" : "비공개"}</span>
+                      </div>
+                      <div className="admin-board-item-actions" onClick={e => e.stopPropagation()} style={{ display: "flex", gap: 6 }}>
                         <button onClick={() => togglePostPublish(post.id, post.is_published)}
                           style={{ padding: "6px 14px", borderRadius: 7, fontSize: 13, fontWeight: 600, cursor: "pointer", border: post.is_published ? `1px solid ${GREEN}55` : "1px solid rgba(255,255,255,0.15)", background: post.is_published ? `${GREEN}18` : "rgba(255,255,255,0.07)", color: post.is_published ? GREEN : "rgba(255,255,255,0.5)", whiteSpace: "nowrap", fontFamily: "inherit" }}>
                           {post.is_published ? "비공개로" : "공개로"}
