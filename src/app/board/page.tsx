@@ -41,12 +41,12 @@ export default function BoardPage() {
 
   useEffect(() => {
     async function init() {
-      const { data: config } = await supabase
-        .from("site_config")
-        .select("value")
-        .eq("key", "board_visible")
-        .single();
-      const visible = config?.value === true;
+      const [{ data: config }, { data: { user } }] = await Promise.all([
+        supabase.from("site_config").select("value").eq("key", "board_visible").single(),
+        supabase.auth.getUser(),
+      ]);
+      const isAdmin = user?.email === "ijhan6403@gmail.com";
+      const visible = config?.value === true || isAdmin;
       setBoardVisible(visible);
       if (visible) {
         const { data } = await supabase
