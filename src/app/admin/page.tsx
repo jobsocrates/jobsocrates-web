@@ -57,6 +57,7 @@ interface PostItem {
   job_title: string;
   category: string;
   is_published: boolean;
+  is_pinned: boolean;
   created_at: string;
 }
 
@@ -177,6 +178,11 @@ export default function AdminPage() {
     setViewPost(updated);
     setEditMode(false);
     setEditSaving(false);
+  }
+
+  async function togglePostPin(id: string, current: boolean) {
+    await supabase.from("posts").update({ is_pinned: !current }).eq("id", id);
+    setBoardPosts(prev => prev.map(p => p.id === id ? { ...p, is_pinned: !current } : p));
   }
 
   async function togglePostPublish(id: string, current: boolean) {
@@ -1435,7 +1441,8 @@ export default function AdminPage() {
                       onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.03)")}
                       onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
                     >
-                      <span style={{ fontSize: 16, color: "rgba(255,255,255,0.88)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 16 }}>
+                      <span style={{ fontSize: 16, color: "rgba(255,255,255,0.88)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 16, display: "flex", alignItems: "center", gap: 6 }}>
+                        {post.is_pinned && <span style={{ fontSize: 13, flexShrink: 0 }}>📌</span>}
                         {post.title || <span style={{ color: "rgba(255,255,255,0.25)", fontStyle: "italic" }}>(제목 없음)</span>}
                       </span>
                       <span style={{ fontSize: 13, padding: "3px 10px", borderRadius: 20, background: `${ACCENT}22`, border: `1px solid ${ACCENT}44`, color: ACCENT, fontWeight: 600, justifySelf: "start" }}>{post.category}</span>
@@ -1520,6 +1527,15 @@ export default function AdminPage() {
               {/* 액션 버튼 */}
               <div style={{ display: "flex", gap: 8, justifyContent: "space-between", alignItems: "center" }}>
                 <div style={{ display: "flex", gap: 8 }}>
+                  {/* 고정 버튼 (수정 모드 아닐 때만 표시) */}
+                  {!editMode && (
+                    <button
+                      onClick={() => { togglePostPin(viewPost.id, viewPost.is_pinned); setViewPost(p => p ? { ...p, is_pinned: !p.is_pinned } : null); }}
+                      style={{ padding: "8px 14px", borderRadius: 9, fontSize: 13, fontWeight: 600, cursor: "pointer", border: viewPost.is_pinned ? "1px solid rgba(255,200,0,0.5)" : "1px solid rgba(255,255,255,0.12)", background: viewPost.is_pinned ? "rgba(255,200,0,0.12)" : "rgba(255,255,255,0.05)", color: viewPost.is_pinned ? "#FFD166" : "rgba(255,255,255,0.45)", fontFamily: "inherit" }}
+                    >
+                      {viewPost.is_pinned ? "📌 고정 해제" : "📌 고정"}
+                    </button>
+                  )}
                   {editMode ? (
                     <>
                       <button onClick={savePostEdit} disabled={editSaving}

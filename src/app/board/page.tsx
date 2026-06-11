@@ -20,7 +20,7 @@ const CATEGORY_TREE: CategoryNode[] = [
   { name: "쥔장에게 묻고 바란다" },
 ];
 
-interface Post { id: string; title: string; category: string; created_at: string }
+interface Post { id: string; title: string; category: string; created_at: string; is_pinned: boolean }
 
 function filterPosts(posts: Post[], cat: string) {
   if (cat === "전체") return posts;
@@ -58,8 +58,9 @@ export default function BoardPage() {
       if (show) {
         const { data } = await supabase
           .from("posts")
-          .select("id, title, category, created_at")
+          .select("id, title, category, created_at, is_pinned")
           .eq("is_published", true)
+          .order("is_pinned", { ascending: false })
           .order("created_at", { ascending: false });
         setPosts(data || []);
       }
@@ -143,12 +144,13 @@ export default function BoardPage() {
               <div
                 key={post.id}
                 onClick={() => router.push(`/board/${post.id}`)}
-                style={{ display: "grid", gridTemplateColumns: "48px 1fr 130px 96px", padding: "16px 12px", borderBottom: `1px solid rgba(255,255,255,0.04)`, cursor: "pointer", borderRadius: 6, transition: "background 0.1s", alignItems: "center" }}
-                onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.04)")}
-                onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+                style={{ display: "grid", gridTemplateColumns: "48px 1fr 130px 96px", padding: "16px 12px", borderBottom: `1px solid rgba(255,255,255,0.04)`, cursor: "pointer", borderRadius: 6, transition: "background 0.1s", alignItems: "center", background: post.is_pinned ? "rgba(255,200,0,0.04)" : "transparent", borderLeft: post.is_pinned ? "2px solid rgba(255,200,0,0.35)" : "2px solid transparent" }}
+                onMouseEnter={e => (e.currentTarget.style.background = post.is_pinned ? "rgba(255,200,0,0.07)" : "rgba(255,255,255,0.04)")}
+                onMouseLeave={e => (e.currentTarget.style.background = post.is_pinned ? "rgba(255,200,0,0.04)" : "transparent")}
               >
                 <span style={{ fontSize: 14, color: "rgba(255,255,255,0.22)", textAlign: "center" }}>{filtered.length - i}</span>
-                <span style={{ fontSize: 16, color: "rgba(255,255,255,0.88)", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 20 }}>
+                <span style={{ fontSize: 16, color: post.is_pinned ? "rgba(255,255,255,0.97)" : "rgba(255,255,255,0.88)", fontWeight: post.is_pinned ? 700 : 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 20, display: "flex", alignItems: "center", gap: 6 }}>
+                  {post.is_pinned && <span style={{ fontSize: 13, flexShrink: 0 }}>📌</span>}
                   {post.title || "(제목 없음)"}
                 </span>
                 <span style={{ fontSize: 14, color: "rgba(255,255,255,0.42)" }}>{post.category}</span>
