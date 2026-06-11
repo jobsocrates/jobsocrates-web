@@ -738,7 +738,7 @@ export default function ChatPage() {
       if (!parentSession) return;
 
       // 이미 이 세션을 dismiss한 경우 다시 표시하지 않음
-      if (sessionStorage.getItem("lastDismissedSessionId") === parentSession.id) return;
+      if (localStorage.getItem("lastDismissedSessionId") === parentSession.id) return;
 
       const { data: allItems } = await supabase
         .from("cover_items")
@@ -1954,7 +1954,7 @@ export default function ChatPage() {
                     </button>
                     <button
                       onClick={() => {
-                        sessionStorage.setItem("lastDismissedSessionId", resumeSession.session.id);
+                        localStorage.setItem("lastDismissedSessionId", resumeSession.session.id);
                         setDiscardConfirmMode(false);
                         setResumeSession(null);
                       }}

@@ -66,7 +66,7 @@ export default function MyPage() {
   const [deletePwError, setDeletePwError] = useState("");
 
   useEffect(() => {
-    setDismissedSessionId(sessionStorage.getItem("lastDismissedSessionId"));
+    setDismissedSessionId(localStorage.getItem("lastDismissedSessionId"));
     supabase.auth.getUser().then(async ({ data }) => {
       if (!data.user) { setLoading(false); return; }
       setUser({ id: data.user.id, email: data.user.email ?? "" });
@@ -355,7 +355,7 @@ export default function MyPage() {
                   <div style={{ borderRadius: 14, border: "1px solid rgba(255,255,255,0.07)", background: "rgba(255,255,255,0.02)", padding: "16px", display: "grid", gridTemplateColumns: "1fr 1fr 1fr" }}>
                     {[
                       { label: "완성 문항", value: totalCompleted, color: GREEN },
-                      { label: "디깅 답변", value: totalDigging, color: BLUE },
+                      { label: "Q/A 답변", value: totalDigging, color: BLUE },
                       { label: "면접 답변", value: totalInterviewDone, color: GOLD },
                     ].map(stat => (
                       <div key={stat.label} style={{ textAlign: "center" }}>
