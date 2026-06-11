@@ -1,0 +1,209 @@
+/**
+ * 뉴스 자동 수집 + AI 정리 스크립트
+ * 실행: node .github/scripts/generate-news.mjs
+ * 환경변수 필요: ANTHROPIC_API_KEY, NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+ */
+
+import { readFileSync, existsSync } from "fs";
+import { resolve, dirname } from "path";
+import { fileURLToPath } from "url";
+
+// .env.local 자동 로드 (로컬 실행 시)
+const __dir = dirname(fileURLToPath(import.meta.url));
+const envPath = resolve(__dir, "../../.env.local");
+if (existsSync(envPath)) {
+  const lines = readFileSync(envPath, "utf-8").split("\n");
+  for (const line of lines) {
+    const m = line.match(/^([^#][^=]*)=(.+)$/);
+    if (m) process.env[m[1].trim()] = m[2].trim();
+  }
+}
+
+// ── 카테고리 순환 (경제 → 기술 → 시사 → 경제 → ...) ──
+// DB에 저장되는 카테고리는 admin 게시판 탭 이름과 일치해야 함
+const START_DATE = new Date("2026-06-11T00:00:00+09:00");
+const CATEGORIES = ["경제", "기술", "시사"];
+
+// 각 카테고리별 RSS 후보 (앞에서부터 시도)
+const RSS = {
+  경제: [
+    "https://www.yna.co.kr/rss/economy.xml",
+    "https://rss.donga.com/economy.xml",
+  ],
+  기술: [
+    "https://www.yna.co.kr/rss/it.xml",
+    "https://rss.donga.com/it.xml",
+  ],
+  시사: [
+    "https://www.yna.co.kr/rss/all.xml",
+    "https://rss.donga.com/total.xml",
+    "https://www.chosun.com/arc/outboundfeeds/rss/?outputType=xml",
+  ],
+};
+
+function todayCategory() {
+  const now = new Date();
+  const kst = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
+  const start = new Date(START_DATE.toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
+  const diff = Math.floor((kst - start) / 86400000);
+  return CATEGORIES[((diff % 3) + 3) % 3];
+}
+
+function todayStr() {
+  return new Date().toLocaleDateString("ko-KR", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).replace(/\.\s*/g, "-").replace(/-$/, "");
+}
+
+function cdata(s) {
+  return s?.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1") ?? "";
+}
+
+function stripHtml(s) {
+  return s.replace(/<[^>]+>/g, "").replace(/&[a-z]+;/g, " ").replace(/\s+/g, " ").trim();
+}
+
+// ── RSS 파싱 ──
+async function fetchArticles(category) {
+  const urls = RSS[category];
+  let xml = null;
+  for (const url of urls) {
+    try {
+      const res = await fetch(url, {
+        headers: { "User-Agent": "Mozilla/5.0 (compatible; jobsocrates/1.0)" },
+      });
+      if (res.ok) { xml = await res.text(); break; }
+    } catch {}
+  }
+  if (!xml) throw new Error(`모든 RSS 소스 실패: ${urls.join(", ")}`);
+  const articles = [];
+  const itemRe = /<item>([\s\S]*?)<\/item>/g;
+  let m;
+  while ((m = itemRe.exec(xml)) !== null && articles.length < 5) {
+    const raw = m[1];
+    const title = stripHtml(cdata(raw.match(/<title>([\s\S]*?)<\/title>/)?.[1] ?? "")).trim();
+    const desc  = stripHtml(cdata(raw.match(/<description>([\s\S]*?)<\/description>/)?.[1] ?? "")).slice(0, 400).trim();
+    const link  = (raw.match(/<link>([\s\S]*?)<\/link>/)?.[1] ?? raw.match(/<guid[^>]*>([\s\S]*?)<\/guid>/)?.[1] ?? "").trim();
+
+    if (title.length > 5) articles.push({ title, desc, link });
+  }
+  return articles;
+}
+
+// ── Claude로 요약 + 제목 생성 ──
+async function summarize(category, articles) {
+  const list = articles
+    .map((a, i) => `[기사 ${i + 1}]\n제목: ${a.title}\n요약: ${a.desc}`)
+    .join("\n\n");
+
+  const prompt = `당신은 취업준비생을 위한 뉴스 큐레이터입니다.
+
+이 글의 목적은 단 하나입니다.
+취준생이 뉴스를 그냥 소비하는 게 아니라, 자신만의 관점을 만들도록 돕는 것.
+그래서 절대로 해석을 대신 해주지 마세요. 답을 주지 마세요.
+"이렇게 말하면 좋아요" 같은 표현은 금지입니다.
+당신이 할 일은 "어디를 봐야 하는지 방향만 가리키는 것"입니다.
+
+규칙:
+- 정치 관련 기사는 완전히 제외 (정치인 언급, 정당, 선거 등 — 해당 기사는 목록에서 빼세요)
+- 어려운 용어는 괄호 안에 한 줄로만 설명
+- 답은 주지 말 것. 생각의 방향만 제시
+- 친근하고 담백한 말투
+
+출력 형식 (반드시 아래 구조를 지키세요):
+
+TITLE: [오늘 기사들을 관통하는 핵심 주제 한 줄, 15자 이내, 취준생이 공감할 표현으로]
+
+각 기사를 아래 형식으로 작성:
+
+📰 [기사 제목]
+무슨 일이냐면: (2줄 이내, 사실만. 평가 없이)
+🔍 이걸 왜 봐야 하냐면: (이 이슈가 취업/사회와 어떻게 연결되는지 맥락만. 1~2줄)
+💬 스스로 물어봐: (정답 없는 질문 1개. 본인 경험·관점과 연결해 생각해보게 만드는 것)
+
+---
+
+기사 목록:
+${list}`;
+
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "x-api-key": process.env.ANTHROPIC_API_KEY,
+      "anthropic-version": "2023-06-01",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-6",
+      max_tokens: 2500,
+      messages: [{ role: "user", content: prompt }],
+    }),
+  });
+
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`Claude API 오류: ${err}`);
+  }
+  const data = await response.json();
+  const raw = data.content[0].text;
+
+  // 첫 줄 TITLE: 파싱 후 본문과 분리
+  const titleMatch = raw.match(/^TITLE:\s*(.+)/m);
+  const generatedTitle = titleMatch ? titleMatch[1].trim() : null;
+  const content = raw.replace(/^TITLE:\s*.+\n*/m, "").trim();
+
+  return { generatedTitle, content };
+}
+
+// ── Supabase에 임시저장 ──
+async function saveToSupabase(title, content, category) {
+  const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/posts`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "apikey": process.env.SUPABASE_SERVICE_ROLE_KEY,
+      "Authorization": `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+      "Content-Type": "application/json",
+      "Prefer": "return=minimal",
+    },
+    body: JSON.stringify({ title, content, category, is_published: false }),
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Supabase 저장 실패: ${err}`);
+  }
+}
+
+// ── 메인 ──
+async function main() {
+  // --category 뉴스_시사 처럼 직접 지정 가능
+  const argIdx = process.argv.indexOf("--category");
+  const category = argIdx !== -1 ? process.argv[argIdx + 1] : todayCategory();
+  const dateStr  = todayStr();
+
+  console.log(`\n📅 ${dateStr} | 카테고리: ${category}`);
+  console.log("🔍 뉴스 수집 중...");
+
+  const articles = await fetchArticles(category);
+  if (articles.length === 0) throw new Error("기사를 가져오지 못했습니다");
+  console.log(`   ${articles.length}개 기사 수집 완료`);
+  articles.forEach((a, i) => console.log(`   [${i+1}] ${a.title}`));
+
+  console.log("🤖 AI 정리 중...");
+  const { generatedTitle, content } = await summarize(category, articles);
+  const finalTitle = generatedTitle ?? `${category} 뉴스 ${dateStr}`;
+
+  console.log("💾 Supabase 임시저장 중...");
+  await saveToSupabase(finalTitle, content, category);
+
+  console.log(`\n✅ 완료! 제목: "${finalTitle}"`);
+  console.log("   관리자 페이지 > 게시판 탭에서 확인 후 발행하세요.\n");
+}
+
+main().catch((err) => {
+  console.error("\n❌ 오류:", err.message);
+  process.exit(1);
+});

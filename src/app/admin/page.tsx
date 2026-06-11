@@ -122,6 +122,12 @@ export default function AdminPage() {
   const [writeSaving, setWriteSaving] = useState(false);
   const [writeOpen, setWriteOpen] = useState(false);
   const [boardCategory, setBoardCategory] = useState("전체");
+  const [viewPost, setViewPost] = useState<PostItem | null>(null);
+  const [editMode, setEditMode] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editContent, setEditContent] = useState("");
+  const [editCategory, setEditCategory] = useState("");
+  const [editSaving, setEditSaving] = useState(false);
 
   // Notes
   const [goodNotes, setGoodNotes] = useState("");
@@ -152,6 +158,25 @@ export default function AdminPage() {
     setBoardPosts(postsData || []);
     setBoardVisible(config?.value === true);
     setBoardPostsLoading(false);
+  }
+
+  function openViewPost(post: PostItem) {
+    setViewPost(post);
+    setEditMode(false);
+    setEditTitle(post.title);
+    setEditContent(post.content);
+    setEditCategory(post.category);
+  }
+
+  async function savePostEdit() {
+    if (!viewPost) return;
+    setEditSaving(true);
+    await supabase.from("posts").update({ title: editTitle.trim(), content: editContent.trim(), category: editCategory }).eq("id", viewPost.id);
+    const updated = { ...viewPost, title: editTitle.trim(), content: editContent.trim(), category: editCategory };
+    setBoardPosts(prev => prev.map(p => p.id === viewPost.id ? updated : p));
+    setViewPost(updated);
+    setEditMode(false);
+    setEditSaving(false);
   }
 
   async function togglePostPublish(id: string, current: boolean) {
@@ -1309,6 +1334,7 @@ export default function AdminPage() {
         const visiblePosts = bFilter(boardCategory);
 
         return (
+        <>
         <div className="admin-board-wrap" style={{ display: "flex", height: "calc(100vh - 56px)" }}>
           {/* 사이드바 (모바일 숨김) */}
           <aside className="admin-board-sidebar" style={{ width: 192, flexShrink: 0, borderRight: "1px solid rgba(255,255,255,0.07)", paddingTop: 24, overflowY: "auto" }}>
@@ -1403,7 +1429,10 @@ export default function AdminPage() {
                   </div>
                   {visiblePosts.map((post, i, arr) => (
                     <div key={post.id} style={{ display: "grid", gridTemplateColumns: "1fr 120px 90px 96px 156px", padding: "15px 28px", borderBottom: i < arr.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none", alignItems: "center" }}>
-                      <span style={{ fontSize: 16, color: "rgba(255,255,255,0.85)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 16 }}>
+                      <span
+                        onClick={() => openViewPost(post)}
+                        style={{ fontSize: 16, color: "rgba(255,255,255,0.85)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 16, cursor: "pointer", textDecoration: "underline", textDecorationColor: "rgba(255,255,255,0.2)" }}
+                      >
                         {post.title || <span style={{ color: "rgba(255,255,255,0.25)", fontStyle: "italic" }}>(제목 없음)</span>}
                       </span>
                       <span style={{ fontSize: 13, padding: "3px 10px", borderRadius: 20, background: `${ACCENT}22`, border: `1px solid ${ACCENT}44`, color: ACCENT, fontWeight: 600, justifySelf: "start" }}>{post.category}</span>
@@ -1426,6 +1455,105 @@ export default function AdminPage() {
             </div>
           </div>
         </div>
+
+        {/* ── 게시글 상세 / 수정 모달 ── */}
+        {viewPost && (
+          <div
+            style={{ position: "fixed", inset: 0, zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, background: "rgba(0,0,0,0.8)", backdropFilter: "blur(6px)" }}
+            onClick={() => { setViewPost(null); setEditMode(false); }}
+          >
+            <div
+              style={{ background: "#18182A", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 20, padding: "24px 24px 20px", maxWidth: 700, width: "100%", maxHeight: "85vh", display: "flex", flexDirection: "column", gap: 14 }}
+              onClick={e => e.stopPropagation()}
+            >
+              {/* 헤더 */}
+              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  {editMode ? (
+                    <input
+                      value={editTitle}
+                      onChange={e => setEditTitle(e.target.value)}
+                      style={{ width: "100%", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 8, padding: "8px 12px", fontSize: 16, fontWeight: 700, color: "rgba(255,255,255,0.92)", fontFamily: "inherit", outline: "none" }}
+                    />
+                  ) : (
+                    <p style={{ fontSize: 18, fontWeight: 700, color: "rgba(255,255,255,0.92)", lineHeight: 1.4, wordBreak: "keep-all" }}>{viewPost.title || "(제목 없음)"}</p>
+                  )}
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 6 }}>
+                    {editMode ? (
+                      <select
+                        value={editCategory}
+                        onChange={e => setEditCategory(e.target.value)}
+                        style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 6, padding: "4px 8px", fontSize: 12, color: "rgba(255,255,255,0.7)", fontFamily: "inherit", cursor: "pointer" }}
+                      >
+                        {["쥔장 잡담","자소서 팁","면접 팁","공지·업데이트","경제","기술","시사","쥔장에게 묻고 바란다"].map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    ) : (
+                      <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 9px", borderRadius: 20, background: `${ACCENT}22`, border: `1px solid ${ACCENT}44`, color: ACCENT }}>{viewPost.category}</span>
+                    )}
+                    <span style={{ fontSize: 12, color: "rgba(255,255,255,0.3)" }}>
+                      {new Date(viewPost.created_at).toLocaleDateString("ko-KR", { year: "numeric", month: "2-digit", day: "2-digit" })}
+                    </span>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: viewPost.is_published ? GREEN : "rgba(255,255,255,0.35)" }}>
+                      {viewPost.is_published ? "공개" : "임시저장"}
+                    </span>
+                  </div>
+                </div>
+                <button onClick={() => { setViewPost(null); setEditMode(false); }} style={{ flexShrink: 0, width: 32, height: 32, borderRadius: 10, background: "rgba(255,255,255,0.08)", border: "none", color: "rgba(255,255,255,0.5)", fontSize: 20, cursor: "pointer" }}>×</button>
+              </div>
+
+              {/* 본문 */}
+              <div style={{ flex: 1, overflowY: "auto", background: "rgba(255,255,255,0.03)", borderRadius: 12, padding: "16px 18px" }}>
+                {editMode ? (
+                  <textarea
+                    value={editContent}
+                    onChange={e => setEditContent(e.target.value)}
+                    style={{ width: "100%", minHeight: 320, background: "transparent", border: "none", outline: "none", fontSize: 14, lineHeight: 2, color: "rgba(255,255,255,0.78)", whiteSpace: "pre-wrap", wordBreak: "keep-all", resize: "vertical" }}
+                  />
+                ) : (
+                  <p style={{ fontSize: 14, lineHeight: 2, color: "rgba(255,255,255,0.78)", whiteSpace: "pre-wrap", wordBreak: "keep-all" }}>{viewPost.content}</p>
+                )}
+              </div>
+
+              {/* 액션 버튼 */}
+              <div style={{ display: "flex", gap: 8, justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ display: "flex", gap: 8 }}>
+                  {editMode ? (
+                    <>
+                      <button onClick={savePostEdit} disabled={editSaving}
+                        style={{ padding: "8px 18px", borderRadius: 9, fontSize: 13, fontWeight: 600, cursor: "pointer", background: BLUE, border: "none", color: "#fff", fontFamily: "inherit", opacity: editSaving ? 0.6 : 1 }}>
+                        {editSaving ? "저장 중..." : "저장"}
+                      </button>
+                      <button onClick={() => setEditMode(false)}
+                        style={{ padding: "8px 14px", borderRadius: 9, fontSize: 13, fontWeight: 600, cursor: "pointer", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.5)", fontFamily: "inherit" }}>
+                        취소
+                      </button>
+                    </>
+                  ) : (
+                    <button onClick={() => setEditMode(true)}
+                      style={{ padding: "8px 16px", borderRadius: 9, fontSize: 13, fontWeight: 600, cursor: "pointer", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.6)", fontFamily: "inherit" }}>
+                      수정
+                    </button>
+                  )}
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button
+                    onClick={() => { togglePostPublish(viewPost.id, viewPost.is_published); setViewPost(p => p ? { ...p, is_published: !p.is_published } : null); }}
+                    style={{ padding: "8px 18px", borderRadius: 9, fontSize: 13, fontWeight: 600, cursor: "pointer", border: viewPost.is_published ? `1px solid ${GREEN}55` : `1px solid ${ACCENT}55`, background: viewPost.is_published ? `${GREEN}18` : `${ACCENT}18`, color: viewPost.is_published ? GREEN : ACCENT, fontFamily: "inherit" }}
+                  >
+                    {viewPost.is_published ? "비공개로" : "공개로 발행"}
+                  </button>
+                  <button
+                    onClick={() => { deletePost(viewPost.id); setViewPost(null); }}
+                    style={{ padding: "8px 14px", borderRadius: 9, fontSize: 13, fontWeight: 600, cursor: "pointer", border: `1px solid ${RED}44`, background: "transparent", color: `${RED}cc`, fontFamily: "inherit" }}
+                  >
+                    삭제
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        </>
         );
       })()}
 

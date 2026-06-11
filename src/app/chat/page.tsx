@@ -87,7 +87,9 @@ function parseRevisionMsg(text: string) {
   const partialChgMatch = !chgMatch ? text.match(/\[변경사항\]([\s\S]*)$/) : null;
 
   const subtitle = subMatch ? subMatch[1].trim() : "";
-  const rawRevision = revMatch ? revMatch[1].trim() : "";
+  const rawRevision = revMatch
+    ? revMatch[1].replace(/\[소제목\][\s\S]*?\[\/소제목\]\s*/g, "").trim()
+    : "";
   const revision = subtitle ? `[${subtitle}]\n\n${rawRevision}` : rawRevision;
   const changes = chgMatch ? chgMatch[1].trim() : "";
   const partialChanges = partialChgMatch ? partialChgMatch[1].trim() : "";
@@ -229,7 +231,10 @@ function StreamingRevisionCard({ text }: { text: string }) {
   const subtitle = subMatch ? subMatch[1].trim() : "";
   const parts = text.split("[수정본]");
   const afterMarker = parts.length > 1 ? parts[1] : "";
-  const rawPartial = afterMarker.replace(/\[\/수정본\][\s\S]*/, "").trim();
+  const rawPartial = afterMarker
+    .replace(/\[\/수정본\][\s\S]*/, "")
+    .replace(/\[소제목\][\s\S]*?\[\/소제목\]\s*/g, "")
+    .trim();
   const partialRevision = subtitle && rawPartial ? `[${subtitle}]\n\n${rawPartial}` : rawPartial;
 
   return (

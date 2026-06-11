@@ -45,7 +45,9 @@ export function parseRevisionMsg(text: string) {
   const revMatch = text.match(/\[수정본\]([\s\S]*?)\[\/수정본\]/);
   const chgMatch = text.match(/\[변경사항\]([\s\S]*?)\[\/변경사항\]/);
   const subtitle = subMatch ? subMatch[1].trim() : "";
-  const rawRevision = revMatch ? revMatch[1].trim() : "";
+  const rawRevision = revMatch
+    ? revMatch[1].replace(/\[소제목\][\s\S]*?\[\/소제목\]\s*/g, "").trim()
+    : "";
   const revision = subtitle ? `[${subtitle}]\n\n${rawRevision}` : rawRevision;
   const changes = chgMatch ? chgMatch[1].trim() : "";
   const rest = text
