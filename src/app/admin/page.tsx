@@ -669,7 +669,25 @@ export default function AdminPage() {
           }
           .admin-board-item-title { font-size: 15px !important; white-space: normal !important; padding-right: 0 !important; }
           .admin-board-item-meta { display: flex !important; align-items: center !important; gap: 8px !important; flex-wrap: wrap !important; }
-          .admin-board-item-actions { display: flex !important; gap: 6px !important; }
+          .admin-board-item-actions { display: none !important; }
+          .admin-board-item-row { cursor: pointer; }
+          .admin-board-modal-backdrop { padding: 0 !important; align-items: flex-end !important; }
+          .admin-board-modal-panel {
+            border-radius: 20px 20px 0 0 !important;
+            max-height: 94dvh !important;
+            max-width: 100% !important;
+            width: 100% !important;
+            padding: 20px 16px 32px !important;
+          }
+          .admin-board-modal-actions { flex-direction: column !important; gap: 10px !important; }
+          .admin-board-modal-actions > div { width: 100% !important; }
+          .admin-board-modal-actions button {
+            flex: 1 !important;
+            padding: 14px 0 !important;
+            font-size: 15px !important;
+            border-radius: 12px !important;
+            justify-content: center !important;
+          }
           /* ─ 유저 관리 ─ */
           .admin-users-container { padding: 16px !important; }
           .admin-users-header { display: none !important; }
@@ -1537,10 +1555,12 @@ export default function AdminPage() {
         {/* ── 게시글 상세 / 수정 모달 ── */}
         {viewPost && (
           <div
+            className="admin-board-modal-backdrop"
             style={{ position: "fixed", inset: 0, zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, background: "rgba(0,0,0,0.8)", backdropFilter: "blur(6px)" }}
             onClick={() => { setViewPost(null); setEditMode(false); }}
           >
             <div
+              className="admin-board-modal-panel"
               style={{ background: "#18182A", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 20, padding: "24px 24px 20px", maxWidth: 700, width: "100%", maxHeight: "85vh", display: "flex", flexDirection: "column", gap: 14 }}
               onClick={e => e.stopPropagation()}
             >
@@ -1593,7 +1613,7 @@ export default function AdminPage() {
               </div>
 
               {/* 액션 버튼 */}
-              <div style={{ display: "flex", gap: 8, justifyContent: "space-between", alignItems: "center" }}>
+              <div className="admin-board-modal-actions" style={{ display: "flex", gap: 8, justifyContent: "space-between", alignItems: "center" }}>
                 <div style={{ display: "flex", gap: 8 }}>
                   {/* 고정 버튼 (수정 모드 아닐 때만 표시) */}
                   {!editMode && (
