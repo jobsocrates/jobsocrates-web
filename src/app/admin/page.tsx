@@ -664,6 +664,7 @@ export default function AdminPage() {
           .admin-board-item-row {
             display: flex !important;
             flex-direction: column !important;
+            align-items: flex-start !important;
             padding: 14px 16px !important;
             gap: 8px !important;
           }
