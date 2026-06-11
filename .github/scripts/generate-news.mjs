@@ -19,20 +19,39 @@ if (existsSync(envPath)) {
   }
 }
 
-// ── 카테고리 순환 (경제+기술 → 사회+글로벌 → 경제+기술 → ...) ──
+// ── 카테고리 순환 (경제 → 기술 → 사회 → 글로벌 → 경제 → ...) ──
 // DB에 저장되는 카테고리는 admin 게시판 탭 이름과 일치해야 함
 const START_DATE = new Date("2026-06-12T00:00:00+09:00");
+const CATEGORIES = ["경제", "기술", "사회", "글로벌"];
 
-// ── 자소서 팁 직무 순환 (8개, 날짜 기반) ──
+// ── 자소서 팁 직무 순환 (20개, 날짜 기반) ──
 const JASOSEO_ROLES = [
+  // 경영/전략
+  "경영기획",
+  "사업개발",
+  // 영업/마케팅
+  "B2B 영업",
+  "영업지원",
   "콘텐츠 마케터",
-  "IT 서비스 기획자",
-  "프론트엔드 개발자",
-  "영업 관리",
-  "인사 담당",
-  "데이터 분석가",
   "브랜드 마케터",
-  "UX 디자이너",
+  // 개발/IT
+  "백엔드 개발자",
+  "프론트엔드 개발자",
+  "데이터 분석가",
+  "PM (프로덕트 매니저)",
+  // 제조/생산
+  "생산기술 엔지니어",
+  "생산관리",
+  "품질관리 (QC/QA)",
+  "설계 엔지니어",
+  "공정 엔지니어",
+  // 연구개발
+  "연구개발 (R&D)",
+  "기구/기계 설계",
+  // 경영지원
+  "HR (인사/채용)",
+  "회계/재무",
+  "구매/SCM",
 ];
 const CATEGORY_PAIRS = [["경제", "기술"], ["사회", "글로벌"]];
 
@@ -63,12 +82,12 @@ const RSS = {
   ],
 };
 
-function todayPair() {
+function todayCategory() {
   const now = new Date();
   const kst = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
   const start = new Date(START_DATE.toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
   const diff = Math.floor((kst - start) / 86400000);
-  return CATEGORY_PAIRS[((diff % CATEGORY_PAIRS.length) + CATEGORY_PAIRS.length) % CATEGORY_PAIRS.length];
+  return CATEGORIES[((diff % CATEGORIES.length) + CATEGORIES.length) % CATEGORIES.length];
 }
 
 function todayRole() {
@@ -352,27 +371,25 @@ async function saveToSupabase(title, content, category) {
 // ── 메인 ──
 async function main() {
   const argIdx = process.argv.indexOf("--category");
-  const categories = argIdx !== -1 ? [process.argv[argIdx + 1]] : todayPair();
+  const category = argIdx !== -1 ? process.argv[argIdx + 1] : todayCategory();
   const dateStr = todayStr();
 
-  console.log(`\n📅 ${dateStr} | 카테고리: ${categories.join(" + ")}`);
+  console.log(`\n📅 ${dateStr} | 카테고리: ${category}`);
 
-  for (const category of categories) {
-    console.log(`\n─── ${category} ───`);
-    console.log("🔍 뉴스 수집 중...");
-    const articles = await fetchArticles(category);
-    if (articles.length === 0) throw new Error(`${category}: 기사를 가져오지 못했습니다`);
-    console.log(`   ${articles.length}개 기사 수집 완료`);
-    articles.forEach((a, i) => console.log(`   [${i+1}] ${a.title}`));
+  console.log(`\n─── 뉴스: ${category} ───`);
+  console.log("🔍 뉴스 수집 중...");
+  const articles = await fetchArticles(category);
+  if (articles.length === 0) throw new Error(`${category}: 기사를 가져오지 못했습니다`);
+  console.log(`   ${articles.length}개 기사 수집 완료`);
+  articles.forEach((a, i) => console.log(`   [${i+1}] ${a.title}`));
 
-    console.log("🤖 AI 정리 중...");
-    const { generatedTitle, content } = await summarize(category, articles);
-    const finalTitle = generatedTitle ?? `${category} 뉴스 ${dateStr}`;
+  console.log("🤖 AI 정리 중...");
+  const { generatedTitle, content } = await summarize(category, articles);
+  const finalTitle = generatedTitle ?? `${category} 뉴스 ${dateStr}`;
 
-    console.log("💾 Supabase 임시저장 중...");
-    await saveToSupabase(finalTitle, content, category);
-    console.log(`   ✅ 완료! 제목: "${finalTitle}"`);
-  }
+  console.log("💾 Supabase 임시저장 중...");
+  await saveToSupabase(finalTitle, content, category);
+  console.log(`   ✅ 완료! 제목: "${finalTitle}"`);
 
   const role = todayRole();
   console.log(`\n─── 자소서 팁 (${role}) ───`);
