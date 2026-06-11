@@ -24,7 +24,6 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY || !ANTHROPIC_KEY) {
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
-// 자소서 가져오기
 const { data: items } = await supabase
   .from('cover_items')
   .select('question, draft, sessions(job_title)')
@@ -37,37 +36,47 @@ if (!items?.length) {
   process.exit(1);
 }
 
-// 가장 긴 초안 선택
 const item = items.sort((a, b) => b.draft.length - a.draft.length)[0];
 const jobTitle = item.sessions?.job_title || '';
 
-// Claude로 각색
 const anthropic = new Anthropic({ apiKey: ANTHROPIC_KEY });
 const res = await anthropic.messages.create({
   model: 'claude-sonnet-4-6',
-  max_tokens: 400,
+  max_tokens: 500,
   messages: [{
     role: 'user',
-    content: `다음 자소서 내용을 Threads(스레드) SNS용 짧은 글로 각색해줘.
-- 반드시 200자 이내
-- 실제 자소서 느낌 지우고, 공감가는 커리어 이야기처럼
-- 해시태그 1~2개 포함
-- 익명화 (회사명/이름 제거)
+    content: `다음 자소서 내용을 SNS 게시글로 각색해줘.
+
+- 제목: 25자 이내, 클릭하고 싶은 제목
+- 본문: 200자 이내, 실제 자소서 느낌 지우고 공감가는 커리어 이야기처럼, 해시태그 1~2개, 익명화(회사명/이름 제거)
 
 직군: ${jobTitle}
-자소서 내용: ${item.draft.slice(0, 600)}`
+자소서 내용: ${item.draft.slice(0, 600)}
+
+반드시 아래 JSON 형식으로만 출력 (다른 텍스트 없이):
+{"title": "제목", "content": "본문"}`
   }]
 });
 
-const adapted = res.content[0].text.trim();
+let title = '', adapted = '';
+try {
+  const parsed = JSON.parse(res.content[0].text.trim());
+  title = parsed.title || '';
+  adapted = parsed.content || '';
+} catch {
+  adapted = res.content[0].text.trim();
+  title = adapted.slice(0, 25);
+}
 
-console.log('\n========== 복사해서 쓰세요 ==========\n');
+console.log('\n========== 제목 ==========\n');
+console.log(title);
+console.log('\n========== 본문 ==========\n');
 console.log(adapted);
-console.log('\n=====================================\n');
-console.log(`(${adapted.length}자)`);
+console.log('\n===========================\n');
+console.log(`(본문 ${adapted.length}자)`);
 
-// DB에 저장 (비공개 상태)
 const { error } = await supabase.from('posts').insert({
+  title,
   content: adapted,
   job_title: jobTitle,
   category: '자소서팁',
