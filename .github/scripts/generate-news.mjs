@@ -22,12 +22,13 @@ if (existsSync(envPath)) {
 // ── 카테고리 순환 (경제 → 기술 → 시사 → 경제 → ...) ──
 // DB에 저장되는 카테고리는 admin 게시판 탭 이름과 일치해야 함
 const START_DATE = new Date("2026-06-11T00:00:00+09:00");
-const CATEGORIES = ["경제", "기술", "시사", "금융"];
+const CATEGORIES = ["경제", "기술", "사회", "글로벌"];
 
 // 각 카테고리별 RSS 후보 (앞에서부터 시도)
 const RSS = {
   경제: [
     "https://www.yna.co.kr/rss/economy.xml",
+    "https://rss.etnews.com/Section902.xml",
     "https://rss.donga.com/economy.xml",
   ],
   기술: [
@@ -35,18 +36,18 @@ const RSS = {
     "https://www.yna.co.kr/rss/it.xml",
     "https://www.yna.co.kr/rss/science.xml",
     "https://rss.donga.com/it.xml",
-    "https://www.chosun.com/arc/outboundfeeds/rss/?outputType=xml",
     "https://www.yna.co.kr/rss/all.xml",
   ],
-  시사: [
+  사회: [
     "https://www.yna.co.kr/rss/all.xml",
     "https://rss.donga.com/total.xml",
     "https://www.chosun.com/arc/outboundfeeds/rss/?outputType=xml",
   ],
-  금융: [
-    "https://www.yna.co.kr/rss/finance.xml",
-    "https://rss.donga.com/economy.xml",
-    "https://www.yna.co.kr/rss/economy.xml",
+  글로벌: [
+    "https://www.yna.co.kr/rss/international.xml",
+    "https://www.yna.co.kr/rss/world.xml",
+    "https://rss.donga.com/international.xml",
+    "https://www.yna.co.kr/rss/all.xml",
   ],
 };
 

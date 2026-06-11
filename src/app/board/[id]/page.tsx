@@ -166,7 +166,7 @@ export default function PostPage() {
     );
   }
 
-  const isNews = ["경제", "기술", "시사", "금융", "뉴스"].includes(post.category);
+  const isNews = ["경제", "기술", "사회", "글로벌", "뉴스"].includes(post.category);
   const articles = isNews ? parseArticles(post.content) : null;
   const date = new Date(post.created_at).toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric" });
 
