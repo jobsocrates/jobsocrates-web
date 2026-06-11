@@ -153,7 +153,7 @@ export default function AdminPage() {
   async function fetchBoard() {
     setBoardPostsLoading(true);
     const [{ data: postsData }, { data: config }] = await Promise.all([
-      supabase.from("posts").select("*").order("created_at", { ascending: false }),
+      supabase.from("posts").select("*").order("is_pinned", { ascending: false }).order("created_at", { ascending: false }),
       supabase.from("site_config").select("value").eq("key", "board_visible").single(),
     ]);
     setBoardPosts(postsData || []);
