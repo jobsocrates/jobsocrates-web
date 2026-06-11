@@ -568,17 +568,61 @@ export default function AdminPage() {
         textarea { font-family: inherit; }
         textarea::placeholder { color: rgba(255,255,255,0.2); }
         .admin-mobile-back { display: none; }
-        @media (max-width: 640px) {
+        @media (max-width: 768px) {
+          /* ─ Header: 2줄 레이아웃 ─ */
+          .admin-header {
+            height: auto !important;
+            flex-wrap: wrap !important;
+            padding: 0 !important;
+            gap: 0 !important;
+          }
+          .admin-header-title {
+            order: 1;
+            padding: 0 16px !important;
+            height: 44px;
+            display: flex;
+            align-items: center;
+          }
+          .admin-header-nav {
+            order: 3;
+            width: 100% !important;
+            flex: none !important;
+            justify-content: flex-start !important;
+            height: 44px;
+            padding: 0 8px !important;
+            border-top: 1px solid rgba(255,255,255,0.06);
+            overflow-x: auto;
+            scrollbar-width: none;
+          }
+          .admin-header-nav::-webkit-scrollbar { display: none; }
+          .admin-header-home {
+            order: 2;
+            margin-left: auto;
+            padding: 0 16px !important;
+            height: 44px;
+            display: flex !important;
+            align-items: center;
+            gap: 5px;
+          }
+          /* ─ 패널 높이 (헤더 88px 기준) ─ */
+          .admin-review-wrap { height: calc(100dvh - 88px) !important; }
+          .admin-board-wrap  { height: calc(100dvh - 88px) !important; }
+          /* ─ 콘텐츠 패딩 ─ */
+          .admin-tab-content { padding: 16px !important; }
+          /* ─ 대시보드 ─ */
           .admin-stat-grid { grid-template-columns: 1fr !important; }
-          .admin-notes-grid { grid-template-columns: 1fr !important; }
+          /* ─ 대화 리뷰 ─ */
           .admin-review-left { width: 100% !important; min-width: 0 !important; }
           .has-selection .admin-review-left { display: none !important; }
           .admin-review-right { width: 100%; }
           .admin-review-empty { display: none !important; }
           .admin-mobile-back { display: flex; }
+          /* ─ 프롬프트 노트 ─ */
+          .admin-notes-grid { grid-template-columns: 1fr !important; }
+          /* ─ 게시판 ─ */
           .admin-board-sidebar { display: none !important; }
           .admin-board-cat-select { display: flex !important; }
-          nav::-webkit-scrollbar { display: none; }
+          /* ─ 유저 관리 ─ */
           .admin-users-container { padding: 16px !important; }
           .admin-users-header { display: none !important; }
           .admin-users-row {
@@ -589,25 +633,48 @@ export default function AdminPage() {
             row-gap: 8px !important;
             column-gap: 0 !important;
           }
-          .admin-users-info { grid-area: info !important; }
-          .admin-users-badge { grid-area: badge !important; justify-self: center !important; align-self: center !important; }
+          .admin-users-info     { grid-area: info !important; }
+          .admin-users-badge    { grid-area: badge !important; justify-self: center !important; align-self: center !important; }
           .admin-users-controls { grid-area: controls !important; justify-content: flex-start !important; }
-          .admin-users-delete { grid-area: del !important; align-self: center !important; }
+          .admin-users-delete   { grid-area: del !important; align-self: center !important; }
+          /* ─ 통계 퍼널 테이블 → 카드 ─ */
+          .admin-funnel-table-header { display: none !important; }
+          .admin-funnel-user-row {
+            grid-template-columns: 1fr auto !important;
+            grid-template-rows: auto auto auto !important;
+            grid-template-areas:
+              "femail  fstage"
+              "fdate   fdate"
+              "frev    fintv" !important;
+            padding: 12px 16px !important;
+            row-gap: 6px !important;
+            column-gap: 8px !important;
+            align-items: center !important;
+          }
+          .admin-funnel-cell-date      { grid-area: fdate !important; }
+          .admin-funnel-cell-email     { grid-area: femail !important; }
+          .admin-funnel-cell-revision  { grid-area: frev !important; justify-content: flex-start !important; }
+          .admin-funnel-cell-interview { grid-area: fintv !important; justify-content: flex-start !important; }
+          .admin-funnel-cell-stage     { grid-area: fstage !important; justify-content: flex-end !important; }
+          .admin-funnel-analysis-sub   { display: none !important; }
+          /* ─ 공통 ─ */
+          button, a { min-height: 44px; }
+          nav button { min-height: 36px !important; }
         }
       `}</style>
 
       {/* Header */}
-      <header style={{ height: 56, padding: "0 20px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid rgba(255,255,255,0.08)", background: "rgba(13,13,24,0.98)", backdropFilter: "blur(12px)", position: "sticky", top: 0, zIndex: 40 }}>
-        <span style={{ fontSize: 13, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(255,255,255,0.7)", flexShrink: 0 }}>Admin</span>
-        <nav style={{ flex: 1, display: "flex", gap: 2, justifyContent: "center", overflowX: "auto", padding: "0 8px", scrollbarWidth: "none" }}>
+      <header className="admin-header" style={{ height: 56, padding: "0 20px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid rgba(255,255,255,0.08)", background: "rgba(13,13,24,0.98)", backdropFilter: "blur(12px)", position: "sticky", top: 0, zIndex: 40 }}>
+        <span className="admin-header-title" style={{ fontSize: 13, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(255,255,255,0.7)", flexShrink: 0 }}>Admin</span>
+        <nav className="admin-header-nav" style={{ flex: 1, display: "flex", gap: 2, justifyContent: "center", overflowX: "auto", padding: "0 8px", scrollbarWidth: "none" }}>
           {(["dashboard", "review", "notes", "users", "funnel", "board"] as Tab[]).map((t) => (
             <button key={t} onClick={() => { setTab(t); if (t === "funnel" && !funnelData) fetchFunnel(); if (t === "board") fetchBoard(); }}
-              style={{ padding: "6px 14px", borderRadius: 8, fontSize: 13, fontWeight: tab === t ? 700 : 500, border: tab === t ? "1px solid rgba(255,255,255,0.15)" : "1px solid transparent", cursor: "pointer", background: tab === t ? "rgba(255,255,255,0.1)" : "transparent", color: tab === t ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.5)", whiteSpace: "nowrap", flexShrink: 0 }}>
+              style={{ padding: "6px 14px", borderRadius: 8, fontSize: 13, fontWeight: tab === t ? 700 : 500, border: tab === t ? "1px solid rgba(255,255,255,0.15)" : "1px solid transparent", cursor: "pointer", background: tab === t ? "rgba(255,255,255,0.1)" : "transparent", color: tab === t ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.5)", whiteSpace: "nowrap", flexShrink: 0, minHeight: "unset" }}>
               {t === "dashboard" ? "대시보드" : t === "review" ? "대화 리뷰" : t === "notes" ? "프롬프트 노트" : t === "users" ? "유저 관리" : t === "funnel" ? "통계" : "게시판"}
             </button>
           ))}
         </nav>
-        <a href="/" style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.55)", textDecoration: "none", display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
+        <a className="admin-header-home" href="/" style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.55)", textDecoration: "none", display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
           </svg>
@@ -617,7 +684,7 @@ export default function AdminPage() {
 
       {/* ─── DASHBOARD ─── */}
       {tab === "dashboard" && (
-        <div style={{ padding: "28px 24px", maxWidth: 900, margin: "0 auto" }}>
+        <div className="admin-tab-content" style={{ padding: "28px 24px", maxWidth: 900, margin: "0 auto" }}>
 
           {/* 3-category cards */}
           <div className="admin-stat-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 20 }}>
@@ -677,7 +744,7 @@ export default function AdminPage() {
 
       {/* ─── REVIEW ─── */}
       {tab === "review" && (
-        <div className={selectedId ? "has-selection" : ""} style={{ display: "flex", height: "calc(100vh - 52px)" }}>
+        <div className={`admin-review-wrap${selectedId ? " has-selection" : ""}`} style={{ display: "flex", height: "calc(100vh - 56px)" }}>
           {/* Left panel: session list */}
           <div className="admin-review-left" style={{ width: 272, flexShrink: 0, borderRight: "1px solid rgba(255,255,255,0.06)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
             {/* Filters */}
@@ -881,7 +948,7 @@ export default function AdminPage() {
 
       {/* ─── NOTES ─── */}
       {tab === "notes" && (
-        <div style={{ padding: "24px", maxWidth: 1000, margin: "0 auto" }}>
+        <div className="admin-tab-content" style={{ padding: "24px", maxWidth: 1000, margin: "0 auto" }}>
           {/* Header */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, gap: 16 }}>
             <div>
@@ -1034,7 +1101,7 @@ export default function AdminPage() {
 
       {/* ─── FUNNEL / 통계 ─── */}
       {tab === "funnel" && (
-        <div style={{ padding: "28px 24px", maxWidth: 900, margin: "0 auto" }}>
+        <div className="admin-tab-content" style={{ padding: "28px 24px", maxWidth: 900, margin: "0 auto" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
             <div>
               <p style={{ fontSize: 15, fontWeight: 700, color: "rgba(255,255,255,0.85)", marginBottom: 3 }}>완주율 퍼널</p>
@@ -1115,7 +1182,7 @@ export default function AdminPage() {
                             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 5 }}>
                               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                                 <span style={{ fontSize: 12, fontWeight: 700, color: r.color, background: r.bg, borderRadius: 6, padding: "2px 9px", whiteSpace: "nowrap" }}>{r.label}</span>
-                                <span style={{ fontSize: 11, color: "rgba(255,255,255,0.28)" }}>{r.sub}</span>
+                                <span className="admin-funnel-analysis-sub" style={{ fontSize: 11, color: "rgba(255,255,255,0.28)" }}>{r.sub}</span>
                               </div>
                               <div style={{ display: "flex", alignItems: "baseline", gap: 5, flexShrink: 0 }}>
                                 <span style={{ fontSize: 17, fontWeight: 800, color: r.color, letterSpacing: "-0.02em" }}>{count}</span>
@@ -1138,7 +1205,7 @@ export default function AdminPage() {
                     <p style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.08em" }}>유저별 상세</p>
                     <span style={{ fontSize: 11, color: "rgba(255,255,255,0.2)", marginLeft: "auto" }}>최신 가입 순</span>
                   </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "110px 1fr 1fr 1fr 1fr", padding: "8px 20px", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                  <div className="admin-funnel-table-header" style={{ display: "grid", gridTemplateColumns: "110px 1fr 1fr 1fr 1fr", padding: "8px 20px", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
                     {["가입일", "이메일", "완성본", "예상Q", "단계"].map((h, hi) => (
                       <span key={h} style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.22)", textTransform: "uppercase", letterSpacing: "0.07em", textAlign: hi === 0 ? "left" : "center" }}>{h}</span>
                     ))}
@@ -1152,10 +1219,10 @@ export default function AdminPage() {
                     const hasInterview = u.interviewTotal > 0;
                     const allDone = hasInterview && u.interviewAnswered === u.interviewTotal;
                     return (
-                      <div key={u.userId} style={{ display: "grid", gridTemplateColumns: "110px 1fr 1fr 1fr 1fr", padding: "12px 20px", borderBottom: idx < funnelData.users.length - 1 ? "1px solid rgba(255,255,255,0.03)" : "none", alignItems: "center" }}>
-                        <span style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", whiteSpace: "nowrap" }}>{u.createdAt.slice(0, 10)}</span>
-                        <span style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 8 }}>{u.email}</span>
-                        <div style={{ display: "flex", justifyContent: "center" }}>
+                      <div key={u.userId} className="admin-funnel-user-row" style={{ display: "grid", gridTemplateColumns: "110px 1fr 1fr 1fr 1fr", padding: "12px 20px", borderBottom: idx < funnelData.users.length - 1 ? "1px solid rgba(255,255,255,0.03)" : "none", alignItems: "center" }}>
+                        <span className="admin-funnel-cell-date" style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", whiteSpace: "nowrap" }}>{u.createdAt.slice(0, 10)}</span>
+                        <span className="admin-funnel-cell-email" style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 8 }}>{u.email}</span>
+                        <div className="admin-funnel-cell-revision" style={{ display: "flex", justifyContent: "center" }}>
                           {hasRevision ? (
                             <span style={{ fontSize: 12, fontWeight: 700, color: "rgba(74,222,128,0.9)", background: "rgba(74,222,128,0.1)", borderRadius: 6, padding: "3px 10px" }}>완료</span>
                           ) : inProgress ? (
@@ -1164,7 +1231,7 @@ export default function AdminPage() {
                             <span style={{ fontSize: 13, color: "rgba(255,255,255,0.18)" }}>—</span>
                           )}
                         </div>
-                        <div style={{ display: "flex", justifyContent: "center" }}>
+                        <div className="admin-funnel-cell-interview" style={{ display: "flex", justifyContent: "center" }}>
                           {hasInterview ? (
                             <span style={{ fontSize: 12, fontWeight: 700, color: allDone ? GREEN : "rgba(255,255,255,0.45)", background: allDone ? "rgba(74,222,128,0.12)" : "rgba(255,255,255,0.06)", borderRadius: 6, padding: "3px 10px" }}>
                               {u.interviewAnswered}/{u.interviewTotal}
@@ -1173,7 +1240,7 @@ export default function AdminPage() {
                             <span style={{ fontSize: 13, color: "rgba(255,255,255,0.18)" }}>—</span>
                           )}
                         </div>
-                        <div style={{ display: "flex", justifyContent: "center" }}>
+                        <div className="admin-funnel-cell-stage" style={{ display: "flex", justifyContent: "center" }}>
                           <span style={{ fontSize: 12, fontWeight: 700, color: c.color, background: c.bg, borderRadius: 6, padding: "3px 12px", whiteSpace: "nowrap" }}>
                             {u.stageIndex === 3 ? "✓ 완주" : u.stageLabel}
                           </span>
@@ -1242,7 +1309,7 @@ export default function AdminPage() {
         const visiblePosts = bFilter(boardCategory);
 
         return (
-        <div style={{ display: "flex", height: "calc(100vh - 56px)" }}>
+        <div className="admin-board-wrap" style={{ display: "flex", height: "calc(100vh - 56px)" }}>
           {/* 사이드바 (모바일 숨김) */}
           <aside className="admin-board-sidebar" style={{ width: 192, flexShrink: 0, borderRight: "1px solid rgba(255,255,255,0.07)", paddingTop: 24, overflowY: "auto" }}>
             {/* 전체 */}
