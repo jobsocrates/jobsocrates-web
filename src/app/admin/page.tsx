@@ -1158,53 +1158,66 @@ export default function AdminPage() {
       )}
 
       {/* ─── BOARD ─── */}
-      {tab === "board" && (
-        <div style={{ display: "flex", height: "calc(100vh - 48px)" }}>
+      {tab === "board" && (() => {
+        const NEWS_CH = ["경제", "기술", "시사"];
+        interface BCNode { name: string; children?: string[] }
+        const BTREE: BCNode[] = [
+          { name: "쥔장 잡담" }, { name: "자소서 팁" }, { name: "면접 팁" }, { name: "공지·업데이트" },
+          { name: "뉴스", children: NEWS_CH },
+          { name: "쥔장에게 묻고 바란다" },
+        ];
+        function bCount(cat: string) {
+          if (cat === "전체") return boardPosts.length;
+          if (cat === "뉴스") return boardPosts.filter(p => ["뉴스", ...NEWS_CH].includes(p.category)).length;
+          return boardPosts.filter(p => p.category === cat).length;
+        }
+        function bFilter(cat: string) {
+          if (cat === "전체") return boardPosts;
+          if (cat === "뉴스") return boardPosts.filter(p => ["뉴스", ...NEWS_CH].includes(p.category));
+          return boardPosts.filter(p => p.category === cat);
+        }
+        const visiblePosts = bFilter(boardCategory);
 
-          {/* 좌측 카테고리 사이드바 */}
-          <aside style={{ width: 190, flexShrink: 0, borderRight: "1px solid rgba(255,255,255,0.07)", paddingTop: 20, overflowY: "auto" }}>
-            {(["전체", "쥔장 잡담", "자소서 팁", "면접 팁", "공지·업데이트", "뉴스", "경제", "기술", "시사", "쥔장에게 묻고 바란다"] as const).map((cat, idx) => (
-              <>
-                {idx === 1 && <div key="divider" style={{ height: 1, background: "rgba(255,255,255,0.07)", margin: "8px 16px" }} />}
-                <button
-                  key={cat}
-                  onClick={() => setBoardCategory(cat)}
-                  style={{
-                    width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
-                    padding: "10px 18px", background: boardCategory === cat ? "rgba(255,255,255,0.06)" : "transparent",
-                    border: "none", borderLeft: `3px solid ${boardCategory === cat ? ACCENT : "transparent"}`,
-                    color: boardCategory === cat ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.42)",
-                    fontSize: 13, fontWeight: boardCategory === cat ? 600 : 400, cursor: "pointer", textAlign: "left", fontFamily: "inherit",
-                  }}
-                >
-                  <span>{cat}</span>
-                  <span style={{ fontSize: 11, color: "rgba(255,255,255,0.2)" }}>
-                    {cat === "전체" ? boardPosts.length : boardPosts.filter(p => p.category === cat).length || ""}
-                  </span>
+        return (
+        <div style={{ display: "flex", height: "calc(100vh - 48px)" }}>
+          {/* 사이드바 */}
+          <aside style={{ width: 168, flexShrink: 0, borderRight: "1px solid rgba(255,255,255,0.07)", paddingTop: 24, overflowY: "auto" }}>
+            {/* 전체 */}
+            <button onClick={() => setBoardCategory("전체")} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 16px", background: boardCategory === "전체" ? "rgba(255,255,255,0.06)" : "transparent", border: "none", borderLeft: `3px solid ${boardCategory === "전체" ? ACCENT : "transparent"}`, color: boardCategory === "전체" ? "rgba(255,255,255,0.94)" : "rgba(255,255,255,0.48)", fontSize: 16, fontWeight: boardCategory === "전체" ? 600 : 400, cursor: "pointer", textAlign: "left", fontFamily: "inherit" }}>
+              <span>전체</span><span style={{ fontSize: 14, color: "rgba(255,255,255,0.28)" }}>{boardPosts.length}</span>
+            </button>
+            <div style={{ height: 1, background: "rgba(255,255,255,0.07)", margin: "8px 14px" }} />
+            {BTREE.map(node => (
+              <div key={node.name}>
+                <button onClick={() => setBoardCategory(node.name)} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 16px", background: boardCategory === node.name ? "rgba(255,255,255,0.06)" : "transparent", border: "none", borderLeft: `3px solid ${boardCategory === node.name ? ACCENT : "transparent"}`, color: boardCategory === node.name ? "rgba(255,255,255,0.94)" : "rgba(255,255,255,0.48)", fontSize: 16, fontWeight: boardCategory === node.name ? 600 : 400, cursor: "pointer", textAlign: "left", fontFamily: "inherit" }}>
+                  <span>{node.name}</span>{bCount(node.name) > 0 && <span style={{ fontSize: 14, color: "rgba(255,255,255,0.28)" }}>{bCount(node.name)}</span>}
                 </button>
-              </>
+                {node.children?.map(child => (
+                  <button key={child} onClick={() => setBoardCategory(child)} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 16px 9px 30px", background: boardCategory === child ? "rgba(255,255,255,0.05)" : "transparent", border: "none", borderLeft: `3px solid ${boardCategory === child ? ACCENT : "transparent"}`, color: boardCategory === child ? "rgba(255,255,255,0.88)" : "rgba(255,255,255,0.38)", fontSize: 14, fontWeight: boardCategory === child ? 600 : 400, cursor: "pointer", textAlign: "left", fontFamily: "inherit" }}>
+                    <span>{child}</span>{bCount(child) > 0 && <span style={{ fontSize: 13, color: "rgba(255,255,255,0.22)" }}>{bCount(child)}</span>}
+                  </button>
+                ))}
+              </div>
             ))}
           </aside>
 
           {/* 우측 메인 */}
           <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-            {/* 상단 액션 바 */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 24px", borderBottom: "1px solid rgba(255,255,255,0.07)", flexShrink: 0 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <span style={{ fontSize: 16, fontWeight: 700, color: "rgba(255,255,255,0.88)" }}>{boardCategory}</span>
-                <span style={{ fontSize: 13, color: "rgba(255,255,255,0.28)" }}>
-                  {boardCategory === "전체" ? boardPosts.length : boardPosts.filter(p => p.category === boardCategory).length}개
-                </span>
-                <span style={{ fontSize: 12, fontWeight: 600, color: boardVisible ? GREEN : "rgba(255,255,255,0.3)", marginLeft: 8 }}>
+            {/* 액션 바 */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 28px", borderBottom: "1px solid rgba(255,255,255,0.07)", flexShrink: 0 }}>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
+                <span style={{ fontSize: 22, fontWeight: 700, color: "rgba(255,255,255,0.92)" }}>{boardCategory}</span>
+                <span style={{ fontSize: 15, color: "rgba(255,255,255,0.3)" }}>{visiblePosts.length}개</span>
+                <span style={{ fontSize: 14, fontWeight: 600, color: boardVisible ? GREEN : "rgba(255,255,255,0.32)", marginLeft: 6 }}>
                   {boardVisible ? "● 공개 중" : "○ 비공개"}
                 </span>
-                <button onClick={toggleBoardVisible} disabled={boardVisibleSaving} style={{ padding: "4px 12px", borderRadius: 7, fontSize: 11, fontWeight: 600, cursor: "pointer", border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.45)", fontFamily: "inherit" }}>
+                <button onClick={toggleBoardVisible} disabled={boardVisibleSaving} style={{ padding: "5px 14px", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer", border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)", fontFamily: "inherit" }}>
                   {boardVisible ? "비공개로" : "공개로"}
                 </button>
               </div>
               <div style={{ display: "flex", gap: 8 }}>
-                <button onClick={fetchBoard} disabled={boardPostsLoading} style={{ padding: "6px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer", border: "1px solid rgba(255,255,255,0.1)", background: "transparent", color: "rgba(255,255,255,0.4)", fontFamily: "inherit" }}>새로고침</button>
-                <button onClick={() => setWriteOpen(v => !v)} style={{ padding: "6px 18px", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer", border: "1px solid rgba(201,100,66,0.4)", background: "rgba(201,100,66,0.12)", color: ACCENT, fontFamily: "inherit" }}>
+                <button onClick={fetchBoard} disabled={boardPostsLoading} style={{ padding: "7px 16px", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer", border: "1px solid rgba(255,255,255,0.1)", background: "transparent", color: "rgba(255,255,255,0.45)", fontFamily: "inherit" }}>새로고침</button>
+                <button onClick={() => setWriteOpen(v => !v)} style={{ padding: "7px 20px", borderRadius: 8, fontSize: 15, fontWeight: 700, cursor: "pointer", border: `1px solid ${ACCENT}66`, background: `${ACCENT}1a`, color: ACCENT, fontFamily: "inherit" }}>
                   {writeOpen ? "취소" : "+ 글쓰기"}
                 </button>
               </div>
@@ -1212,20 +1225,20 @@ export default function AdminPage() {
 
             {/* 글쓰기 폼 */}
             {writeOpen && (
-              <div style={{ padding: "16px 24px", borderBottom: "1px solid rgba(255,255,255,0.07)", background: "rgba(201,100,66,0.04)", flexShrink: 0 }}>
+              <div style={{ padding: "18px 28px", borderBottom: "1px solid rgba(255,255,255,0.07)", background: `${ACCENT}08`, flexShrink: 0 }}>
                 <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
                   <select value={writeCategory} onChange={e => setWriteCategory(e.target.value)}
-                    style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: "#1a1a2e", color: "rgba(255,255,255,0.8)", fontSize: 13, fontFamily: "inherit", cursor: "pointer", flexShrink: 0 }}>
+                    style={{ padding: "9px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: "#1a1a2e", color: "rgba(255,255,255,0.8)", fontSize: 15, fontFamily: "inherit", cursor: "pointer", flexShrink: 0 }}>
                     {["쥔장 잡담","자소서 팁","면접 팁","공지·업데이트","뉴스","경제","기술","시사","쥔장에게 묻고 바란다"].map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                   <input value={writeTitle} onChange={e => setWriteTitle(e.target.value)} placeholder="제목"
-                    style={{ flex: 1, padding: "8px 14px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: "#1a1a2e", color: "rgba(255,255,255,0.88)", fontSize: 14, fontFamily: "inherit", outline: "none" }} />
+                    style={{ flex: 1, padding: "9px 14px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: "#1a1a2e", color: "rgba(255,255,255,0.88)", fontSize: 16, fontFamily: "inherit", outline: "none" }} />
                 </div>
                 <textarea value={writeContent} onChange={e => setWriteContent(e.target.value)} placeholder="본문" rows={6}
-                  style={{ width: "100%", padding: "10px 14px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: "#1a1a2e", color: "rgba(255,255,255,0.82)", fontSize: 14, fontFamily: "inherit", resize: "vertical", outline: "none", lineHeight: 1.7 }} />
-                <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
+                  style={{ width: "100%", padding: "12px 14px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: "#1a1a2e", color: "rgba(255,255,255,0.82)", fontSize: 15, fontFamily: "inherit", resize: "vertical", outline: "none", lineHeight: 1.75 }} />
+                <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 10 }}>
                   <button onClick={submitPost} disabled={writeSaving || !writeTitle.trim() || !writeContent.trim()}
-                    style={{ padding: "8px 24px", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer", border: "1px solid rgba(201,100,66,0.5)", background: "rgba(201,100,66,0.18)", color: ACCENT, fontFamily: "inherit", opacity: writeSaving || !writeTitle.trim() || !writeContent.trim() ? 0.5 : 1 }}>
+                    style={{ padding: "9px 28px", borderRadius: 8, fontSize: 15, fontWeight: 700, cursor: "pointer", border: `1px solid ${ACCENT}88`, background: `${ACCENT}2a`, color: ACCENT, fontFamily: "inherit", opacity: writeSaving || !writeTitle.trim() || !writeContent.trim() ? 0.45 : 1 }}>
                     {writeSaving ? "등록 중..." : "등록"}
                   </button>
                 </div>
@@ -1234,55 +1247,46 @@ export default function AdminPage() {
 
             {/* 글 목록 */}
             <div style={{ flex: 1, overflowY: "auto" }}>
-          {boardPostsLoading ? (
-            <div style={{ display: "flex", justifyContent: "center", padding: 60 }}>
-              <div style={{ width: 24, height: 24, borderRadius: "50%", border: `2px solid rgba(201,100,66,0.3)`, borderTopColor: ACCENT, animation: "spin 0.8s linear infinite" }} />
-            </div>
-          ) : boardPosts.filter(p => boardCategory === "전체" || p.category === boardCategory).length === 0 ? (
-            <div style={{ textAlign: "center", padding: "60px 0", color: "rgba(255,255,255,0.28)", fontSize: 14 }}>
-              글이 없어요
-            </div>
-          ) : (
-            <div style={{ border: "none" }}>
-              {/* 테이블 헤더 */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 80px 90px 140px", padding: "10px 24px", background: "rgba(255,255,255,0.03)", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
-                {["제목", "카테고리", "날짜", "상태", ""].map((h) => (
-                  <span key={h} style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.3)", letterSpacing: "0.05em" }}>{h}</span>
-                ))}
-              </div>
-              {boardPosts.filter(p => boardCategory === "전체" || p.category === boardCategory).map((post, i, arr) => (
-                <div
-                  key={post.id}
-                  style={{ display: "grid", gridTemplateColumns: "1fr 100px 80px 90px 140px", padding: "12px 24px", borderBottom: i < arr.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none", alignItems: "center", background: post.is_published ? "rgba(74,222,128,0.02)" : "transparent" }}
-                >
-                  <span style={{ fontSize: 13, color: "rgba(255,255,255,0.82)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 12 }}>
-                    {post.title || <span style={{ color: "rgba(255,255,255,0.25)", fontStyle: "italic" }}>(제목 없음)</span>}
-                  </span>
-                  <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 20, background: "rgba(201,100,66,0.14)", border: "1px solid rgba(201,100,66,0.28)", color: ACCENT, fontWeight: 600, justifySelf: "start" }}>{post.category}</span>
-                  <span style={{ fontSize: 12, color: "rgba(255,255,255,0.28)" }}>{new Date(post.created_at).toLocaleDateString("ko-KR", { month: "2-digit", day: "2-digit" })}</span>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: post.is_published ? GREEN : "rgba(255,255,255,0.35)" }}>{post.is_published ? "공개" : "비공개"}</span>
-                  <div style={{ display: "flex", gap: 6 }}>
-                    <button
-                      onClick={() => togglePostPublish(post.id, post.is_published)}
-                      style={{ padding: "5px 12px", borderRadius: 7, fontSize: 11, fontWeight: 600, cursor: "pointer", border: post.is_published ? `1px solid ${GREEN}55` : "1px solid rgba(255,255,255,0.15)", background: post.is_published ? `${GREEN}18` : "rgba(255,255,255,0.07)", color: post.is_published ? GREEN : "rgba(255,255,255,0.5)", transition: "all 0.15s", whiteSpace: "nowrap", fontFamily: "inherit" }}
-                    >
-                      {post.is_published ? "비공개로" : "공개로"}
-                    </button>
-                    <button
-                      onClick={() => deletePost(post.id)}
-                      style={{ padding: "5px 10px", borderRadius: 7, fontSize: 11, fontWeight: 600, cursor: "pointer", border: `1px solid ${RED}44`, background: "transparent", color: `${RED}bb`, transition: "all 0.15s", whiteSpace: "nowrap", fontFamily: "inherit" }}
-                    >
-                      삭제
-                    </button>
-                  </div>
+              {boardPostsLoading ? (
+                <div style={{ display: "flex", justifyContent: "center", padding: 60 }}>
+                  <div style={{ width: 24, height: 24, borderRadius: "50%", border: `2px solid rgba(201,100,66,0.3)`, borderTopColor: ACCENT, animation: "spin 0.8s linear infinite" }} />
                 </div>
-              ))}
-            </div>
-          )}
+              ) : visiblePosts.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "60px 0", color: "rgba(255,255,255,0.28)", fontSize: 16 }}>글이 없어요</div>
+              ) : (
+                <>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 120px 90px 96px 156px", padding: "10px 28px", background: "rgba(255,255,255,0.03)", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+                    {["제목", "카테고리", "날짜", "상태", ""].map(h => (
+                      <span key={h} style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.3)", letterSpacing: "0.04em" }}>{h}</span>
+                    ))}
+                  </div>
+                  {visiblePosts.map((post, i, arr) => (
+                    <div key={post.id} style={{ display: "grid", gridTemplateColumns: "1fr 120px 90px 96px 156px", padding: "15px 28px", borderBottom: i < arr.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none", alignItems: "center" }}>
+                      <span style={{ fontSize: 16, color: "rgba(255,255,255,0.85)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 16 }}>
+                        {post.title || <span style={{ color: "rgba(255,255,255,0.25)", fontStyle: "italic" }}>(제목 없음)</span>}
+                      </span>
+                      <span style={{ fontSize: 13, padding: "3px 10px", borderRadius: 20, background: `${ACCENT}22`, border: `1px solid ${ACCENT}44`, color: ACCENT, fontWeight: 600, justifySelf: "start" }}>{post.category}</span>
+                      <span style={{ fontSize: 14, color: "rgba(255,255,255,0.32)" }}>{new Date(post.created_at).toLocaleDateString("ko-KR", { month: "2-digit", day: "2-digit" })}</span>
+                      <span style={{ fontSize: 14, fontWeight: 600, color: post.is_published ? GREEN : "rgba(255,255,255,0.35)" }}>{post.is_published ? "공개" : "비공개"}</span>
+                      <div style={{ display: "flex", gap: 6 }}>
+                        <button onClick={() => togglePostPublish(post.id, post.is_published)}
+                          style={{ padding: "6px 14px", borderRadius: 7, fontSize: 13, fontWeight: 600, cursor: "pointer", border: post.is_published ? `1px solid ${GREEN}55` : "1px solid rgba(255,255,255,0.15)", background: post.is_published ? `${GREEN}18` : "rgba(255,255,255,0.07)", color: post.is_published ? GREEN : "rgba(255,255,255,0.5)", whiteSpace: "nowrap", fontFamily: "inherit" }}>
+                          {post.is_published ? "비공개로" : "공개로"}
+                        </button>
+                        <button onClick={() => deletePost(post.id)}
+                          style={{ padding: "6px 12px", borderRadius: 7, fontSize: 13, fontWeight: 600, cursor: "pointer", border: `1px solid ${RED}44`, background: "transparent", color: `${RED}cc`, whiteSpace: "nowrap", fontFamily: "inherit" }}>
+                          삭제
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </>
+              )}
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* 유저 삭제 확인 모달 */}
       {deleteTarget && (
