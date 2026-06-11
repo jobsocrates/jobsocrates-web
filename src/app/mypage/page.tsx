@@ -51,7 +51,6 @@ export default function MyPage() {
   const [pdfLoadingId, setPdfLoadingId] = useState<string | null>(null);
   const [viewLoadingId, setViewLoadingId] = useState<string | null>(null);
   const [showAllSessions, setShowAllSessions] = useState(false);
-  const [dismissedSessionId, setDismissedSessionId] = useState<string | null>(null);
 
   // 비밀번호 변경
   const [pwNew, setPwNew] = useState("");
@@ -66,7 +65,6 @@ export default function MyPage() {
   const [deletePwError, setDeletePwError] = useState("");
 
   useEffect(() => {
-    setDismissedSessionId(localStorage.getItem("lastDismissedSessionId"));
     supabase.auth.getUser().then(async ({ data }) => {
       if (!data.user) { setLoading(false); return; }
       setUser({ id: data.user.id, email: data.user.email ?? "" });
@@ -331,12 +329,6 @@ export default function MyPage() {
             const totalCompleted = allItems.filter(i => (i.revisions || []).length > 0).length;
             const totalDigging = allItems.reduce((acc, i) => acc + (i.messages || []).filter(m => m.role === "user").length, 0);
             const totalInterviewDone = allItems.reduce((acc, i) => acc + (i.interview_questions || []).filter(q => (q.interview_answers || []).length > 0).length, 0);
-            const firstSession = sessions[0];
-            const firstHasIncomplete = firstSession?.id !== dismissedSessionId &&
-              firstSession?.cover_items?.some(i =>
-                (i.revisions || []).length === 0 && (i.messages || []).length > 0
-              );
-
             if (sessions.length === 0) {
               return (
                 <div className="card-depth-sm" style={{ borderRadius: 16, border: "1px solid rgba(255,255,255,0.07)", background: "rgba(255,255,255,0.02)", padding: "36px 20px", textAlign: "center" }}>
@@ -364,17 +356,6 @@ export default function MyPage() {
                       </div>
                     ))}
                   </div>
-                )}
-
-                {/* 이어하기 CTA */}
-                {firstHasIncomplete && (
-                  <Link href="/chat" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 18px", borderRadius: 14, background: `rgba(201,100,66,0.1)`, border: `1px solid rgba(201,100,66,0.3)`, textDecoration: "none" }}>
-                    <div>
-                      <p style={{ fontSize: 14, fontWeight: 700, color: "rgba(255,255,255,0.92)", marginBottom: 3 }}>작성 중인 자소서가 있어요</p>
-                      <p style={{ fontSize: 13, color: "rgba(255,255,255,0.5)" }}>{firstSession.job_title || "직무 미입력"} · 이어서 완성해보세요</p>
-                    </div>
-                    <span style={{ fontSize: 22, color: ACCENT, flexShrink: 0, marginLeft: 12, fontWeight: 700 }}>→</span>
-                  </Link>
                 )}
 
                 <p style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.28)", letterSpacing: "0.08em", textTransform: "uppercase", paddingLeft: 2, marginBottom: -4 }}>이전 기록</p>
