@@ -11,10 +11,11 @@ const NEWS_CHILDREN = ["경제", "기술", "시사"];
 
 interface CategoryNode { name: string; children?: string[] }
 const CATEGORY_TREE: CategoryNode[] = [
+  { name: "공지·업데이트" },
+  { name: "──" },
   { name: "쥔장 잡담" },
   { name: "자소서 팁" },
   { name: "면접 팁" },
-  { name: "공지·업데이트" },
   { name: "뉴스", children: NEWS_CHILDREN },
   { name: "쥔장에게 묻고 바란다" },
 ];
@@ -105,14 +106,18 @@ export default function BoardPage() {
         <aside style={{ width: 160, flexShrink: 0, borderRight: `1px solid ${BORDER}`, paddingTop: 28, position: "sticky", top: 54, height: "calc(100vh - 54px)", overflowY: "auto" }}>
           <SideItem label="전체" count={countFor(posts, "전체")} active={category === "전체"} onClick={() => setCategory("전체")} />
           <div style={{ height: 1, background: BORDER, margin: "10px 14px" }} />
-          {CATEGORY_TREE.map(node => (
-            <div key={node.name}>
-              <SideItem label={node.name} count={countFor(posts, node.name)} active={category === node.name} onClick={() => setCategory(node.name)} />
-              {node.children?.map(child => (
-                <SideChild key={child} label={child} count={countFor(posts, child)} active={category === child} onClick={() => setCategory(child)} />
-              ))}
-            </div>
-          ))}
+          {CATEGORY_TREE.map(node =>
+            node.name === "──"
+              ? <div key="sep2" style={{ height: 1, background: BORDER, margin: "10px 14px" }} />
+              : (
+                <div key={node.name}>
+                  <SideItem label={node.name} count={countFor(posts, node.name)} active={category === node.name} onClick={() => setCategory(node.name)} />
+                  {node.children?.map(child => (
+                    <SideChild key={child} label={child} count={countFor(posts, child)} active={category === child} onClick={() => setCategory(child)} />
+                  ))}
+                </div>
+              )
+          )}
         </aside>
 
         {/* 본문 */}

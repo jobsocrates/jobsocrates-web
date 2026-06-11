@@ -1162,7 +1162,9 @@ export default function AdminPage() {
         const NEWS_CH = ["경제", "기술", "시사"];
         interface BCNode { name: string; children?: string[] }
         const BTREE: BCNode[] = [
-          { name: "쥔장 잡담" }, { name: "자소서 팁" }, { name: "면접 팁" }, { name: "공지·업데이트" },
+          { name: "공지·업데이트" },
+          { name: "──" },
+          { name: "쥔장 잡담" }, { name: "자소서 팁" }, { name: "면접 팁" },
           { name: "뉴스", children: NEWS_CH },
           { name: "쥔장에게 묻고 바란다" },
         ];
@@ -1187,18 +1189,22 @@ export default function AdminPage() {
               <span>전체</span><span style={{ fontSize: 14, color: "rgba(255,255,255,0.28)" }}>{boardPosts.length}</span>
             </button>
             <div style={{ height: 1, background: "rgba(255,255,255,0.07)", margin: "8px 14px" }} />
-            {BTREE.map(node => (
-              <div key={node.name}>
-                <button onClick={() => setBoardCategory(node.name)} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 16px", background: boardCategory === node.name ? "rgba(255,255,255,0.06)" : "transparent", border: "none", borderLeft: `3px solid ${boardCategory === node.name ? ACCENT : "transparent"}`, color: boardCategory === node.name ? "rgba(255,255,255,0.94)" : "rgba(255,255,255,0.48)", fontSize: 16, fontWeight: boardCategory === node.name ? 600 : 400, cursor: "pointer", textAlign: "left", fontFamily: "inherit" }}>
-                  <span>{node.name}</span>{bCount(node.name) > 0 && <span style={{ fontSize: 14, color: "rgba(255,255,255,0.28)" }}>{bCount(node.name)}</span>}
-                </button>
-                {node.children?.map(child => (
-                  <button key={child} onClick={() => setBoardCategory(child)} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 16px 9px 30px", background: boardCategory === child ? "rgba(255,255,255,0.05)" : "transparent", border: "none", borderLeft: `3px solid ${boardCategory === child ? ACCENT : "transparent"}`, color: boardCategory === child ? "rgba(255,255,255,0.88)" : "rgba(255,255,255,0.38)", fontSize: 14, fontWeight: boardCategory === child ? 600 : 400, cursor: "pointer", textAlign: "left", fontFamily: "inherit" }}>
-                    <span>{child}</span>{bCount(child) > 0 && <span style={{ fontSize: 13, color: "rgba(255,255,255,0.22)" }}>{bCount(child)}</span>}
-                  </button>
-                ))}
-              </div>
-            ))}
+            {BTREE.map(node =>
+              node.name === "──"
+                ? <div key="sep2" style={{ height: 1, background: "rgba(255,255,255,0.07)", margin: "8px 14px" }} />
+                : (
+                  <div key={node.name}>
+                    <button onClick={() => setBoardCategory(node.name)} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 16px", background: boardCategory === node.name ? "rgba(255,255,255,0.06)" : "transparent", border: "none", borderLeft: `3px solid ${boardCategory === node.name ? ACCENT : "transparent"}`, color: boardCategory === node.name ? "rgba(255,255,255,0.94)" : "rgba(255,255,255,0.48)", fontSize: 16, fontWeight: boardCategory === node.name ? 600 : 400, cursor: "pointer", textAlign: "left", fontFamily: "inherit" }}>
+                      <span>{node.name}</span>{bCount(node.name) > 0 && <span style={{ fontSize: 14, color: "rgba(255,255,255,0.28)" }}>{bCount(node.name)}</span>}
+                    </button>
+                    {node.children?.map(child => (
+                      <button key={child} onClick={() => setBoardCategory(child)} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 16px 9px 30px", background: boardCategory === child ? "rgba(255,255,255,0.05)" : "transparent", border: "none", borderLeft: `3px solid ${boardCategory === child ? ACCENT : "transparent"}`, color: boardCategory === child ? "rgba(255,255,255,0.88)" : "rgba(255,255,255,0.38)", fontSize: 14, fontWeight: boardCategory === child ? 600 : 400, cursor: "pointer", textAlign: "left", fontFamily: "inherit" }}>
+                        <span>{child}</span>{bCount(child) > 0 && <span style={{ fontSize: 13, color: "rgba(255,255,255,0.22)" }}>{bCount(child)}</span>}
+                      </button>
+                    ))}
+                  </div>
+                )
+            )}
           </aside>
 
           {/* 우측 메인 */}
