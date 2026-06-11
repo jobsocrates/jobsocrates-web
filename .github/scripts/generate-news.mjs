@@ -19,10 +19,10 @@ if (existsSync(envPath)) {
   }
 }
 
-// ── 카테고리 순환 (경제 → 기술 → 시사 → 경제 → ...) ──
+// ── 카테고리 순환 (경제+기술 → 사회+글로벌 → 경제+기술 → ...) ──
 // DB에 저장되는 카테고리는 admin 게시판 탭 이름과 일치해야 함
-const START_DATE = new Date("2026-06-11T00:00:00+09:00");
-const CATEGORIES = ["경제", "기술", "사회", "글로벌"];
+const START_DATE = new Date("2026-06-12T00:00:00+09:00");
+const CATEGORY_PAIRS = [["경제", "기술"], ["사회", "글로벌"]];
 
 // 각 카테고리별 RSS 후보 (앞에서부터 시도)
 const RSS = {
@@ -51,12 +51,12 @@ const RSS = {
   ],
 };
 
-function todayCategory() {
+function todayPair() {
   const now = new Date();
   const kst = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
   const start = new Date(START_DATE.toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
   const diff = Math.floor((kst - start) / 86400000);
-  return CATEGORIES[((diff % CATEGORIES.length) + CATEGORIES.length) % CATEGORIES.length];
+  return CATEGORY_PAIRS[((diff % CATEGORY_PAIRS.length) + CATEGORY_PAIRS.length) % CATEGORY_PAIRS.length];
 }
 
 function todayStr() {
@@ -210,28 +210,30 @@ async function saveToSupabase(title, content, category) {
 
 // ── 메인 ──
 async function main() {
-  // --category 뉴스_시사 처럼 직접 지정 가능
   const argIdx = process.argv.indexOf("--category");
-  const category = argIdx !== -1 ? process.argv[argIdx + 1] : todayCategory();
-  const dateStr  = todayStr();
+  const categories = argIdx !== -1 ? [process.argv[argIdx + 1]] : todayPair();
+  const dateStr = todayStr();
 
-  console.log(`\n📅 ${dateStr} | 카테고리: ${category}`);
-  console.log("🔍 뉴스 수집 중...");
+  console.log(`\n📅 ${dateStr} | 카테고리: ${categories.join(" + ")}`);
 
-  const articles = await fetchArticles(category);
-  if (articles.length === 0) throw new Error("기사를 가져오지 못했습니다");
-  console.log(`   ${articles.length}개 기사 수집 완료`);
-  articles.forEach((a, i) => console.log(`   [${i+1}] ${a.title}`));
+  for (const category of categories) {
+    console.log(`\n─── ${category} ───`);
+    console.log("🔍 뉴스 수집 중...");
+    const articles = await fetchArticles(category);
+    if (articles.length === 0) throw new Error(`${category}: 기사를 가져오지 못했습니다`);
+    console.log(`   ${articles.length}개 기사 수집 완료`);
+    articles.forEach((a, i) => console.log(`   [${i+1}] ${a.title}`));
 
-  console.log("🤖 AI 정리 중...");
-  const { generatedTitle, content } = await summarize(category, articles);
-  const finalTitle = generatedTitle ?? `${category} 뉴스 ${dateStr}`;
+    console.log("🤖 AI 정리 중...");
+    const { generatedTitle, content } = await summarize(category, articles);
+    const finalTitle = generatedTitle ?? `${category} 뉴스 ${dateStr}`;
 
-  console.log("💾 Supabase 임시저장 중...");
-  await saveToSupabase(finalTitle, content, category);
+    console.log("💾 Supabase 임시저장 중...");
+    await saveToSupabase(finalTitle, content, category);
+    console.log(`   ✅ 완료! 제목: "${finalTitle}"`);
+  }
 
-  console.log(`\n✅ 완료! 제목: "${finalTitle}"`);
-  console.log("   관리자 페이지 > 게시판 탭에서 확인 후 발행하세요.\n");
+  console.log(`\n✅ 전체 완료! 관리자 페이지 > 게시판 탭에서 확인 후 발행하세요.\n`);
 }
 
 main().catch((err) => {
