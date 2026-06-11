@@ -127,7 +127,8 @@ export function TutorialModal({ userId, onClose }: Props) {
         className="w-full flex flex-col rounded-3xl overflow-hidden"
         style={{
           maxWidth: "min(96vw, 820px)",
-          maxHeight: "96vh",
+          maxHeight: "92dvh",
+          height: "92dvh",
           background: "#0D0D18",
           border: "1px solid rgba(255,255,255,0.1)",
           boxShadow: "0 60px 120px rgba(0,0,0,0.8)",
@@ -135,7 +136,7 @@ export function TutorialModal({ userId, onClose }: Props) {
         }}
       >
         {/* ── 헤더 ── */}
-        <div className="flex items-center justify-between px-7 pt-5 pb-0 flex-shrink-0">
+        <div className="flex items-center justify-between px-5 sm:px-7 pt-4 sm:pt-5 pb-0 flex-shrink-0">
           <span
             className="text-sm font-semibold px-3 py-1 rounded-full"
             style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.4)", border: "1px solid rgba(255,255,255,0.08)" }}
@@ -159,18 +160,18 @@ export function TutorialModal({ userId, onClose }: Props) {
         </div>
 
         {/* ── 챕터 + 제목 ── */}
-        <div className="px-7 pt-4 pb-0 flex-shrink-0">
-          <div className="flex items-center gap-2.5 mb-2">
+        <div className="px-5 sm:px-7 pt-3 sm:pt-4 pb-0 flex-shrink-0">
+          <div className="flex items-center gap-2 mb-1.5">
             <span
-              className="text-sm font-bold px-3 py-1 rounded-full"
+              className="text-xs sm:text-sm font-bold px-2.5 py-0.5 rounded-full"
               style={{ background: `${ACCENT}18`, color: ACCENT, border: `1px solid ${ACCENT}35` }}
             >
               {current.chapter}
             </span>
-            <span className="text-xl leading-none">{current.icon}</span>
+            <span className="text-lg sm:text-xl leading-none">{current.icon}</span>
           </div>
           <h2
-            className="text-2xl sm:text-3xl font-bold leading-snug"
+            className="text-xl sm:text-3xl font-bold leading-snug"
             style={{ color: "rgba(255,255,255,0.96)", letterSpacing: "-0.03em" }}
           >
             {current.title}
@@ -180,7 +181,7 @@ export function TutorialModal({ userId, onClose }: Props) {
         {/* ── 본문 ── */}
         <div
           key={animKey}
-          className="hide-scrollbar px-7 pb-2 pt-4 flex flex-col gap-3 overflow-y-auto flex-1"
+          className="hide-scrollbar px-5 sm:px-7 pb-2 pt-3 sm:pt-4 flex flex-col gap-2.5 sm:gap-3 overflow-y-auto flex-1 min-h-0"
           style={{ animation: "pageIn 0.32s ease forwards" }}
         >
 
@@ -220,18 +221,18 @@ export function TutorialModal({ userId, onClose }: Props) {
                     key={i}
                     className={isLast ? "sm:col-span-2" : ""}
                     style={{
-                      padding: "16px 18px",
-                      borderRadius: 16,
+                      padding: "12px 14px",
+                      borderRadius: 14,
                       background: c.bg,
                       border: `1px solid ${c.border}`,
                       display: "flex",
-                      gap: 16,
+                      gap: 12,
                       alignItems: "flex-start",
                     }}
                   >
                     <span
                       style={{
-                        fontSize: 24,
+                        fontSize: 20,
                         fontWeight: 800,
                         color: c.num,
                         lineHeight: 1,
@@ -243,10 +244,10 @@ export function TutorialModal({ userId, onClose }: Props) {
                       {step.num}
                     </span>
                     <div>
-                      <p style={{ fontSize: 17, fontWeight: 700, color: "rgba(255,255,255,0.92)", marginBottom: 5 }}>
+                      <p style={{ fontSize: 15, fontWeight: 700, color: "rgba(255,255,255,0.92)", marginBottom: 3 }}>
                         {step.label}
                       </p>
-                      <p style={{ fontSize: 14, color: "rgba(255,255,255,0.5)", lineHeight: 1.65, wordBreak: "keep-all" }}>
+                      <p style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", lineHeight: 1.6, wordBreak: "keep-all" }}>
                         {step.desc}
                       </p>
                     </div>
@@ -332,7 +333,7 @@ export function TutorialModal({ userId, onClose }: Props) {
 
         {/* ── 버튼 ── */}
         <div
-          className="px-7 pt-3 pb-6 flex flex-col gap-2.5 flex-shrink-0"
+          className="px-5 sm:px-7 pt-3 pb-4 sm:pb-6 flex flex-col gap-2 flex-shrink-0"
           style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
         >
           <button

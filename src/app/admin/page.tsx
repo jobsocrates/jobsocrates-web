@@ -546,27 +546,33 @@ export default function AdminPage() {
           .admin-review-right { width: 100%; }
           .admin-review-empty { display: none !important; }
           .admin-mobile-back { display: flex; }
+          .admin-board-sidebar { display: none !important; }
+          .admin-board-cat-select { display: flex !important; }
+          nav::-webkit-scrollbar { display: none; }
         }
       `}</style>
 
       {/* Header */}
-      <header style={{ height: 56, padding: "0 20px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid rgba(255,255,255,0.08)", background: "rgba(13,13,24,0.98)", backdropFilter: "blur(12px)", position: "sticky", top: 0, zIndex: 40 }}>
-        <span style={{ fontSize: 13, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(255,255,255,0.7)" }}>Admin</span>
-
-        <nav style={{ display: "flex", gap: 4 }}>
+      <header style={{ borderBottom: "1px solid rgba(255,255,255,0.08)", background: "rgba(13,13,24,0.98)", backdropFilter: "blur(12px)", position: "sticky", top: 0, zIndex: 40 }}>
+        {/* 상단 바: ADMIN + 홈 */}
+        <div style={{ height: 48, padding: "0 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <span style={{ fontSize: 13, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(255,255,255,0.7)", flexShrink: 0 }}>Admin</span>
+          <a href="/" style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.55)", textDecoration: "none", display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+            </svg>
+            홈
+          </a>
+        </div>
+        {/* 탭 바: 스크롤 가능 */}
+        <nav style={{ display: "flex", gap: 2, overflowX: "auto", padding: "0 12px 8px", scrollbarWidth: "none" }}>
           {(["dashboard", "review", "notes", "users", "funnel", "board"] as Tab[]).map((t) => (
-            <button key={t} onClick={() => { setTab(t); if (t === "funnel" && !funnelData) fetchFunnel(); if (t === "board") fetchBoard(); }} style={{ padding: "6px 14px", borderRadius: 8, fontSize: 13, fontWeight: tab === t ? 700 : 500, border: tab === t ? "1px solid rgba(255,255,255,0.15)" : "1px solid transparent", cursor: "pointer", transition: "all 0.15s", background: tab === t ? "rgba(255,255,255,0.1)" : "transparent", color: tab === t ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.5)" }}>
+            <button key={t} onClick={() => { setTab(t); if (t === "funnel" && !funnelData) fetchFunnel(); if (t === "board") fetchBoard(); }}
+              style={{ padding: "6px 14px", borderRadius: 8, fontSize: 13, fontWeight: tab === t ? 700 : 500, border: tab === t ? "1px solid rgba(255,255,255,0.15)" : "1px solid transparent", cursor: "pointer", background: tab === t ? "rgba(255,255,255,0.1)" : "transparent", color: tab === t ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.5)", whiteSpace: "nowrap", flexShrink: 0 }}>
               {t === "dashboard" ? "대시보드" : t === "review" ? "대화 리뷰" : t === "notes" ? "프롬프트 노트" : t === "users" ? "유저 관리" : t === "funnel" ? "통계" : "게시판"}
             </button>
           ))}
         </nav>
-
-        <a href="/" style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.55)", textDecoration: "none", display: "flex", alignItems: "center", gap: 5 }}>
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
-          </svg>
-          홈
-        </a>
       </header>
 
       {/* ─── DASHBOARD ─── */}
@@ -1182,8 +1188,8 @@ export default function AdminPage() {
 
         return (
         <div style={{ display: "flex", height: "calc(100vh - 48px)" }}>
-          {/* 사이드바 */}
-          <aside style={{ width: 168, flexShrink: 0, borderRight: "1px solid rgba(255,255,255,0.07)", paddingTop: 24, overflowY: "auto" }}>
+          {/* 사이드바 (모바일 숨김) */}
+          <aside className="admin-board-sidebar" style={{ width: 168, flexShrink: 0, borderRight: "1px solid rgba(255,255,255,0.07)", paddingTop: 24, overflowY: "auto" }}>
             {/* 전체 */}
             <button onClick={() => setBoardCategory("전체")} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 16px", background: boardCategory === "전체" ? "rgba(255,255,255,0.06)" : "transparent", border: "none", borderLeft: `3px solid ${boardCategory === "전체" ? ACCENT : "transparent"}`, color: boardCategory === "전체" ? "rgba(255,255,255,0.94)" : "rgba(255,255,255,0.48)", fontSize: 16, fontWeight: boardCategory === "전체" ? 600 : 400, cursor: "pointer", textAlign: "left", fontFamily: "inherit" }}>
               <span>전체</span><span style={{ fontSize: 14, color: "rgba(255,255,255,0.28)" }}>{boardPosts.length}</span>
@@ -1209,6 +1215,13 @@ export default function AdminPage() {
 
           {/* 우측 메인 */}
           <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+            {/* 모바일 카테고리 셀렉트 */}
+            <div className="admin-board-cat-select" style={{ display: "none", padding: "10px 16px", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+              <select value={boardCategory} onChange={e => setBoardCategory(e.target.value)}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: "#1a1a2e", color: "rgba(255,255,255,0.85)", fontSize: 15, fontFamily: "inherit" }}>
+                {["전체","공지·업데이트","쥔장 잡담","자소서 팁","면접 팁","뉴스","경제","기술","시사","쥔장에게 묻고 바란다"].map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
             {/* 액션 바 */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 28px", borderBottom: "1px solid rgba(255,255,255,0.07)", flexShrink: 0 }}>
               <div style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
