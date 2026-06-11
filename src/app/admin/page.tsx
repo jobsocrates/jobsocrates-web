@@ -116,6 +116,11 @@ export default function AdminPage() {
   const [boardPostsLoading, setBoardPostsLoading] = useState(false);
   const [boardVisible, setBoardVisible] = useState(false);
   const [boardVisibleSaving, setBoardVisibleSaving] = useState(false);
+  const [writeTitle, setWriteTitle] = useState("");
+  const [writeCategory, setWriteCategory] = useState("쥔장 잡담");
+  const [writeContent, setWriteContent] = useState("");
+  const [writeSaving, setWriteSaving] = useState(false);
+  const [writeOpen, setWriteOpen] = useState(false);
 
   // Notes
   const [goodNotes, setGoodNotes] = useState("");
@@ -156,6 +161,24 @@ export default function AdminPage() {
   async function deletePost(id: string) {
     await supabase.from("posts").delete().eq("id", id);
     setBoardPosts((prev) => prev.filter((p) => p.id !== id));
+  }
+
+  async function submitPost() {
+    if (!writeTitle.trim() || !writeContent.trim()) return;
+    setWriteSaving(true);
+    const { data } = await supabase
+      .from("posts")
+      .insert({ title: writeTitle.trim(), content: writeContent.trim(), category: writeCategory, is_published: true })
+      .select()
+      .single();
+    if (data) {
+      setBoardPosts((prev) => [data, ...prev]);
+      setWriteTitle("");
+      setWriteContent("");
+      setWriteCategory("쥔장 잡담");
+      setWriteOpen(false);
+    }
+    setWriteSaving(false);
   }
 
   async function toggleBoardVisible() {
@@ -1135,32 +1158,75 @@ export default function AdminPage() {
 
       {/* ─── BOARD ─── */}
       {tab === "board" && (
-        <div style={{ padding: "28px 24px", maxWidth: 900, margin: "0 auto" }}>
-          {/* 게시판 공개 토글 */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24, padding: "20px 24px", borderRadius: 16, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
-            <div>
-              <p style={{ fontSize: 15, fontWeight: 700, color: "rgba(255,255,255,0.85)", marginBottom: 4 }}>게시판 공개 여부</p>
-              <p style={{ fontSize: 12, color: "rgba(255,255,255,0.3)" }}>{boardVisible ? "/board 페이지 공개 중" : "/board 페이지 비공개 상태"}</p>
+        <div style={{ padding: "28px 24px", maxWidth: 1000, margin: "0 auto" }}>
+          {/* 상단 액션 바 */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <span style={{ fontSize: 14, fontWeight: 700, color: boardVisible ? "rgb(74,222,128)" : "rgba(255,255,255,0.4)" }}>
+                {boardVisible ? "● 공개 중" : "○ 비공개"}
+              </span>
+              <button
+                onClick={toggleBoardVisible}
+                disabled={boardVisibleSaving}
+                style={{ padding: "6px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: boardVisibleSaving ? "default" : "pointer", border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.55)", fontFamily: "inherit", opacity: boardVisibleSaving ? 0.5 : 1 }}
+              >
+                {boardVisible ? "비공개로" : "공개로"}
+              </button>
             </div>
-            <button
-              onClick={toggleBoardVisible}
-              disabled={boardVisibleSaving}
-              style={{ padding: "9px 22px", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: boardVisibleSaving ? "default" : "pointer", border: boardVisible ? `1px solid ${GREEN}55` : "1px solid rgba(255,255,255,0.15)", background: boardVisible ? `${GREEN}18` : "rgba(255,255,255,0.07)", color: boardVisible ? GREEN : "rgba(255,255,255,0.55)", transition: "all 0.2s", opacity: boardVisibleSaving ? 0.5 : 1 }}
-            >
-              {boardVisible ? "공개 중 → 비공개로" : "비공개 → 공개로"}
-            </button>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={fetchBoard} disabled={boardPostsLoading} style={{ padding: "7px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer", border: "1px solid rgba(255,255,255,0.1)", background: "transparent", color: "rgba(255,255,255,0.45)", fontFamily: "inherit" }}>
+                새로고침
+              </button>
+              <button
+                onClick={() => setWriteOpen((v) => !v)}
+                style={{ padding: "7px 18px", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer", border: "1px solid rgba(201,100,66,0.4)", background: "rgba(201,100,66,0.12)", color: "#C96442", fontFamily: "inherit" }}
+              >
+                {writeOpen ? "취소" : "+ 글쓰기"}
+              </button>
+            </div>
           </div>
 
-          {/* 글 목록 헤더 */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-            <div>
-              <p style={{ fontSize: 15, fontWeight: 700, color: "rgba(255,255,255,0.85)", marginBottom: 3 }}>게시글 목록 ({boardPosts.length}개)</p>
-              <p style={{ fontSize: 12, color: "rgba(255,255,255,0.3)" }}>스크립트 실행 → 여기서 공개 선택</p>
+          {/* 글쓰기 폼 */}
+          {writeOpen && (
+            <div style={{ marginBottom: 24, padding: "22px 24px", borderRadius: 12, border: "1px solid rgba(201,100,66,0.25)", background: "rgba(201,100,66,0.05)" }}>
+              <p style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.7)", marginBottom: 16 }}>새 글 작성</p>
+              <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
+                <select
+                  value={writeCategory}
+                  onChange={(e) => setWriteCategory(e.target.value)}
+                  style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: "#1a1a2e", color: "rgba(255,255,255,0.8)", fontSize: 13, fontFamily: "inherit", cursor: "pointer", flexShrink: 0 }}
+                >
+                  {["쥔장 잡담","자소서 팁","면접 팁","공지·업데이트","뉴스","경제","기술","시사","쥔장에게 묻고 바란다"].map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+                <input
+                  value={writeTitle}
+                  onChange={(e) => setWriteTitle(e.target.value)}
+                  placeholder="제목을 입력하세요"
+                  style={{ flex: 1, padding: "8px 14px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: "#1a1a2e", color: "rgba(255,255,255,0.88)", fontSize: 14, fontFamily: "inherit", outline: "none" }}
+                />
+              </div>
+              <textarea
+                value={writeContent}
+                onChange={(e) => setWriteContent(e.target.value)}
+                placeholder="본문을 입력하세요"
+                rows={8}
+                style={{ width: "100%", padding: "12px 14px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: "#1a1a2e", color: "rgba(255,255,255,0.82)", fontSize: 14, fontFamily: "inherit", resize: "vertical", outline: "none", lineHeight: 1.7 }}
+              />
+              <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 10 }}>
+                <button
+                  onClick={submitPost}
+                  disabled={writeSaving || !writeTitle.trim() || !writeContent.trim()}
+                  style={{ padding: "9px 24px", borderRadius: 9, fontSize: 13, fontWeight: 700, cursor: writeSaving || !writeTitle.trim() || !writeContent.trim() ? "default" : "pointer", border: "1px solid rgba(201,100,66,0.5)", background: "rgba(201,100,66,0.18)", color: "#C96442", fontFamily: "inherit", opacity: writeSaving || !writeTitle.trim() || !writeContent.trim() ? 0.5 : 1 }}
+                >
+                  {writeSaving ? "등록 중..." : "등록"}
+                </button>
+              </div>
             </div>
-            <button onClick={fetchBoard} disabled={boardPostsLoading} style={{ padding: "6px 16px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: boardPostsLoading ? "default" : "pointer", border: "1px solid rgba(255,255,255,0.1)", background: "transparent", color: "rgba(255,255,255,0.5)", transition: "all 0.15s" }}>
-              {boardPostsLoading ? "로딩 중..." : "새로고침"}
-            </button>
-          </div>
+          )}
+
+          <p style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.38)", marginBottom: 10 }}>게시글 목록 ({boardPosts.length}개)</p>
 
           {/* 글 목록 */}
           {boardPostsLoading ? (
