@@ -31,7 +31,7 @@ interface SessionItem {
   created_at: string;
   user_id: string;
   profiles?: { email: string } | null;
-  admin_reviews: { id?: string; rating: string | null; comment: string }[];
+  admin_reviews: { id?: string; rating: string | null; comment: string; created_at?: string }[];
 }
 
 interface CoverItemFull {
@@ -274,20 +274,23 @@ export default function AdminPage() {
     if (error) console.error("[Admin] fetchSessions error:", error);
 
     const token = sessionRes.data.session?.access_token;
-    let reviewsMap: Record<string, { id: string; rating: string | null; comment: string }> = {};
+    let reviewsMap: Record<string, { id: string; rating: string | null; comment: string; created_at: string }[]> = {};
     if (token) {
       const res = await fetch("/api/admin/reviews", {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
-        const reviews: { id: string; session_id: string; rating: string | null; comment: string }[] = await res.json();
-        for (const r of reviews) reviewsMap[r.session_id] = r;
+        const reviews: { id: string; session_id: string; rating: string | null; comment: string; created_at: string }[] = await res.json();
+        for (const r of reviews) {
+          if (!reviewsMap[r.session_id]) reviewsMap[r.session_id] = [];
+          reviewsMap[r.session_id].push(r);
+        }
       }
     }
 
     const merged = (data || []).map((s: any) => ({
       ...s,
-      admin_reviews: reviewsMap[s.id] ? [reviewsMap[s.id]] : [],
+      admin_reviews: reviewsMap[s.id] || [],
     }));
     setSessions(merged as SessionItem[]);
     setSessionsLoading(false);
@@ -296,10 +299,8 @@ export default function AdminPage() {
   async function selectSession(id: string) {
     if (selectedId === id) return;
     setSelectedId(id);
-    const s = sessions.find((x) => x.id === id);
-    const rev = s?.admin_reviews?.[0];
-    setRating((rev?.rating as "good" | "bad" | null) || null);
-    setComment(rev?.comment || "");
+    setRating(null);
+    setComment("");
     setSaved(false);
 
     setDetailLoading(true);
@@ -330,9 +331,11 @@ export default function AdminPage() {
       const saved_review = await res.json();
       setSessions((prev) => prev.map((s) =>
         s.id === selectedId
-          ? { ...s, admin_reviews: [{ id: saved_review.id, rating, comment }] }
+          ? { ...s, admin_reviews: [{ id: saved_review.id, rating, comment, created_at: saved_review.created_at }, ...s.admin_reviews] }
           : s
       ));
+      setRating(null);
+      setComment("");
       setSaving(false);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -955,6 +958,54 @@ export default function AdminPage() {
                   })}
                 </div>
 
+                {/* Comment history */}
+                {(() => {
+                  const revs = sessions.find(s => s.id === selectedId)?.admin_reviews || [];
+                  if (revs.length === 0) return null;
+                  return (
+                    <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", flexShrink: 0, maxHeight: 220, overflowY: "auto", background: "rgba(9,9,22,0.5)" }}>
+                      <div style={{ padding: "10px 20px 0", display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.22)" }}>코멘트 기록</span>
+                        <span style={{ fontSize: 10, color: "rgba(255,255,255,0.18)" }}>{revs.length}개</span>
+                        <span style={{ marginLeft: "auto", fontSize: 10, color: "rgba(74,222,128,0.6)", fontWeight: 600 }}>
+                          👍 {revs.filter(r => r.rating === "good").length}
+                        </span>
+                        <span style={{ fontSize: 10, color: "rgba(248,113,113,0.6)", fontWeight: 600 }}>
+                          👎 {revs.filter(r => r.rating === "bad").length}
+                        </span>
+                      </div>
+                      <div style={{ padding: "8px 20px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
+                        {revs.map((rev, i) => (
+                          <div key={rev.id || i} style={{
+                            padding: "9px 12px",
+                            borderRadius: 10,
+                            background: rev.rating === "good" ? "rgba(74,222,128,0.06)" : rev.rating === "bad" ? "rgba(248,113,113,0.06)" : "rgba(255,255,255,0.04)",
+                            border: `1px solid ${rev.rating === "good" ? "rgba(74,222,128,0.18)" : rev.rating === "bad" ? "rgba(248,113,113,0.18)" : "rgba(255,255,255,0.07)"}`,
+                          }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: rev.comment ? 5 : 0 }}>
+                              {rev.rating === "good" && (
+                                <span style={{ fontSize: 10, fontWeight: 700, padding: "1px 7px", borderRadius: 5, background: "rgba(74,222,128,0.15)", border: "1px solid rgba(74,222,128,0.3)", color: "rgba(74,222,128,0.9)", flexShrink: 0 }}>👍 Good</span>
+                              )}
+                              {rev.rating === "bad" && (
+                                <span style={{ fontSize: 10, fontWeight: 700, padding: "1px 7px", borderRadius: 5, background: "rgba(248,113,113,0.15)", border: "1px solid rgba(248,113,113,0.3)", color: "rgba(248,113,113,0.9)", flexShrink: 0 }}>👎 Bad</span>
+                              )}
+                              {!rev.rating && (
+                                <span style={{ fontSize: 10, padding: "1px 7px", borderRadius: 5, background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.3)", flexShrink: 0 }}>메모</span>
+                              )}
+                              <span style={{ fontSize: 10, color: "rgba(255,255,255,0.22)", marginLeft: "auto", flexShrink: 0 }}>
+                                {rev.created_at ? new Date(rev.created_at).toLocaleString("ko-KR", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }) : ""}
+                              </span>
+                            </div>
+                            {rev.comment && (
+                              <p style={{ fontSize: 12, color: "rgba(255,255,255,0.68)", lineHeight: 1.65, whiteSpace: "pre-wrap", wordBreak: "keep-all" }}>{rev.comment}</p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 {/* Rating + comment footer */}
                 <div style={{ padding: "14px 20px", borderTop: "1px solid rgba(255,255,255,0.06)", flexShrink: 0, background: "rgba(9,9,22,0.85)", backdropFilter: "blur(8px)" }}>
                   <div style={{ display: "flex", gap: 8, marginBottom: 10, alignItems: "center" }}>
@@ -965,7 +1016,7 @@ export default function AdminPage() {
                       👎 Bad
                     </button>
                     <div style={{ flex: 1 }} />
-                    <button onClick={saveReview} disabled={saving} style={{ padding: "6px 20px", borderRadius: 10, fontSize: 12, fontWeight: 700, cursor: saving ? "default" : "pointer", border: "none", background: saved ? "rgba(74,222,128,0.2)" : ACCENT, color: saved ? GREEN : "#fff", opacity: saving ? 0.6 : 1, transition: "all 0.15s" }}>
+                    <button onClick={saveReview} disabled={saving || (!rating && !comment.trim())} style={{ padding: "6px 20px", borderRadius: 10, fontSize: 12, fontWeight: 700, cursor: (saving || (!rating && !comment.trim())) ? "default" : "pointer", border: "none", background: saved ? "rgba(74,222,128,0.2)" : ACCENT, color: saved ? GREEN : "#fff", opacity: (saving || (!rating && !comment.trim())) ? 0.45 : 1, transition: "all 0.15s" }}>
                       {saving ? "저장 중…" : saved ? "저장됨 ✓" : "저장"}
                     </button>
                   </div>

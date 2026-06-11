@@ -26,7 +26,8 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await admin
     .from("admin_reviews")
-    .select("id, session_id, rating, comment");
+    .select("id, session_id, rating, comment, created_at")
+    .order("created_at", { ascending: false });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data);
@@ -41,11 +42,8 @@ export async function POST(req: NextRequest) {
 
   const { data, error } = await admin
     .from("admin_reviews")
-    .upsert(
-      { session_id, rating, comment, updated_at: new Date().toISOString() },
-      { onConflict: "session_id" }
-    )
-    .select("id, session_id, rating, comment")
+    .insert({ session_id, rating, comment, created_at: new Date().toISOString() })
+    .select("id, session_id, rating, comment, created_at")
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
