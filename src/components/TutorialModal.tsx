@@ -128,7 +128,6 @@ export function TutorialModal({ userId, onClose }: Props) {
         style={{
           maxWidth: "min(96vw, 820px)",
           maxHeight: "92dvh",
-          height: "92dvh",
           background: "#0D0D18",
           border: "1px solid rgba(255,255,255,0.1)",
           boxShadow: "0 60px 120px rgba(0,0,0,0.8)",
@@ -181,7 +180,7 @@ export function TutorialModal({ userId, onClose }: Props) {
         {/* ── 본문 ── */}
         <div
           key={animKey}
-          className="hide-scrollbar px-5 sm:px-7 pb-2 pt-3 sm:pt-4 flex flex-col gap-2.5 sm:gap-3 overflow-y-auto flex-1 min-h-0"
+          className="hide-scrollbar px-5 sm:px-7 pb-2 pt-3 sm:pt-4 flex flex-col gap-2.5 sm:gap-3 overflow-y-auto"
           style={{ animation: "pageIn 0.32s ease forwards" }}
         >
 
