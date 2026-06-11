@@ -22,7 +22,7 @@ if (existsSync(envPath)) {
 // ── 카테고리 순환 (경제 → 기술 → 시사 → 경제 → ...) ──
 // DB에 저장되는 카테고리는 admin 게시판 탭 이름과 일치해야 함
 const START_DATE = new Date("2026-06-11T00:00:00+09:00");
-const CATEGORIES = ["경제", "기술", "시사"];
+const CATEGORIES = ["경제", "기술", "시사", "금융"];
 
 // 각 카테고리별 RSS 후보 (앞에서부터 시도)
 const RSS = {
@@ -31,13 +31,22 @@ const RSS = {
     "https://rss.donga.com/economy.xml",
   ],
   기술: [
+    "https://rss.etnews.com/Section901.xml",
     "https://www.yna.co.kr/rss/it.xml",
+    "https://www.yna.co.kr/rss/science.xml",
     "https://rss.donga.com/it.xml",
+    "https://www.chosun.com/arc/outboundfeeds/rss/?outputType=xml",
+    "https://www.yna.co.kr/rss/all.xml",
   ],
   시사: [
     "https://www.yna.co.kr/rss/all.xml",
     "https://rss.donga.com/total.xml",
     "https://www.chosun.com/arc/outboundfeeds/rss/?outputType=xml",
+  ],
+  금융: [
+    "https://www.yna.co.kr/rss/finance.xml",
+    "https://rss.donga.com/economy.xml",
+    "https://www.yna.co.kr/rss/economy.xml",
   ],
 };
 
@@ -46,7 +55,7 @@ function todayCategory() {
   const kst = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
   const start = new Date(START_DATE.toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
   const diff = Math.floor((kst - start) / 86400000);
-  return CATEGORIES[((diff % 3) + 3) % 3];
+  return CATEGORIES[((diff % CATEGORIES.length) + CATEGORIES.length) % CATEGORIES.length];
 }
 
 function todayStr() {

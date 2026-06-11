@@ -7,7 +7,7 @@ import { supabase } from "@/lib/supabase";
 const BG = "#0D0D18";
 const ACCENT = "#C96442";
 const BORDER = "rgba(255,255,255,0.07)";
-const NEWS_CHILDREN = ["경제", "기술", "시사"];
+const NEWS_CHILDREN = ["경제", "기술", "시사", "금융"];
 
 interface CategoryNode { name: string; children?: string[] }
 const CATEGORY_TREE: CategoryNode[] = [

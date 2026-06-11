@@ -1318,7 +1318,7 @@ export default function AdminPage() {
 
       {/* ─── BOARD ─── */}
       {tab === "board" && (() => {
-        const NEWS_CH = ["경제", "기술", "시사"];
+        const NEWS_CH = ["경제", "기술", "시사", "금융"];
         interface BCNode { name: string; children?: string[] }
         const BTREE: BCNode[] = [
           { name: "공지·업데이트" },
@@ -1373,7 +1373,7 @@ export default function AdminPage() {
             <div className="admin-board-cat-select" style={{ display: "none", padding: "10px 16px", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
               <select value={boardCategory} onChange={e => setBoardCategory(e.target.value)}
                 style={{ width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: "#1a1a2e", color: "rgba(255,255,255,0.85)", fontSize: 15, fontFamily: "inherit" }}>
-                {["전체","공지·업데이트","쥔장 잡담","자소서 팁","면접 팁","뉴스","경제","기술","시사","쥔장에게 묻고 바란다"].map(c => <option key={c} value={c}>{c}</option>)}
+                {["전체","공지·업데이트","쥔장 잡담","자소서 팁","면접 팁","뉴스","경제","기술","시사","금융","쥔장에게 묻고 바란다"].map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
             {/* 액션 바 */}
@@ -1402,7 +1402,7 @@ export default function AdminPage() {
                 <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
                   <select value={writeCategory} onChange={e => setWriteCategory(e.target.value)}
                     style={{ padding: "9px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: "#1a1a2e", color: "rgba(255,255,255,0.8)", fontSize: 15, fontFamily: "inherit", cursor: "pointer", flexShrink: 0 }}>
-                    {["쥔장 잡담","자소서 팁","면접 팁","공지·업데이트","뉴스","경제","기술","시사","쥔장에게 묻고 바란다"].map(c => <option key={c} value={c}>{c}</option>)}
+                    {["쥔장 잡담","자소서 팁","면접 팁","공지·업데이트","뉴스","경제","기술","시사","금융","쥔장에게 묻고 바란다"].map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                   <input value={writeTitle} onChange={e => setWriteTitle(e.target.value)} placeholder="제목"
                     style={{ flex: 1, padding: "9px 14px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: "#1a1a2e", color: "rgba(255,255,255,0.88)", fontSize: 16, fontFamily: "inherit", outline: "none" }} />
@@ -1495,7 +1495,7 @@ export default function AdminPage() {
                         onChange={e => setEditCategory(e.target.value)}
                         style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 6, padding: "4px 8px", fontSize: 12, color: "rgba(255,255,255,0.7)", fontFamily: "inherit", cursor: "pointer" }}
                       >
-                        {["쥔장 잡담","자소서 팁","면접 팁","공지·업데이트","경제","기술","시사","쥔장에게 묻고 바란다"].map(c => <option key={c} value={c}>{c}</option>)}
+                        {["쥔장 잡담","자소서 팁","면접 팁","공지·업데이트","경제","기술","시사","금융","쥔장에게 묻고 바란다"].map(c => <option key={c} value={c}>{c}</option>)}
                       </select>
                     ) : (
                       <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 9px", borderRadius: 20, background: `${ACCENT}22`, border: `1px solid ${ACCENT}44`, color: ACCENT }}>{viewPost.category}</span>
