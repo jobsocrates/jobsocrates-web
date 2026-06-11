@@ -34,6 +34,7 @@ function parseArticles(content: string) {
 // 한 블록 내 줄들을 렌더링
 function ArticleCard({ block }: { block: string }) {
   const link = extractLink(block);
+  // 링크 줄은 헤더 영역에서만 쓰고 본문에서 제거
   const lines = block
     .replace(/🔗\s*원문[:：]?\s*https?:\/\/\S+/g, "")
     .split("\n");
@@ -45,7 +46,7 @@ function ArticleCard({ block }: { block: string }) {
     const text = bodyBuf.join("\n").trim();
     if (text) {
       elements.push(
-        <p key={key} style={{ fontSize: 17, color: "rgba(255,255,255,0.78)", lineHeight: 2.1, whiteSpace: "pre-wrap", wordBreak: "keep-all", margin: "0 0 4px" }}>
+        <p key={key} style={{ fontSize: 17, color: "rgba(255,255,255,0.78)", lineHeight: 2.15, whiteSpace: "pre-wrap", wordBreak: "keep-all", margin: 0 }}>
           {text}
         </p>
       );
@@ -53,25 +54,43 @@ function ArticleCard({ block }: { block: string }) {
     bodyBuf = [];
   };
 
+  let titleSet = false;
+
   lines.forEach((line, i) => {
     const trimmed = line.trim();
     if (!trimmed) {
-      bodyBuf.push("");
+      if (bodyBuf.length) bodyBuf.push("");
       return;
     }
 
-    // 📰 기사 제목
+    // 📰 기사 제목 + 원문 링크 한 줄에
     if (trimmed.startsWith("📰")) {
       flushBody(`body-before-${i}`);
+      titleSet = true;
       elements.push(
-        <h2 key={`title-${i}`} style={{ fontSize: 21, fontWeight: 700, color: "rgba(255,255,255,0.95)", lineHeight: 1.55, wordBreak: "keep-all", margin: "0 0 20px", letterSpacing: "-0.01em" }}>
-          {trimmed.replace(/^📰\s*/, "")}
-        </h2>
+        <div key={`title-${i}`} style={{ marginBottom: 20 }}>
+          <h2 style={{ fontSize: 21, fontWeight: 700, color: "rgba(255,255,255,0.95)", lineHeight: 1.55, wordBreak: "keep-all", margin: "0 0 10px", letterSpacing: "-0.01em" }}>
+            {trimmed.replace(/^📰\s*/, "")}
+          </h2>
+          {link && (
+            <a
+              href={link}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "5px 12px", borderRadius: 8, background: `${BLUE}18`, border: `1px solid ${BLUE}38`, color: BLUE, fontSize: 12, fontWeight: 600, textDecoration: "none" }}
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+              </svg>
+              원문 보기
+            </a>
+          )}
+        </div>
       );
       return;
     }
 
-    // 섹션 레이블 (무슨 일이냐면: / 🔍 / 💬)
+    // 섹션 레이블 (무슨 일이냐면 / 🔍 / 💬)
     const isSectionLabel =
       trimmed.startsWith("무슨 일이냐면") ||
       trimmed.startsWith("🔍") ||
@@ -80,12 +99,15 @@ function ArticleCard({ block }: { block: string }) {
     if (isSectionLabel) {
       flushBody(`body-${i}`);
       elements.push(
-        <p key={`label-${i}`} style={{ fontSize: 13, fontWeight: 700, color: ACCENT, letterSpacing: "0.06em", textTransform: "uppercase", margin: "24px 0 8px", opacity: 0.9 }}>
-          {trimmed.endsWith(":") ? trimmed : trimmed + (trimmed.includes(":") ? "" : "")}
+        <p key={`label-${i}`} style={{ fontSize: 12, fontWeight: 700, color: ACCENT, letterSpacing: "0.07em", textTransform: "uppercase", margin: "28px 0 10px", opacity: 0.85 }}>
+          {trimmed}
         </p>
       );
       return;
     }
+
+    // 제목 전 줄(TITLE 파싱 잔여 등) 무시
+    if (!titleSet) return;
 
     bodyBuf.push(line);
   });
@@ -95,39 +117,12 @@ function ArticleCard({ block }: { block: string }) {
     <div style={{
       background: "rgba(255,255,255,0.03)",
       border: "1px solid rgba(255,255,255,0.08)",
-      borderRadius: 20,
-      padding: "32px 36px 28px",
+      borderRadius: 22,
+      padding: "36px 40px 36px",
       display: "flex",
       flexDirection: "column",
     }}>
       {elements}
-      {link && (
-        <a
-          href={link}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6,
-            marginTop: 24,
-            padding: "9px 18px",
-            borderRadius: 10,
-            background: `${BLUE}18`,
-            border: `1px solid ${BLUE}40`,
-            color: BLUE,
-            fontSize: 13,
-            fontWeight: 600,
-            textDecoration: "none",
-            alignSelf: "flex-start",
-          }}
-        >
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
-          </svg>
-          원문 보기
-        </a>
-      )}
     </div>
   );
 }
@@ -213,9 +208,12 @@ export default function PostPage() {
 
         {/* 뉴스 카드 vs 일반 글 */}
         {articles ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
             {articles.map((block, i) => (
-              <ArticleCard key={i} block={block} />
+              <div key={i}>
+                {i > 0 && <div style={{ height: 1, background: "rgba(255,255,255,0.06)", margin: "48px 0" }} />}
+                <ArticleCard block={block} />
+              </div>
             ))}
           </div>
         ) : (
