@@ -668,8 +668,8 @@ export default function AdminPage() {
             padding: 14px 16px !important;
             gap: 8px !important;
           }
-          .admin-board-item-title { font-size: 15px !important; white-space: normal !important; padding-right: 0 !important; }
-          .admin-board-item-meta { display: flex !important; align-items: center !important; gap: 8px !important; flex-wrap: wrap !important; }
+          .admin-board-item-title { font-size: 15px !important; white-space: normal !important; padding-right: 0 !important; width: 100% !important; }
+          .admin-board-item-meta { display: flex !important; align-items: center !important; gap: 8px !important; flex-wrap: wrap !important; width: 100% !important; }
           .admin-board-item-actions { display: none !important; }
           .admin-board-item-row { cursor: pointer; }
           .admin-board-modal-backdrop { padding: 0 !important; align-items: flex-end !important; }
