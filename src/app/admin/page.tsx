@@ -233,13 +233,32 @@ export default function AdminPage() {
 
   async function fetchSessions() {
     setSessionsLoading(true);
-    const { data, error } = await supabase
-      .from("sessions")
-      .select("id, job_title, created_at, user_id, profiles(email), admin_reviews(id, rating, comment)")
-      .order("created_at", { ascending: false });
+    const [{ data, error }, sessionRes] = await Promise.all([
+      supabase
+        .from("sessions")
+        .select("id, job_title, created_at, user_id, profiles(email)")
+        .order("created_at", { ascending: false }),
+      supabase.auth.getSession(),
+    ]);
     if (error) console.error("[Admin] fetchSessions error:", error);
-    console.log("[Admin] sessions fetched:", data?.length, data);
-    setSessions((data as unknown as SessionItem[]) || []);
+
+    const token = sessionRes.data.session?.access_token;
+    let reviewsMap: Record<string, { id: string; rating: string | null; comment: string }> = {};
+    if (token) {
+      const res = await fetch("/api/admin/reviews", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const reviews: { id: string; session_id: string; rating: string | null; comment: string }[] = await res.json();
+        for (const r of reviews) reviewsMap[r.session_id] = r;
+      }
+    }
+
+    const merged = (data || []).map((s: any) => ({
+      ...s,
+      admin_reviews: reviewsMap[s.id] ? [reviewsMap[s.id]] : [],
+    }));
+    setSessions(merged as SessionItem[]);
     setSessionsLoading(false);
   }
 
@@ -268,17 +287,28 @@ export default function AdminPage() {
   async function saveReview() {
     if (!selectedId) return;
     setSaving(true);
-    await supabase
-      .from("admin_reviews")
-      .upsert({ session_id: selectedId, rating, comment, updated_at: new Date().toISOString() }, { onConflict: "session_id" });
-    setSessions((prev) => prev.map((s) =>
-      s.id === selectedId
-        ? { ...s, admin_reviews: [{ id: s.admin_reviews?.[0]?.id || "", rating, comment }] }
-        : s
-    ));
-    setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    try {
+      const { data: { session: authSession } } = await supabase.auth.getSession();
+      const token = authSession?.access_token;
+      const res = await fetch("/api/admin/reviews", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ session_id: selectedId, rating, comment }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const saved_review = await res.json();
+      setSessions((prev) => prev.map((s) =>
+        s.id === selectedId
+          ? { ...s, admin_reviews: [{ id: saved_review.id, rating, comment }] }
+          : s
+      ));
+      setSaving(false);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (e) {
+      console.error("[saveReview]", e);
+      setSaving(false);
+    }
   }
 
   async function fetchUsers() {
@@ -654,7 +684,13 @@ export default function AdminPage() {
             <div style={{ padding: "10px 12px", borderBottom: "1px solid rgba(255,255,255,0.05)", display: "flex", gap: 4, flexWrap: "wrap" }}>
               {(["all", "good", "bad", "none"] as Filter[]).map((f) => (
                 <button key={f} onClick={() => setFilter(f)} style={{ padding: "4px 11px", borderRadius: 8, fontSize: 11, fontWeight: 500, cursor: "pointer", border: "none", transition: "all 0.15s", background: filter === f ? "rgba(255,255,255,0.1)" : "transparent", color: filter === f ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.3)" }}>
-                  {f === "all" ? `전체 (${sessions.length})` : f === "good" ? "👍 Good" : f === "bad" ? "👎 Bad" : "미평가"}
+                  {f === "all"
+                    ? `전체 (${sessions.length})`
+                    : f === "good"
+                    ? `👍 Good (${sessions.filter(s => s.admin_reviews?.[0]?.rating === "good").length})`
+                    : f === "bad"
+                    ? `👎 Bad (${sessions.filter(s => s.admin_reviews?.[0]?.rating === "bad").length})`
+                    : `미평가 (${sessions.filter(s => !s.admin_reviews?.[0]?.rating).length})`}
                 </button>
               ))}
             </div>
@@ -673,13 +709,22 @@ export default function AdminPage() {
                 return (
                   <div key={s.id} style={{ position: "relative", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
                     <div onClick={() => selectSession(s.id)} style={{ padding: "11px 14px", paddingRight: 34, cursor: "pointer", background: isSelected ? "rgba(255,255,255,0.07)" : "transparent", transition: "background 0.12s" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 3 }}>
-                        {rev?.rating === "good" && <span style={{ fontSize: 10, lineHeight: 1 }}>👍</span>}
-                        {rev?.rating === "bad" && <span style={{ fontSize: 10, lineHeight: 1 }}>👎</span>}
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                        {rev?.rating === "good" && (
+                          <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 5, background: "rgba(74,222,128,0.15)", border: "1px solid rgba(74,222,128,0.3)", color: "rgba(74,222,128,0.9)", flexShrink: 0 }}>👍 Good</span>
+                        )}
+                        {rev?.rating === "bad" && (
+                          <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 5, background: "rgba(248,113,113,0.15)", border: "1px solid rgba(248,113,113,0.3)", color: "rgba(248,113,113,0.9)", flexShrink: 0 }}>👎 Bad</span>
+                        )}
                         <span style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.82)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                           {s.job_title || "직무 미입력"}
                         </span>
                       </div>
+                      {rev?.comment && (
+                        <p style={{ fontSize: 11, color: "rgba(255,255,255,0.38)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 3, fontStyle: "italic" }}>
+                          {rev.comment}
+                        </p>
+                      )}
                       <p style={{ fontSize: 11, color: "rgba(255,255,255,0.28)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 2 }}>
                         {(s.profiles as any)?.email || s.user_id?.slice(0, 8) || "—"}
                       </p>
