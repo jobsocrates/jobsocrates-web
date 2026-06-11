@@ -52,6 +52,7 @@ interface CoverItemFull {
 interface UserProfile { id: string; email: string; credits: number; created_at?: string; }
 interface PostItem {
   id: string;
+  title: string;
   content: string;
   job_title: string;
   category: string;
@@ -1168,30 +1169,37 @@ export default function AdminPage() {
             </div>
           ) : boardPosts.length === 0 ? (
             <div style={{ textAlign: "center", padding: "60px 0", color: "rgba(255,255,255,0.28)", fontSize: 14 }}>
-              글이 없어요. <code style={{ fontSize: 13, background: "rgba(255,255,255,0.06)", padding: "2px 8px", borderRadius: 6 }}>node scripts/kakao-test.mjs</code> 실행해서 생성해보세요.
+              글이 없어요. <code style={{ fontSize: 13, background: "rgba(255,255,255,0.06)", padding: "2px 8px", borderRadius: 6 }}>node scripts/generate-post.mjs</code> 실행해서 생성해보세요.
             </div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {boardPosts.map((post) => (
-                <div key={post.id} style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${post.is_published ? "rgba(74,222,128,0.2)" : "rgba(255,255,255,0.07)"}`, borderRadius: 14, padding: "18px 20px", display: "flex", gap: 16, alignItems: "flex-start" }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap", alignItems: "center" }}>
-                      <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 20, background: "rgba(201,100,66,0.14)", border: "1px solid rgba(201,100,66,0.28)", color: ACCENT, fontWeight: 600 }}>{post.category}</span>
-                      {post.job_title && <span style={{ fontSize: 12, color: "rgba(255,255,255,0.35)" }}>{post.job_title}</span>}
-                      <span style={{ fontSize: 11, color: "rgba(255,255,255,0.22)", marginLeft: "auto" }}>{new Date(post.created_at).toLocaleDateString("ko-KR")}</span>
-                    </div>
-                    <p style={{ fontSize: 14, color: "rgba(255,255,255,0.78)", lineHeight: 1.75, margin: 0, wordBreak: "keep-all", whiteSpace: "pre-wrap" }}>{post.content}</p>
-                  </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8, flexShrink: 0 }}>
+            <div style={{ border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, overflow: "hidden" }}>
+              {/* 테이블 헤더 */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 80px 90px 140px", gap: 0, padding: "10px 16px", background: "rgba(255,255,255,0.04)", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+                {["제목", "카테고리", "날짜", "상태", ""].map((h) => (
+                  <span key={h} style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.3)", letterSpacing: "0.05em" }}>{h}</span>
+                ))}
+              </div>
+              {boardPosts.map((post, i) => (
+                <div
+                  key={post.id}
+                  style={{ display: "grid", gridTemplateColumns: "1fr 100px 80px 90px 140px", gap: 0, padding: "12px 16px", borderBottom: i < boardPosts.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none", alignItems: "center", background: post.is_published ? "rgba(74,222,128,0.02)" : "transparent" }}
+                >
+                  <span style={{ fontSize: 13, color: "rgba(255,255,255,0.82)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 12 }}>
+                    {post.title || <span style={{ color: "rgba(255,255,255,0.25)", fontStyle: "italic" }}>(제목 없음)</span>}
+                  </span>
+                  <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 20, background: "rgba(201,100,66,0.14)", border: "1px solid rgba(201,100,66,0.28)", color: ACCENT, fontWeight: 600, justifySelf: "start" }}>{post.category}</span>
+                  <span style={{ fontSize: 12, color: "rgba(255,255,255,0.28)" }}>{new Date(post.created_at).toLocaleDateString("ko-KR", { month: "2-digit", day: "2-digit" })}</span>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: post.is_published ? GREEN : "rgba(255,255,255,0.35)" }}>{post.is_published ? "공개" : "비공개"}</span>
+                  <div style={{ display: "flex", gap: 6 }}>
                     <button
                       onClick={() => togglePostPublish(post.id, post.is_published)}
-                      style={{ padding: "6px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer", border: post.is_published ? `1px solid ${GREEN}55` : "1px solid rgba(255,255,255,0.15)", background: post.is_published ? `${GREEN}18` : "rgba(255,255,255,0.07)", color: post.is_published ? GREEN : "rgba(255,255,255,0.5)", transition: "all 0.15s", whiteSpace: "nowrap", fontFamily: "inherit" }}
+                      style={{ padding: "5px 12px", borderRadius: 7, fontSize: 11, fontWeight: 600, cursor: "pointer", border: post.is_published ? `1px solid ${GREEN}55` : "1px solid rgba(255,255,255,0.15)", background: post.is_published ? `${GREEN}18` : "rgba(255,255,255,0.07)", color: post.is_published ? GREEN : "rgba(255,255,255,0.5)", transition: "all 0.15s", whiteSpace: "nowrap", fontFamily: "inherit" }}
                     >
-                      {post.is_published ? "공개 중" : "비공개"}
+                      {post.is_published ? "비공개로" : "공개로"}
                     </button>
                     <button
                       onClick={() => deletePost(post.id)}
-                      style={{ padding: "6px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer", border: `1px solid ${RED}44`, background: "transparent", color: `${RED}bb`, transition: "all 0.15s", whiteSpace: "nowrap", fontFamily: "inherit" }}
+                      style={{ padding: "5px 10px", borderRadius: 7, fontSize: 11, fontWeight: 600, cursor: "pointer", border: `1px solid ${RED}44`, background: "transparent", color: `${RED}bb`, transition: "all 0.15s", whiteSpace: "nowrap", fontFamily: "inherit" }}
                     >
                       삭제
                     </button>
