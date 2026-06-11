@@ -24,7 +24,7 @@ interface CoverItemRecord {
   id: string;
   question: string;
   status: string;
-  messages?: { id: string; role: string }[];
+  messages?: { id: string; role: string; content?: string }[];
   revisions?: { id: string }[];
   interview_questions?: { id: string; interview_answers?: { id: string }[] }[];
 }
@@ -77,7 +77,7 @@ export default function MyPage() {
           .order("created_at", { ascending: false })
           .limit(50),
         supabase.from("sessions")
-          .select("id, job_title, created_at, cover_items(id, question, status, messages(id, role), revisions(id), interview_questions(id, interview_answers(id)))")
+          .select("id, job_title, created_at, cover_items(id, question, status, messages(id, role, content), revisions(id), interview_questions(id, interview_answers(id)))")
           .eq("user_id", data.user.id)
           .order("created_at", { ascending: false })
           .limit(20),
@@ -327,7 +327,8 @@ export default function MyPage() {
           {(() => {
             const allItems = sessions.flatMap(s => s.cover_items || []);
             const totalCompleted = allItems.filter(i => (i.revisions || []).length > 0).length;
-            const totalDigging = allItems.reduce((acc, i) => acc + (i.messages || []).filter(m => m.role === "user").length, 0);
+            const CMD_MSGS = ["초안 진단을 시작해줘.", "수정본을 작성해줘."];
+            const totalDigging = allItems.reduce((acc, i) => acc + (i.messages || []).filter(m => m.role === "user" && !CMD_MSGS.includes(m.content || "")).length, 0);
             const totalInterviewDone = allItems.reduce((acc, i) => acc + (i.interview_questions || []).filter(q => (q.interview_answers || []).length > 0).length, 0);
             if (sessions.length === 0) {
               return (
@@ -389,7 +390,7 @@ export default function MyPage() {
 
                       {/* 아이템 목록 */}
                       {items.map(item => {
-                        const diggingCount = (item.messages || []).filter(m => m.role === "user").length;
+                        const diggingCount = (item.messages || []).filter(m => m.role === "user" && !CMD_MSGS.includes(m.content || "")).length;
                         const hasRevision = (item.revisions || []).length > 0;
                         const interviewTotal = (item.interview_questions || []).length;
                         const interviewDone = (item.interview_questions || []).filter(q => (q.interview_answers || []).length > 0).length;

@@ -311,7 +311,7 @@ export default function AdminPage() {
       supabase.from("profiles").select("id, email, created_at").order("created_at", { ascending: false }),
       supabase.from("sessions").select("id, user_id"),
       supabase.from("cover_items").select("id, session_id, revisions(id), interview_questions(id, interview_answers(id))"),
-      supabase.from("messages").select("cover_item_id, role"),
+      supabase.from("messages").select("cover_item_id, role, content"),
     ]);
 
     const sessionByUser: Record<string, string[]> = {};
@@ -330,8 +330,9 @@ export default function AdminPage() {
     const msgCountByCi: Record<string, { asked: number; answered: number }> = {};
     (msgData || []).forEach((m: any) => {
       if (!msgCountByCi[m.cover_item_id]) msgCountByCi[m.cover_item_id] = { asked: 0, answered: 0 };
+      const CMD = ["초안 진단을 시작해줘.", "수정본을 작성해줘."];
       if (m.role === "assistant") msgCountByCi[m.cover_item_id].asked++;
-      if (m.role === "user") msgCountByCi[m.cover_item_id].answered++;
+      if (m.role === "user" && !CMD.includes(m.content)) msgCountByCi[m.cover_item_id].answered++;
     });
 
     const STAGE_LABELS = ["가입만", "분석 시작", "완성본 작성", "완주"];
