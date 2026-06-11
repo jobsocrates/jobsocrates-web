@@ -22,7 +22,7 @@ const VIOLET = "#A78BFA";
 const GREEN = "rgb(74,222,128)";
 const RED = "rgb(248,113,113)";
 
-type Tab = "dashboard" | "review" | "notes" | "users" | "funnel";
+type Tab = "dashboard" | "review" | "notes" | "users" | "funnel" | "board";
 type Filter = "all" | "good" | "bad" | "none";
 
 interface SessionItem {
@@ -50,6 +50,15 @@ interface CoverItemFull {
 }
 
 interface UserProfile { id: string; email: string; credits: number; created_at?: string; }
+interface PostItem {
+  id: string;
+  content: string;
+  job_title: string;
+  category: string;
+  is_published: boolean;
+  created_at: string;
+}
+
 interface FunnelRow { userId: string; email: string; createdAt: string; stageIndex: number; stageLabel: string; diggingAsked: number; diggingAnswered: number; interviewAnswered: number; interviewTotal: number; dropReason: string; }
 interface FunnelData {
   totalUsers: number;
@@ -101,6 +110,12 @@ export default function AdminPage() {
   const [funnelData, setFunnelData] = useState<FunnelData | null>(null);
   const [funnelLoading, setFunnelLoading] = useState(false);
 
+  // Board
+  const [boardPosts, setBoardPosts] = useState<PostItem[]>([]);
+  const [boardPostsLoading, setBoardPostsLoading] = useState(false);
+  const [boardVisible, setBoardVisible] = useState(false);
+  const [boardVisibleSaving, setBoardVisibleSaving] = useState(false);
+
   // Notes
   const [goodNotes, setGoodNotes] = useState("");
   const [badNotes, setBadNotes] = useState("");
@@ -120,6 +135,35 @@ export default function AdminPage() {
       setLoading(false);
     });
   }, []);
+
+  async function fetchBoard() {
+    setBoardPostsLoading(true);
+    const [{ data: postsData }, { data: config }] = await Promise.all([
+      supabase.from("posts").select("*").order("created_at", { ascending: false }),
+      supabase.from("site_config").select("value").eq("key", "board_visible").single(),
+    ]);
+    setBoardPosts(postsData || []);
+    setBoardVisible(config?.value === true);
+    setBoardPostsLoading(false);
+  }
+
+  async function togglePostPublish(id: string, current: boolean) {
+    await supabase.from("posts").update({ is_published: !current }).eq("id", id);
+    setBoardPosts((prev) => prev.map((p) => p.id === id ? { ...p, is_published: !current } : p));
+  }
+
+  async function deletePost(id: string) {
+    await supabase.from("posts").delete().eq("id", id);
+    setBoardPosts((prev) => prev.filter((p) => p.id !== id));
+  }
+
+  async function toggleBoardVisible() {
+    const next = !boardVisible;
+    setBoardVisibleSaving(true);
+    await supabase.from("site_config").update({ value: next }).eq("key", "board_visible");
+    setBoardVisible(next);
+    setBoardVisibleSaving(false);
+  }
 
   async function fetchDashboard() {
     const now = new Date();
@@ -485,9 +529,9 @@ export default function AdminPage() {
         <span style={{ fontSize: 13, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(255,255,255,0.7)" }}>Admin</span>
 
         <nav style={{ display: "flex", gap: 4 }}>
-          {(["dashboard", "review", "notes", "users", "funnel"] as Tab[]).map((t) => (
-            <button key={t} onClick={() => { setTab(t); if (t === "funnel" && !funnelData) fetchFunnel(); }} style={{ padding: "6px 14px", borderRadius: 8, fontSize: 13, fontWeight: tab === t ? 700 : 500, border: tab === t ? "1px solid rgba(255,255,255,0.15)" : "1px solid transparent", cursor: "pointer", transition: "all 0.15s", background: tab === t ? "rgba(255,255,255,0.1)" : "transparent", color: tab === t ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.5)" }}>
-              {t === "dashboard" ? "대시보드" : t === "review" ? "대화 리뷰" : t === "notes" ? "프롬프트 노트" : t === "users" ? "유저 관리" : "통계"}
+          {(["dashboard", "review", "notes", "users", "funnel", "board"] as Tab[]).map((t) => (
+            <button key={t} onClick={() => { setTab(t); if (t === "funnel" && !funnelData) fetchFunnel(); if (t === "board") fetchBoard(); }} style={{ padding: "6px 14px", borderRadius: 8, fontSize: 13, fontWeight: tab === t ? 700 : 500, border: tab === t ? "1px solid rgba(255,255,255,0.15)" : "1px solid transparent", cursor: "pointer", transition: "all 0.15s", background: tab === t ? "rgba(255,255,255,0.1)" : "transparent", color: tab === t ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.5)" }}>
+              {t === "dashboard" ? "대시보드" : t === "review" ? "대화 리뷰" : t === "notes" ? "프롬프트 노트" : t === "users" ? "유저 관리" : t === "funnel" ? "통계" : "게시판"}
             </button>
           ))}
         </nav>
@@ -1085,6 +1129,77 @@ export default function AdminPage() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ─── BOARD ─── */}
+      {tab === "board" && (
+        <div style={{ padding: "28px 24px", maxWidth: 900, margin: "0 auto" }}>
+          {/* 게시판 공개 토글 */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24, padding: "20px 24px", borderRadius: 16, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+            <div>
+              <p style={{ fontSize: 15, fontWeight: 700, color: "rgba(255,255,255,0.85)", marginBottom: 4 }}>게시판 공개 여부</p>
+              <p style={{ fontSize: 12, color: "rgba(255,255,255,0.3)" }}>{boardVisible ? "/board 페이지 공개 중" : "/board 페이지 비공개 상태"}</p>
+            </div>
+            <button
+              onClick={toggleBoardVisible}
+              disabled={boardVisibleSaving}
+              style={{ padding: "9px 22px", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: boardVisibleSaving ? "default" : "pointer", border: boardVisible ? `1px solid ${GREEN}55` : "1px solid rgba(255,255,255,0.15)", background: boardVisible ? `${GREEN}18` : "rgba(255,255,255,0.07)", color: boardVisible ? GREEN : "rgba(255,255,255,0.55)", transition: "all 0.2s", opacity: boardVisibleSaving ? 0.5 : 1 }}
+            >
+              {boardVisible ? "공개 중 → 비공개로" : "비공개 → 공개로"}
+            </button>
+          </div>
+
+          {/* 글 목록 헤더 */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+            <div>
+              <p style={{ fontSize: 15, fontWeight: 700, color: "rgba(255,255,255,0.85)", marginBottom: 3 }}>게시글 목록 ({boardPosts.length}개)</p>
+              <p style={{ fontSize: 12, color: "rgba(255,255,255,0.3)" }}>스크립트 실행 → 여기서 공개 선택</p>
+            </div>
+            <button onClick={fetchBoard} disabled={boardPostsLoading} style={{ padding: "6px 16px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: boardPostsLoading ? "default" : "pointer", border: "1px solid rgba(255,255,255,0.1)", background: "transparent", color: "rgba(255,255,255,0.5)", transition: "all 0.15s" }}>
+              {boardPostsLoading ? "로딩 중..." : "새로고침"}
+            </button>
+          </div>
+
+          {/* 글 목록 */}
+          {boardPostsLoading ? (
+            <div style={{ display: "flex", justifyContent: "center", padding: 60 }}>
+              <div style={{ width: 24, height: 24, borderRadius: "50%", border: `2px solid rgba(201,100,66,0.3)`, borderTopColor: ACCENT, animation: "spin 0.8s linear infinite" }} />
+            </div>
+          ) : boardPosts.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "60px 0", color: "rgba(255,255,255,0.28)", fontSize: 14 }}>
+              글이 없어요. <code style={{ fontSize: 13, background: "rgba(255,255,255,0.06)", padding: "2px 8px", borderRadius: 6 }}>node scripts/kakao-test.mjs</code> 실행해서 생성해보세요.
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {boardPosts.map((post) => (
+                <div key={post.id} style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${post.is_published ? "rgba(74,222,128,0.2)" : "rgba(255,255,255,0.07)"}`, borderRadius: 14, padding: "18px 20px", display: "flex", gap: 16, alignItems: "flex-start" }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap", alignItems: "center" }}>
+                      <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 20, background: "rgba(201,100,66,0.14)", border: "1px solid rgba(201,100,66,0.28)", color: ACCENT, fontWeight: 600 }}>{post.category}</span>
+                      {post.job_title && <span style={{ fontSize: 12, color: "rgba(255,255,255,0.35)" }}>{post.job_title}</span>}
+                      <span style={{ fontSize: 11, color: "rgba(255,255,255,0.22)", marginLeft: "auto" }}>{new Date(post.created_at).toLocaleDateString("ko-KR")}</span>
+                    </div>
+                    <p style={{ fontSize: 14, color: "rgba(255,255,255,0.78)", lineHeight: 1.75, margin: 0, wordBreak: "keep-all", whiteSpace: "pre-wrap" }}>{post.content}</p>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8, flexShrink: 0 }}>
+                    <button
+                      onClick={() => togglePostPublish(post.id, post.is_published)}
+                      style={{ padding: "6px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer", border: post.is_published ? `1px solid ${GREEN}55` : "1px solid rgba(255,255,255,0.15)", background: post.is_published ? `${GREEN}18` : "rgba(255,255,255,0.07)", color: post.is_published ? GREEN : "rgba(255,255,255,0.5)", transition: "all 0.15s", whiteSpace: "nowrap", fontFamily: "inherit" }}
+                    >
+                      {post.is_published ? "공개 중" : "비공개"}
+                    </button>
+                    <button
+                      onClick={() => deletePost(post.id)}
+                      style={{ padding: "6px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer", border: `1px solid ${RED}44`, background: "transparent", color: `${RED}bb`, transition: "all 0.15s", whiteSpace: "nowrap", fontFamily: "inherit" }}
+                    >
+                      삭제
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
