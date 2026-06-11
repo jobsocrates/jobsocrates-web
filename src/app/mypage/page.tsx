@@ -327,7 +327,7 @@ export default function MyPage() {
           {(() => {
             const allItems = sessions.flatMap(s => s.cover_items || []);
             const totalCompleted = allItems.filter(i => (i.revisions || []).length > 0).length;
-            const CMD_MSGS = ["초안 진단을 시작해줘.", "수정본을 작성해줘."];
+            const CMD_MSGS = ["초안 진단을 시작해줘.", "수정본을 작성해줘.", "완성본을 작성해줘."];
             const totalDigging = allItems.reduce((acc, i) => acc + (i.messages || []).filter(m => m.role === "user" && !CMD_MSGS.includes(m.content || "")).length, 0);
             const totalInterviewDone = allItems.reduce((acc, i) => acc + (i.interview_questions || []).filter(q => (q.interview_answers || []).length > 0).length, 0);
             if (sessions.length === 0) {
@@ -411,7 +411,7 @@ export default function MyPage() {
                                   <span style={{ fontSize: 11, color: "rgba(107,142,255,0.85)", fontWeight: 600 }}>💬 {diggingCount}회</span>
                                 )}
                                 {hasRevision && (
-                                  <span style={{ fontSize: 11, color: "rgba(74,222,128,0.85)", fontWeight: 600 }}>✏️ 수정본</span>
+                                  <span style={{ fontSize: 11, color: "rgba(74,222,128,0.85)", fontWeight: 600 }}>✏️ 완성본</span>
                                 )}
                                 {interviewTotal > 0 && (
                                   <span style={{ fontSize: 11, color: interviewDone === interviewTotal ? "rgba(74,222,128,0.85)" : "rgba(255,209,102,0.75)", fontWeight: 600 }}>🎤 {interviewDone}/{interviewTotal}</span>

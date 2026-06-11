@@ -237,7 +237,7 @@ function StreamingRevisionCard({ text }: { text: string }) {
       <div className="rounded-2xl overflow-hidden" style={{ background: `${BLUE}0D`, border: `1px solid ${BLUE}28` }}>
         <div className="flex items-center gap-2 px-4 py-2.5 border-b" style={{ borderColor: `${BLUE}20` }}>
           <img src="/ai-avatar.webp" alt="" className="w-5 h-5 rounded-full object-cover flex-shrink-0" />
-          <span className="text-xs lg:text-[15px] font-semibold" style={{ color: BLUE }}>수정본</span>
+          <span className="text-xs lg:text-[15px] font-semibold" style={{ color: BLUE }}>완성본</span>
         </div>
         <div className="px-4 py-4">
           {partialRevision ? (
@@ -267,7 +267,7 @@ function RevisionMessage({ text }: { text: string }) {
         <div className="rounded-2xl overflow-hidden" style={{ background: `${BLUE}0D`, border: `1px solid ${BLUE}28` }}>
           <div className="flex items-center gap-2 px-4 py-2.5 border-b" style={{ borderColor: `${BLUE}20` }}>
             <img src="/ai-avatar.webp" alt="" className="w-5 h-5 rounded-full object-cover flex-shrink-0" />
-            <span className="text-xs lg:text-[15px] font-semibold" style={{ color: BLUE }}>수정본</span>
+            <span className="text-xs lg:text-[15px] font-semibold" style={{ color: BLUE }}>완성본</span>
           </div>
           <div className="px-4 py-4">
             <p className="text-sm lg:text-base leading-[1.9] whitespace-pre-wrap" style={{ color: "rgba(255,255,255,0.9)", wordBreak: "keep-all" }}>
@@ -1036,7 +1036,7 @@ export default function ChatPage() {
 
   async function handleRevisionRequest() {
     if (!selected || isStreaming) return;
-    const t = "수정본을 작성해줘.";
+    const t = "완성본을 작성해줘.";
     const newHistory = [...selected.apiHistory, { role: "user", content: t }];
     setItems((prev) =>
       prev.map((it) =>
@@ -1180,7 +1180,7 @@ export default function ChatPage() {
   ) ?? false;
 
   const revisionReady = (selected?.msgs.some(
-    (m) => m.role === "bot" && m.text.includes("수정본을 원하면")
+    (m) => m.role === "bot" && (m.text.includes("완성본을 원하면") || m.text.includes("수정본을 원하면"))
   ) ?? false) && !hasAnyRevision;
 
   const interviewQs = selected?.interviewQs ?? [];
@@ -1541,7 +1541,7 @@ export default function ChatPage() {
                   <p className="text-xs font-semibold px-1" style={{ color: "rgba(255,255,255,0.38)", letterSpacing: "0.06em" }}>초안 작성 가이드</p>
                   {[
                     { icon: "📋", text: "지원 직무, 자소서 문항, 글자수 제한은 반드시 입력해주세요.", color: GOLD },
-                    { icon: "✏️", text: "초안이 글자수 제한을 초과해도 괜찮아요. 수정본은 입력한 글자수에 맞춰 작성돼요.", color: BLUE },
+                    { icon: "✏️", text: "초안이 글자수 제한을 초과해도 괜찮아요. 완성본은 입력한 글자수에 맞춰 작성돼요.", color: BLUE },
                   ].map((item, i) => (
                     <div key={i} className="flex items-start gap-3 px-4 py-3.5 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${item.color}22` }}>
                       <span className="text-lg flex-shrink-0 leading-none mt-0.5">{item.icon}</span>
@@ -1692,7 +1692,7 @@ export default function ChatPage() {
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
                         </svg>
-                        수정본 작성 요청
+                        완성본 작성 요청
                       </button>
                     ) : showInterviewButton ? (
                       /* 면접 예상질문 확인 버튼 */

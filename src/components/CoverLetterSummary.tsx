@@ -175,7 +175,7 @@ ${revision ? `
 <div class="section">
   <div class="section-header">
     <span class="section-num">01</span>
-    <span class="section-title">수정본</span>
+    <span class="section-title">완성본</span>
   </div>
   <div class="revision-box">
     <div class="revision-header"><p>수정된 자소서</p></div>
@@ -299,8 +299,8 @@ export function CoverLetterSummary({ jobTitle, question, draft, msgs, interviewQ
       <div className="flex-1 overflow-y-auto px-6 py-7">
         <div className="max-w-4xl mx-auto flex flex-col gap-12">
 
-          {/* 01 · 수정본 */}
-          <Section number="01" title="수정본" numColor={`${GOLD}99`}>
+          {/* 01 · 완성본 */}
+          <Section number="01" title="완성본" numColor={`${GOLD}99`}>
             <div className="flex flex-col gap-4">
               {revision ? (
                 <DraftBox label="수정된 자소서" text={revision} accent />
@@ -309,7 +309,7 @@ export function CoverLetterSummary({ jobTitle, question, draft, msgs, interviewQ
                   className="rounded-2xl flex items-center justify-center py-10"
                   style={{ background: "rgba(255,255,255,0.02)", border: "1px dashed rgba(255,255,255,0.1)" }}
                 >
-                  <p className="text-sm" style={{ color: "rgba(255,255,255,0.2)" }}>수정본이 아직 작성되지 않았어요</p>
+                  <p className="text-sm" style={{ color: "rgba(255,255,255,0.2)" }}>완성본이 아직 작성되지 않았어요</p>
                 </div>
               )}
 

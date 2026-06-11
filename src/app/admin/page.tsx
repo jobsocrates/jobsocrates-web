@@ -330,7 +330,7 @@ export default function AdminPage() {
     const msgCountByCi: Record<string, { asked: number; answered: number }> = {};
     (msgData || []).forEach((m: any) => {
       if (!msgCountByCi[m.cover_item_id]) msgCountByCi[m.cover_item_id] = { asked: 0, answered: 0 };
-      const CMD = ["초안 진단을 시작해줘.", "수정본을 작성해줘."];
+      const CMD = ["초안 진단을 시작해줘.", "수정본을 작성해줘.", "완성본을 작성해줘."];
       if (m.role === "assistant") msgCountByCi[m.cover_item_id].asked++;
       if (m.role === "user" && !CMD.includes(m.content)) msgCountByCi[m.cover_item_id].answered++;
     });
