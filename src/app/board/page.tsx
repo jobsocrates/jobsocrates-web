@@ -103,7 +103,7 @@ export default function BoardPage() {
 
       <div style={{ display: "flex", flex: 1 }}>
         {/* 사이드바 */}
-        <aside style={{ width: 160, flexShrink: 0, borderRight: `1px solid ${BORDER}`, paddingTop: 28, position: "sticky", top: 54, height: "calc(100vh - 54px)", overflowY: "auto" }}>
+        <aside style={{ width: 192, flexShrink: 0, borderRight: `1px solid ${BORDER}`, paddingTop: 28, position: "sticky", top: 54, height: "calc(100vh - 54px)", overflowY: "auto" }}>
           <SideItem label="전체" count={countFor(posts, "전체")} active={category === "전체"} onClick={() => setCategory("전체")} />
           <div style={{ height: 1, background: BORDER, margin: "10px 14px" }} />
           {CATEGORY_TREE.map(node =>
@@ -166,13 +166,14 @@ function SideItem({ label, count, active, onClick }: { label: string; count: num
   return (
     <button onClick={onClick} style={{
       width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
-      padding: "11px 16px", background: active ? "rgba(255,255,255,0.06)" : "transparent",
+      padding: "11px 14px", background: active ? "rgba(255,255,255,0.06)" : "transparent",
       border: "none", borderLeft: `3px solid ${active ? ACCENT : "transparent"}`,
       color: active ? "rgba(255,255,255,0.94)" : "rgba(255,255,255,0.48)",
-      fontSize: 16, fontWeight: active ? 600 : 400, cursor: "pointer", textAlign: "left", fontFamily: "inherit", transition: "all 0.12s",
+      fontSize: label === "쥔장에게 묻고 바란다" ? 13 : 15,
+      fontWeight: active ? 600 : 400, cursor: "pointer", textAlign: "left", fontFamily: "inherit", transition: "all 0.12s", whiteSpace: "nowrap",
     }}>
       <span>{label}</span>
-      {count > 0 && <span style={{ fontSize: 14, color: "rgba(255,255,255,0.28)" }}>{count}</span>}
+      {count > 0 && <span style={{ fontSize: 13, color: "rgba(255,255,255,0.28)", marginLeft: 6 }}>{count}</span>}
     </button>
   );
 }
@@ -181,13 +182,13 @@ function SideChild({ label, count, active, onClick }: { label: string; count: nu
   return (
     <button onClick={onClick} style={{
       width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
-      padding: "9px 16px 9px 28px", background: active ? "rgba(255,255,255,0.05)" : "transparent",
+      padding: "11px 14px 11px 28px", background: active ? "rgba(255,255,255,0.05)" : "transparent",
       border: "none", borderLeft: `3px solid ${active ? ACCENT : "transparent"}`,
       color: active ? "rgba(255,255,255,0.88)" : "rgba(255,255,255,0.38)",
-      fontSize: 14, fontWeight: active ? 600 : 400, cursor: "pointer", textAlign: "left", fontFamily: "inherit", transition: "all 0.12s",
+      fontSize: 13, fontWeight: active ? 600 : 400, cursor: "pointer", textAlign: "left", fontFamily: "inherit", transition: "all 0.12s", whiteSpace: "nowrap",
     }}>
       <span>{label}</span>
-      {count > 0 && <span style={{ fontSize: 13, color: "rgba(255,255,255,0.22)" }}>{count}</span>}
+      {count > 0 && <span style={{ fontSize: 12, color: "rgba(255,255,255,0.22)", marginLeft: 6 }}>{count}</span>}
     </button>
   );
 }

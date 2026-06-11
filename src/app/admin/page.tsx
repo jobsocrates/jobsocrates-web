@@ -553,19 +553,9 @@ export default function AdminPage() {
       `}</style>
 
       {/* Header */}
-      <header style={{ borderBottom: "1px solid rgba(255,255,255,0.08)", background: "rgba(13,13,24,0.98)", backdropFilter: "blur(12px)", position: "sticky", top: 0, zIndex: 40 }}>
-        {/* 상단 바: ADMIN + 홈 */}
-        <div style={{ height: 48, padding: "0 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span style={{ fontSize: 13, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(255,255,255,0.7)", flexShrink: 0 }}>Admin</span>
-          <a href="/" style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.55)", textDecoration: "none", display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
-            </svg>
-            홈
-          </a>
-        </div>
-        {/* 탭 바: 스크롤 가능 */}
-        <nav style={{ display: "flex", gap: 2, overflowX: "auto", padding: "0 12px 8px", scrollbarWidth: "none" }}>
+      <header style={{ height: 56, padding: "0 20px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid rgba(255,255,255,0.08)", background: "rgba(13,13,24,0.98)", backdropFilter: "blur(12px)", position: "sticky", top: 0, zIndex: 40 }}>
+        <span style={{ fontSize: 13, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(255,255,255,0.7)", flexShrink: 0 }}>Admin</span>
+        <nav style={{ flex: 1, display: "flex", gap: 2, justifyContent: "center", overflowX: "auto", padding: "0 8px", scrollbarWidth: "none" }}>
           {(["dashboard", "review", "notes", "users", "funnel", "board"] as Tab[]).map((t) => (
             <button key={t} onClick={() => { setTab(t); if (t === "funnel" && !funnelData) fetchFunnel(); if (t === "board") fetchBoard(); }}
               style={{ padding: "6px 14px", borderRadius: 8, fontSize: 13, fontWeight: tab === t ? 700 : 500, border: tab === t ? "1px solid rgba(255,255,255,0.15)" : "1px solid transparent", cursor: "pointer", background: tab === t ? "rgba(255,255,255,0.1)" : "transparent", color: tab === t ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.5)", whiteSpace: "nowrap", flexShrink: 0 }}>
@@ -573,6 +563,12 @@ export default function AdminPage() {
             </button>
           ))}
         </nav>
+        <a href="/" style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.55)", textDecoration: "none", display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+          </svg>
+          홈
+        </a>
       </header>
 
       {/* ─── DASHBOARD ─── */}
@@ -1187,25 +1183,25 @@ export default function AdminPage() {
         const visiblePosts = bFilter(boardCategory);
 
         return (
-        <div style={{ display: "flex", height: "calc(100vh - 48px)" }}>
+        <div style={{ display: "flex", height: "calc(100vh - 56px)" }}>
           {/* 사이드바 (모바일 숨김) */}
-          <aside className="admin-board-sidebar" style={{ width: 168, flexShrink: 0, borderRight: "1px solid rgba(255,255,255,0.07)", paddingTop: 24, overflowY: "auto" }}>
+          <aside className="admin-board-sidebar" style={{ width: 192, flexShrink: 0, borderRight: "1px solid rgba(255,255,255,0.07)", paddingTop: 24, overflowY: "auto" }}>
             {/* 전체 */}
-            <button onClick={() => setBoardCategory("전체")} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 16px", background: boardCategory === "전체" ? "rgba(255,255,255,0.06)" : "transparent", border: "none", borderLeft: `3px solid ${boardCategory === "전체" ? ACCENT : "transparent"}`, color: boardCategory === "전체" ? "rgba(255,255,255,0.94)" : "rgba(255,255,255,0.48)", fontSize: 16, fontWeight: boardCategory === "전체" ? 600 : 400, cursor: "pointer", textAlign: "left", fontFamily: "inherit" }}>
-              <span>전체</span><span style={{ fontSize: 14, color: "rgba(255,255,255,0.28)" }}>{boardPosts.length}</span>
+            <button onClick={() => setBoardCategory("전체")} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 14px", background: boardCategory === "전체" ? "rgba(255,255,255,0.06)" : "transparent", border: "none", borderLeft: `3px solid ${boardCategory === "전체" ? ACCENT : "transparent"}`, color: boardCategory === "전체" ? "rgba(255,255,255,0.94)" : "rgba(255,255,255,0.48)", fontSize: 15, fontWeight: boardCategory === "전체" ? 600 : 400, cursor: "pointer", textAlign: "left", fontFamily: "inherit", whiteSpace: "nowrap" }}>
+              <span>전체</span><span style={{ fontSize: 13, color: "rgba(255,255,255,0.28)", marginLeft: 6 }}>{boardPosts.length}</span>
             </button>
-            <div style={{ height: 1, background: "rgba(255,255,255,0.07)", margin: "8px 14px" }} />
+            <div style={{ height: 1, background: "rgba(255,255,255,0.07)", margin: "6px 14px" }} />
             {BTREE.map(node =>
               node.name === "──"
                 ? <div key="sep2" style={{ height: 1, background: "rgba(255,255,255,0.07)", margin: "8px 14px" }} />
                 : (
                   <div key={node.name}>
-                    <button onClick={() => setBoardCategory(node.name)} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 16px", background: boardCategory === node.name ? "rgba(255,255,255,0.06)" : "transparent", border: "none", borderLeft: `3px solid ${boardCategory === node.name ? ACCENT : "transparent"}`, color: boardCategory === node.name ? "rgba(255,255,255,0.94)" : "rgba(255,255,255,0.48)", fontSize: 16, fontWeight: boardCategory === node.name ? 600 : 400, cursor: "pointer", textAlign: "left", fontFamily: "inherit" }}>
-                      <span>{node.name}</span>{bCount(node.name) > 0 && <span style={{ fontSize: 14, color: "rgba(255,255,255,0.28)" }}>{bCount(node.name)}</span>}
+                    <button onClick={() => setBoardCategory(node.name)} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 14px", background: boardCategory === node.name ? "rgba(255,255,255,0.06)" : "transparent", border: "none", borderLeft: `3px solid ${boardCategory === node.name ? ACCENT : "transparent"}`, color: boardCategory === node.name ? "rgba(255,255,255,0.94)" : "rgba(255,255,255,0.48)", fontSize: node.name === "쥔장에게 묻고 바란다" ? 13 : 15, fontWeight: boardCategory === node.name ? 600 : 400, cursor: "pointer", textAlign: "left", fontFamily: "inherit", whiteSpace: "nowrap" }}>
+                      <span>{node.name}</span>{bCount(node.name) > 0 && <span style={{ fontSize: 13, color: "rgba(255,255,255,0.28)", marginLeft: 6 }}>{bCount(node.name)}</span>}
                     </button>
                     {node.children?.map(child => (
-                      <button key={child} onClick={() => setBoardCategory(child)} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 16px 9px 30px", background: boardCategory === child ? "rgba(255,255,255,0.05)" : "transparent", border: "none", borderLeft: `3px solid ${boardCategory === child ? ACCENT : "transparent"}`, color: boardCategory === child ? "rgba(255,255,255,0.88)" : "rgba(255,255,255,0.38)", fontSize: 14, fontWeight: boardCategory === child ? 600 : 400, cursor: "pointer", textAlign: "left", fontFamily: "inherit" }}>
-                        <span>{child}</span>{bCount(child) > 0 && <span style={{ fontSize: 13, color: "rgba(255,255,255,0.22)" }}>{bCount(child)}</span>}
+                      <button key={child} onClick={() => setBoardCategory(child)} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 14px 11px 28px", background: boardCategory === child ? "rgba(255,255,255,0.05)" : "transparent", border: "none", borderLeft: `3px solid ${boardCategory === child ? ACCENT : "transparent"}`, color: boardCategory === child ? "rgba(255,255,255,0.88)" : "rgba(255,255,255,0.38)", fontSize: 13, fontWeight: boardCategory === child ? 600 : 400, cursor: "pointer", textAlign: "left", fontFamily: "inherit", whiteSpace: "nowrap" }}>
+                        <span>{child}</span>{bCount(child) > 0 && <span style={{ fontSize: 12, color: "rgba(255,255,255,0.22)", marginLeft: 6 }}>{bCount(child)}</span>}
                       </button>
                     ))}
                   </div>
