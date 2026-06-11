@@ -148,6 +148,7 @@ export async function POST(req: Request) {
     case "interview-questions": {
       const sys =
         "당신은 면접 전문가입니다. 자소서를 분석하여 면접관이 실제로 물어볼 법한 예상 질문 4개를 생성하세요. " +
+        "질문 문장에 쉼표(,)를 사용하지 마세요. " +
         "반드시 JSON 배열만 출력하세요. 다른 텍스트 없이: [\"질문1\",\"질문2\",\"질문3\",\"질문4\"]";
       const messages: MsgParam[] = [
         {
@@ -164,7 +165,7 @@ export async function POST(req: Request) {
       const sys =
         `면접 코치. 직무: ${body.jobTitle || "미입력"}. 자소서 문항: ${body.question || "미입력"}.\n` +
         `면접 질문: "${body.interviewQuestion}".\n` +
-        "학생 답변에 피드백을 줘라. 잘한 점과 보완할 점을 구체적으로 짚어줘. \"~요\" 체로 따뜻하게. 4~5문장 이내. 마크다운 볼드(**) 절대 금지.";
+        "학생 답변에 피드백을 줘라. 잘한 점과 보완할 점을 구체적으로 짚어줘. \"~요\" 체로 따뜻하게. 4~5문장 이내. 마크다운 볼드(**) 절대 금지. 쉼표(,) 사용 금지.";
       const messages: MsgParam[] = [{ role: "user", content: body.answer }];
       return stream(sys, messages);
     }
