@@ -202,7 +202,11 @@ export default function AdminPage() {
     await supabase
       .from("admin_reviews")
       .upsert({ session_id: selectedId, rating, comment, updated_at: new Date().toISOString() }, { onConflict: "session_id" });
-    await fetchSessions();
+    setSessions((prev) => prev.map((s) =>
+      s.id === selectedId
+        ? { ...s, admin_reviews: [{ id: s.admin_reviews?.[0]?.id || "", rating, comment }] }
+        : s
+    ));
     setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
@@ -264,25 +268,18 @@ export default function AdminPage() {
   async function handleDeleteSession(sessionId: string) {
     setDeletingSessionId(sessionId);
     try {
-      const { data: items } = await supabase.from("cover_items").select("id").eq("session_id", sessionId);
-      if (items && items.length > 0) {
-        const itemIds = items.map((c) => c.id);
-        const { data: iqs } = await supabase.from("interview_questions").select("id").in("cover_item_id", itemIds);
-        if (iqs && iqs.length > 0) {
-          await supabase.from("interview_answers").delete().in("interview_question_id", iqs.map((q) => q.id));
-          await supabase.from("interview_questions").delete().in("cover_item_id", itemIds);
-        }
-        await supabase.from("messages").delete().in("cover_item_id", itemIds);
-        await supabase.from("revisions").delete().in("cover_item_id", itemIds);
-        await supabase.from("cover_items").delete().eq("session_id", sessionId);
-      }
-      await supabase.from("admin_reviews").delete().eq("session_id", sessionId);
-      const { error } = await supabase.from("sessions").delete().eq("id", sessionId);
-      if (!error) {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      const res = await fetch("/api/admin/delete-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ sessionId }),
+      });
+      if (res.ok) {
         setSessions((prev) => prev.filter((s) => s.id !== sessionId));
         if (selectedId === sessionId) { setSelectedId(null); setCoverItems([]); }
       } else {
-        console.error("[handleDeleteSession]", error);
+        console.error("[handleDeleteSession]", await res.text());
       }
     } catch (e) {
       console.error("[handleDeleteSession]", e);
@@ -314,6 +311,10 @@ export default function AdminPage() {
       supabase.from("messages").select("cover_item_id, role, content"),
     ]);
 
+    // session_id → user_id 역방향 매핑
+    const sessionToUser: Record<string, string> = {};
+    (sesData || []).forEach((s: any) => { sessionToUser[s.id] = s.user_id; });
+
     const sessionByUser: Record<string, string[]> = {};
     (sesData || []).forEach((s: any) => {
       if (!sessionByUser[s.user_id]) sessionByUser[s.user_id] = [];
@@ -326,17 +327,41 @@ export default function AdminPage() {
       coverBySession[ci.session_id].push(ci);
     });
 
-    // cover_item별 메시지 카운트 별도 집계 (nested select는 RLS로 오염될 수 있음)
+    // cover_item → user 매핑
+    const ciToUser: Record<string, string> = {};
+    (ciData || []).forEach((ci: any) => { ciToUser[ci.id] = sessionToUser[ci.session_id]; });
+
+    // 유저별 단계 이벤트 집계
+    const startedAnalysis = new Set<string>();   // "초안 진단을 시작해줘." 전송
+    const finishedDigging = new Set<string>();    // AI가 "완성본을 원하면" 발송
+    const CMD = ["초안 진단을 시작해줘.", "수정본을 작성해줘.", "완성본을 작성해줘."];
     const msgCountByCi: Record<string, { asked: number; answered: number }> = {};
+
     (msgData || []).forEach((m: any) => {
+      const uid = ciToUser[m.cover_item_id];
       if (!msgCountByCi[m.cover_item_id]) msgCountByCi[m.cover_item_id] = { asked: 0, answered: 0 };
-      const CMD = ["초안 진단을 시작해줘.", "수정본을 작성해줘.", "완성본을 작성해줘."];
-      if (m.role === "assistant") msgCountByCi[m.cover_item_id].asked++;
-      if (m.role === "user" && !CMD.includes(m.content)) msgCountByCi[m.cover_item_id].answered++;
+      if (m.role === "assistant") {
+        msgCountByCi[m.cover_item_id].asked++;
+        if (uid && (m.content?.includes("완성본을 원하면") || m.content?.includes("수정본을 원하면")))
+          finishedDigging.add(uid);
+      }
+      if (m.role === "user") {
+        if (uid && m.content === "초안 진단을 시작해줘.") startedAnalysis.add(uid);
+        if (!CMD.includes(m.content)) msgCountByCi[m.cover_item_id].answered++;
+      }
     });
 
-    const STAGE_LABELS = ["가입만", "분석 시작", "완성본 작성", "완주"];
-    const FUNNEL_NAMES = ["가입", "분석 시작", "완성본 작성", "완주"];
+    // 유저별 revision / interview 여부
+    const hasRevisionUser = new Set<string>();
+    (ciData || []).forEach((ci: any) => {
+      if ((ci.revisions || []).length > 0) {
+        const uid = sessionToUser[ci.session_id];
+        if (uid) hasRevisionUser.add(uid);
+      }
+    });
+
+    const STAGE_LABELS = ["가입", "분석 시작", "디깅 완주", "최종본 확인", "예상질문 진행"];
+    const FUNNEL_NAMES = ["가입", "분석 시작", "디깅 완주", "최종본 확인", "예상질문 진행"];
 
     const userRows: FunnelRow[] = (profiles || []).map((p: any) => {
       const sids = sessionByUser[p.id] || [];
@@ -356,23 +381,25 @@ export default function AdminPage() {
         });
       });
 
+      // 5단계: 각 이벤트 실제 발생 여부 기준
       let idx = 0;
-      if (items.length > 0) {
+      if (startedAnalysis.has(p.id)) {
         idx = 1;
-        if (items.some((ci: any) => (ci.revisions || []).length > 0)) {
+        if (finishedDigging.has(p.id)) {
           idx = 2;
-          if (interviewAnswered > 0) idx = 3;
+          if (hasRevisionUser.has(p.id)) {
+            idx = 3;
+            if (interviewAnswered > 0) idx = 4;
+          }
         }
       }
 
-      const hasSessions = (sessionByUser[p.id] || []).length > 0;
       let dropReason: string;
-      if (idx === 3) dropReason = "complete";
-      else if (!hasSessions) dropReason = "no_session";
-      else if (items.length === 0) dropReason = "no_items";
-      else if (diggingAsked === 0) dropReason = "no_analysis";
-      else if (idx === 1) dropReason = "digging_no_revision";
-      else dropReason = "no_interview";
+      if (idx === 4) dropReason = "complete";
+      else if (idx === 3) dropReason = "no_interview";
+      else if (idx === 2) dropReason = "no_revision";
+      else if (idx === 1) dropReason = "no_digging";
+      else dropReason = "not_started";
 
       return { userId: p.id, email: p.email, createdAt: p.created_at || "", stageIndex: idx, stageLabel: STAGE_LABELS[idx], diggingAsked, diggingAnswered, interviewAnswered, interviewTotal, dropReason };
     });
@@ -894,10 +921,11 @@ export default function AdminPage() {
             </div>
           ) : funnelData ? (() => {
             const stagePalette: Record<number, { color: string; bg: string; bar: string }> = {
-              0: { color: "rgba(255,255,255,0.35)", bg: "rgba(255,255,255,0.06)", bar: "rgba(255,255,255,0.2)" },
-              1: { color: BLUE,                    bg: "rgba(107,142,255,0.15)",  bar: BLUE },
-              2: { color: VIOLET,                  bg: "rgba(167,139,250,0.15)",  bar: VIOLET },
-              3: { color: GREEN,                   bg: "rgba(74,222,128,0.15)",   bar: GREEN },
+              0: { color: "rgba(255,255,255,0.35)", bg: "rgba(255,255,255,0.06)",  bar: "rgba(255,255,255,0.2)" },
+              1: { color: BLUE,                    bg: "rgba(107,142,255,0.15)",   bar: BLUE },
+              2: { color: "rgba(255,165,0,0.85)",  bg: "rgba(255,165,0,0.12)",    bar: "rgba(255,165,0,0.7)" },
+              3: { color: VIOLET,                  bg: "rgba(167,139,250,0.15)",   bar: VIOLET },
+              4: { color: GREEN,                   bg: "rgba(74,222,128,0.15)",    bar: GREEN },
             };
             return (
               <>
@@ -942,12 +970,11 @@ export default function AdminPage() {
                   <div style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: 12 }}>
                     {(() => {
                       const reasons = [
-                        { key: "no_session", label: "방문 없음", sub: "가입 후 채팅 미방문", color: "rgba(255,255,255,0.28)", bg: "rgba(255,255,255,0.05)" },
-                        { key: "no_items", label: "항목 미입력", sub: "채팅 방문 후 자소서 미입력", color: "rgba(255,165,0,0.75)", bg: "rgba(255,165,0,0.08)" },
-                        { key: "no_analysis", label: "분석 안 함", sub: "항목 입력 후 분석 미시작", color: "rgba(255,209,102,0.88)", bg: "rgba(255,209,102,0.08)" },
-                        { key: "digging_no_revision", label: "수정본 미요청", sub: "디깅 후 수정본 요청 안 함", color: BLUE, bg: "rgba(107,142,255,0.1)" },
-                        { key: "no_interview", label: "면접 미진행", sub: "수정본 완성 후 면접 Q&A 안 함", color: VIOLET, bg: "rgba(167,139,250,0.1)" },
-                        { key: "complete", label: "완주", sub: "면접 Q&A까지 완료", color: GREEN, bg: "rgba(74,222,128,0.1)" },
+                        { key: "not_started", label: "분석 전 이탈",   sub: "분석하기 버튼 미클릭",              color: "rgba(255,255,255,0.28)",  bg: "rgba(255,255,255,0.05)" },
+                        { key: "no_digging",  label: "디깅 미완주",    sub: "분석 시작 후 Q/A 완료 못 함",       color: BLUE,                      bg: "rgba(107,142,255,0.1)" },
+                        { key: "no_revision", label: "최종본 미확인",  sub: "디깅 완주 후 최종본 요청 안 함",     color: "rgba(255,165,0,0.85)",    bg: "rgba(255,165,0,0.08)" },
+                        { key: "no_interview",label: "면접 미진행",    sub: "최종본 확인 후 예상질문 안 함",      color: VIOLET,                    bg: "rgba(167,139,250,0.1)" },
+                        { key: "complete",    label: "완주",           sub: "예상질문까지 진행 완료",             color: GREEN,                     bg: "rgba(74,222,128,0.1)" },
                       ];
                       const total = funnelData.users.length;
                       return reasons.map(r => {
@@ -982,7 +1009,7 @@ export default function AdminPage() {
                     <span style={{ fontSize: 11, color: "rgba(255,255,255,0.2)", marginLeft: "auto" }}>최신 가입 순</span>
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "110px 1fr 1fr 1fr 1fr", padding: "8px 20px", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-                    {["가입일", "이메일", "디깅 Q/A", "예상Q", "단계"].map((h, hi) => (
+                    {["가입일", "이메일", "완성본", "예상Q", "단계"].map((h, hi) => (
                       <span key={h} style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.22)", textTransform: "uppercase", letterSpacing: "0.07em", textAlign: hi === 0 ? "left" : "center" }}>{h}</span>
                     ))}
                   </div>
@@ -990,8 +1017,8 @@ export default function AdminPage() {
                     <p style={{ padding: 20, fontSize: 12, color: "rgba(255,255,255,0.2)", textAlign: "center" }}>유저 없음</p>
                   ) : funnelData.users.map((u, idx) => {
                     const c = stagePalette[u.stageIndex];
-                    const hasDigging = u.diggingAsked > 0;
-                    const diggingDrop = hasDigging && u.diggingAnswered < u.diggingAsked - 1;
+                    const hasRevision = u.stageIndex >= 3;
+                    const inProgress = !hasRevision && u.diggingAsked > 0;
                     const hasInterview = u.interviewTotal > 0;
                     const allDone = hasInterview && u.interviewAnswered === u.interviewTotal;
                     return (
@@ -999,10 +1026,10 @@ export default function AdminPage() {
                         <span style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", whiteSpace: "nowrap" }}>{u.createdAt.slice(0, 10)}</span>
                         <span style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 8 }}>{u.email}</span>
                         <div style={{ display: "flex", justifyContent: "center" }}>
-                          {hasDigging ? (
-                            <span style={{ fontSize: 12, fontWeight: 700, color: diggingDrop ? "rgba(248,113,113,0.85)" : "rgba(255,255,255,0.55)", background: diggingDrop ? "rgba(248,113,113,0.1)" : "rgba(255,255,255,0.06)", borderRadius: 6, padding: "3px 10px" }}>
-                              {diggingDrop ? "⚠ " : ""}{u.diggingAnswered}/{u.diggingAsked}
-                            </span>
+                          {hasRevision ? (
+                            <span style={{ fontSize: 12, fontWeight: 700, color: "rgba(74,222,128,0.9)", background: "rgba(74,222,128,0.1)", borderRadius: 6, padding: "3px 10px" }}>완료</span>
+                          ) : inProgress ? (
+                            <span style={{ fontSize: 12, fontWeight: 700, color: "rgba(107,142,255,0.9)", background: "rgba(107,142,255,0.1)", borderRadius: 6, padding: "3px 10px" }}>진행중</span>
                           ) : (
                             <span style={{ fontSize: 13, color: "rgba(255,255,255,0.18)" }}>—</span>
                           )}
