@@ -94,12 +94,16 @@ function todayCategory() {
   return CATEGORIES[((diff % CATEGORIES.length) + CATEGORIES.length) % CATEGORIES.length];
 }
 
-function todayRole() {
+function todayRoles() {
   const now = new Date();
   const kst = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
   const start = new Date(START_DATE.toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
-  const diff = Math.floor((kst - start) / 86400000);
-  return JASOSEO_ROLES[((diff % JASOSEO_ROLES.length) + JASOSEO_ROLES.length) % JASOSEO_ROLES.length];
+  const diff = Math.floor((kst - start) / 86400000) * 2;
+  const len = JASOSEO_ROLES.length;
+  return [
+    JASOSEO_ROLES[((diff % len) + len) % len],
+    JASOSEO_ROLES[(((diff + 1) % len) + len) % len],
+  ];
 }
 
 function todayStr() {
@@ -408,12 +412,14 @@ async function main() {
   await saveToSupabase(finalTitle, content, category);
   console.log(`   ✅ 완료! 제목: "${finalTitle}"`);
 
-  const role = todayRole();
-  console.log(`\n─── 자소서 팁 (${role}) ───`);
-  console.log("🤖 자소서 비포·애프터 생성 중...");
-  const { generatedTitle: tipTitle, content: tipContent } = await generateJasoserTip(role);
-  await saveToSupabase(tipTitle, tipContent, "자소서 팁");
-  console.log(`   ✅ 완료! 제목: "${tipTitle}"`);
+  const roles = todayRoles();
+  for (const role of roles) {
+    console.log(`\n─── 자소서 팁 (${role}) ───`);
+    console.log("🤖 자소서 비포·애프터 생성 중...");
+    const { generatedTitle: tipTitle, content: tipContent } = await generateJasoserTip(role);
+    await saveToSupabase(tipTitle, tipContent, "자소서 팁");
+    console.log(`   ✅ 완료! 제목: "${tipTitle}"`);
+  }
 
   console.log(`\n✅ 전체 완료! 관리자 페이지 > 게시판 탭에서 확인 후 발행하세요.\n`);
 }
