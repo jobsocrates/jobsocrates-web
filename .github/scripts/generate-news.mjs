@@ -22,6 +22,18 @@ if (existsSync(envPath)) {
 // ── 카테고리 순환 (경제+기술 → 사회+글로벌 → 경제+기술 → ...) ──
 // DB에 저장되는 카테고리는 admin 게시판 탭 이름과 일치해야 함
 const START_DATE = new Date("2026-06-12T00:00:00+09:00");
+
+// ── 자소서 팁 직무 순환 (8개, 날짜 기반) ──
+const JASOSEO_ROLES = [
+  "콘텐츠 마케터",
+  "IT 서비스 기획자",
+  "프론트엔드 개발자",
+  "영업 관리",
+  "인사 담당",
+  "데이터 분석가",
+  "브랜드 마케터",
+  "UX 디자이너",
+];
 const CATEGORY_PAIRS = [["경제", "기술"], ["사회", "글로벌"]];
 
 // 각 카테고리별 RSS 후보 (앞에서부터 시도)
@@ -57,6 +69,14 @@ function todayPair() {
   const start = new Date(START_DATE.toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
   const diff = Math.floor((kst - start) / 86400000);
   return CATEGORY_PAIRS[((diff % CATEGORY_PAIRS.length) + CATEGORY_PAIRS.length) % CATEGORY_PAIRS.length];
+}
+
+function todayRole() {
+  const now = new Date();
+  const kst = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
+  const start = new Date(START_DATE.toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
+  const diff = Math.floor((kst - start) / 86400000);
+  return JASOSEO_ROLES[((diff % JASOSEO_ROLES.length) + JASOSEO_ROLES.length) % JASOSEO_ROLES.length];
 }
 
 function todayStr() {
@@ -189,6 +209,127 @@ ${list}`;
   return { generatedTitle, content };
 }
 
+// ── 자소서 팁 생성 ──
+async function generateJasoserTip(role) {
+  const prompt = `당신은 취업 전문가입니다. 자소서 비포·애프터 예시 게시물을 하나 만들어주세요.
+
+직무: ${role}
+문항: 지원 직무에 적합하다고 생각하는 이유를 서술하시오.
+
+작성 규칙:
+- BEFORE (~300자): 결과 없음 / 선택 기준 없음 / 경쟁사 대비 빈자리 없음, 이 3가지 약점이 자연스럽게 드러나는 자소서 초안
+- 질문 3개: 어느 문장을 보고 → 어떤 질문을 던졌는지 → 왜 그 질문인지 설명 → 사용자 답변 (구체적 수치 포함)
+- AFTER (~300자): 3개 질문의 답변이 모두 자연스럽게 녹아든 개선 버전
+
+구체성 규칙 (반드시 준수):
+- 수치는 반드시 맥락과 함께: "저장률" (X) → "인스타그램 게시물 저장수" (O), "조회율" (X) → "유튜브 영상 조회수" (O)
+- 숫자는 실제처럼 구체적으로: "많이 증가" (X) → "3개월 만에 팔로워 2,300명 증가" (O)
+- 플랫폼·채널·도구명 명시: "온라인 채널" (X) → "네이버 스마트스토어 / 인스타그램 / 슬랙" (O)
+
+출력 형식 (이 구조를 정확히 지키세요):
+
+TITLE: ✍️ 자소서 비포·애프터 [키워드1, 키워드2]
+
+직무: ${role}
+문항: 지원 직무에 적합하다고 생각하는 이유
+
+━━━━━━━━━━━━━━━━━━━━━
+[ BEFORE ] 취업소크라테스와 대화 전
+━━━━━━━━━━━━━━━━━━━━━
+
+(BEFORE 본문)
+
+▷ 약 300자
+
+
+────────────────────
+취업소크라테스가 던진 질문들
+────────────────────
+
+▶ Q1. (약점 한 줄 요약)
+
+이 문장을 보고
+→ "(해당 문장 인용)"
+
+질문: (질문 내용)
+
+이 질문을 던진 이유:
+(2~3줄 설명)
+
+답변: "(수치 포함 구체적 답변)"
+
+
+▶ Q2. (약점 한 줄 요약)
+
+이 문장을 보고
+→ "(해당 문장 인용)"
+
+질문: (질문 내용)
+
+이 질문을 던진 이유:
+(2~3줄 설명)
+
+답변: "(수치 포함 구체적 답변)"
+
+
+▶ Q3. (약점 한 줄 요약)
+
+이 문장을 보고
+→ "(해당 문장 인용)"
+
+질문: (질문 내용)
+
+이 질문을 던진 이유:
+(2~3줄 설명)
+
+답변: "(수치 포함 구체적 답변)"
+
+
+────────────────────
+
+[ AFTER ] 취업소크라테스와 대화 후
+
+(AFTER 본문)
+
+▷ 약 300자
+
+
+━━━━━━━━━━━━━━━━━━━━━
+달라진 것 요약
+
+1. (변화 1)
+2. (변화 2)
+3. (변화 3)
+━━━━━━━━━━━━━━━━━━━━━`;
+
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "x-api-key": process.env.ANTHROPIC_API_KEY,
+      "anthropic-version": "2023-06-01",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-6",
+      max_tokens: 3000,
+      messages: [{ role: "user", content: prompt }],
+    }),
+  });
+
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`Claude API 오류 (자소서 팁): ${err}`);
+  }
+  const data = await response.json();
+  const raw = data.content[0].text;
+
+  const titleMatch = raw.match(/^TITLE:\s*(.+)/m);
+  const generatedTitle = titleMatch ? titleMatch[1].trim() : `✍️ 자소서 비포·애프터 [${role}]`;
+  const content = raw.replace(/^TITLE:\s*.+\n*/m, "").trim();
+
+  return { generatedTitle, content };
+}
+
 // ── Supabase에 임시저장 ──
 async function saveToSupabase(title, content, category) {
   const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/posts`;
@@ -232,6 +373,13 @@ async function main() {
     await saveToSupabase(finalTitle, content, category);
     console.log(`   ✅ 완료! 제목: "${finalTitle}"`);
   }
+
+  const role = todayRole();
+  console.log(`\n─── 자소서 팁 (${role}) ───`);
+  console.log("🤖 자소서 비포·애프터 생성 중...");
+  const { generatedTitle: tipTitle, content: tipContent } = await generateJasoserTip(role);
+  await saveToSupabase(tipTitle, tipContent, "자소서 팁");
+  console.log(`   ✅ 완료! 제목: "${tipTitle}"`);
 
   console.log(`\n✅ 전체 완료! 관리자 페이지 > 게시판 탭에서 확인 후 발행하세요.\n`);
 }
