@@ -549,6 +549,20 @@ export default function AdminPage() {
           .admin-board-sidebar { display: none !important; }
           .admin-board-cat-select { display: flex !important; }
           nav::-webkit-scrollbar { display: none; }
+          .admin-users-container { padding: 16px !important; }
+          .admin-users-header { display: none !important; }
+          .admin-users-row {
+            grid-template-columns: 1fr 44px !important;
+            grid-template-rows: auto auto !important;
+            grid-template-areas: "info badge" "controls del" !important;
+            padding: 12px 16px !important;
+            row-gap: 8px !important;
+            column-gap: 0 !important;
+          }
+          .admin-users-info { grid-area: info !important; }
+          .admin-users-badge { grid-area: badge !important; justify-self: center !important; align-self: center !important; }
+          .admin-users-controls { grid-area: controls !important; justify-content: flex-start !important; }
+          .admin-users-delete { grid-area: del !important; align-self: center !important; }
         }
       `}</style>
 
@@ -888,7 +902,7 @@ export default function AdminPage() {
 
       {/* ─── USERS ─── */}
       {tab === "users" && (
-        <div style={{ padding: "24px 32px", maxWidth: 1100, margin: "0 auto" }}>
+        <div className="admin-users-container" style={{ padding: "24px 32px", maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 3 }}>
@@ -912,7 +926,7 @@ export default function AdminPage() {
 
           <div style={{ borderRadius: 16, border: "1px solid rgba(255,255,255,0.07)", background: "rgba(255,255,255,0.02)", overflow: "hidden" }}>
             {/* Header row */}
-            <div style={{ display: "grid", gridTemplateColumns: "minmax(180px,1fr) 90px auto 44px", gap: 0, padding: "10px 20px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+            <div className="admin-users-header" style={{ display: "grid", gridTemplateColumns: "minmax(180px,1fr) 90px auto 44px", gap: 0, padding: "10px 20px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
               <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.08em" }}>이메일 / 가입일</span>
               <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.08em", textAlign: "center" }}>뱃지</span>
               <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.08em", textAlign: "right", paddingRight: 12 }}>수량 입력 후 지급 / 차감</span>
@@ -922,8 +936,8 @@ export default function AdminPage() {
             {users.length === 0 ? (
               <p style={{ padding: "24px 18px", fontSize: 13, color: "rgba(255,255,255,0.3)", textAlign: "center" }}>유저 없음</p>
             ) : users.map(u => (
-              <div key={u.id} style={{ display: "grid", gridTemplateColumns: "minmax(180px,1fr) 90px auto 44px", gap: 0, padding: "14px 20px", borderBottom: "1px solid rgba(255,255,255,0.04)", alignItems: "center" }}>
-                <div style={{ paddingRight: 12, minWidth: 0 }}>
+              <div key={u.id} className="admin-users-row" style={{ display: "grid", gridTemplateColumns: "minmax(180px,1fr) 90px auto 44px", gap: 0, padding: "14px 20px", borderBottom: "1px solid rgba(255,255,255,0.04)", alignItems: "center" }}>
+                <div className="admin-users-info" style={{ paddingRight: 12, minWidth: 0 }}>
                   <p style={{ fontSize: 13, fontWeight: 500, color: "rgba(255,255,255,0.82)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.email}</p>
                   {u.created_at && (
                     <p style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 3 }}>
@@ -931,10 +945,10 @@ export default function AdminPage() {
                     </p>
                   )}
                 </div>
-                <p style={{ fontSize: 17, fontWeight: 700, color: u.credits > 0 ? "rgba(255,209,102,0.9)" : "rgba(255,255,255,0.25)", textAlign: "center" }}>
+                <p className="admin-users-badge" style={{ fontSize: 17, fontWeight: 700, color: u.credits > 0 ? "rgba(255,209,102,0.9)" : "rgba(255,255,255,0.25)", textAlign: "center" }}>
                   🏅 {u.credits}
                 </p>
-                <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
+                <div className="admin-users-controls" style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
                   <input
                     type="number"
                     min={1}
@@ -958,7 +972,7 @@ export default function AdminPage() {
                     차감
                   </button>
                 </div>
-                <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                <div className="admin-users-delete" style={{ display: "flex", justifyContent: "flex-end" }}>
                   <button
                     onClick={() => setDeleteTarget({ id: u.id, email: u.email })}
                     title="계정 삭제"
