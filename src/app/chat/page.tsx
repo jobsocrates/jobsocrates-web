@@ -76,6 +76,7 @@ function stripMd(t: string) {
     .replace(/\[변경사항\][\s\S]*?\[\/변경사항\]/g, "")
     .replace(/\[참조\]([\s\S]*?)\[\/참조\]/g, "$1")
     .replace(/\[참조\]|\[\/참조\]/g, "")
+    .replace(/\[완성준비\]/g, "")
     .trim();
 }
 
@@ -1185,7 +1186,7 @@ export default function ChatPage() {
   ) ?? false;
 
   const revisionReady = (selected?.msgs.some(
-    (m) => m.role === "bot" && (m.text.includes("완성본을 원하면") || m.text.includes("수정본을 원하면"))
+    (m) => m.role === "bot" && m.text.includes("[완성준비]")
   ) ?? false) && !hasAnyRevision;
 
   const interviewQs = selected?.interviewQs ?? [];
@@ -1697,7 +1698,7 @@ export default function ChatPage() {
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
                         </svg>
-                        완성본 작성 요청
+                        자소서 완성하기
                       </button>
                     ) : showInterviewButton ? (
                       /* 면접 예상질문 확인 버튼 */
