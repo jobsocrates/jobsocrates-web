@@ -980,6 +980,11 @@ export default function AdminPage() {
                     const userMsgs = item.messages.filter(m => m.role === "user").length;
                     const dropped = aiMsgs > 0 && userMsgs < aiMsgs - 1;
                     const notStarted = aiMsgs === 0;
+                    const sortedForTime = [...item.messages].sort((a, b) => a.created_at.localeCompare(b.created_at));
+                    const firstMsg = sortedForTime[0];
+                    const lastMsg = sortedForTime[sortedForTime.length - 1];
+                    const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" });
+                    const durationMin = firstMsg && lastMsg ? Math.round((new Date(lastMsg.created_at).getTime() - new Date(firstMsg.created_at).getTime()) / 60000) : null;
                     return (
                     <div key={item.id} style={{ marginBottom: 36 }}>
                       {/* Cover letter question + draft */}
@@ -999,6 +1004,17 @@ export default function AdminPage() {
                           <p style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", lineHeight: 1.65, whiteSpace: "pre-wrap" }}>{item.draft}</p>
                         )}
                       </div>
+
+                      {/* 시작/완성 시간 */}
+                      {firstMsg && lastMsg && durationMin !== null && (
+                        <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 12, fontSize: 11, color: "rgba(255,255,255,0.35)" }}>
+                          <span>시작 {fmtTime(firstMsg.created_at)}</span>
+                          <span style={{ color: "rgba(255,255,255,0.15)" }}>→</span>
+                          <span>완성 {fmtTime(lastMsg.created_at)}</span>
+                          <span style={{ color: "rgba(255,255,255,0.15)" }}>·</span>
+                          <span style={{ color: "rgba(255,255,255,0.5)", fontWeight: 600 }}>{durationMin}분</span>
+                        </div>
+                      )}
 
                       {/* Chat messages */}
                       {item.messages
