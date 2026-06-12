@@ -108,7 +108,7 @@ function parseRevisionMsg(text: string) {
 /* ── 진단 카드 (첫 번째 봇 메시지) ── */
 function DiagnosisCard({ text, streaming }: { text: string; streaming: boolean }) {
   const stripped = stripMd(text);
-  const splitIdx = stripped.indexOf("이 중에서");
+  const splitIdx = stripped.search(/(이 중에서|가장 약한 부분인)/);
   const mainText = splitIdx !== -1 ? stripped.slice(0, splitIdx).trim() : stripped;
   const followText = splitIdx !== -1 ? stripped.slice(splitIdx).trim() : null;
   const lines = mainText.split("\n").filter((l) => l.trim() !== "");
