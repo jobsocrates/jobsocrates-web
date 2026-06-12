@@ -91,7 +91,7 @@ function parseRevisionMsg(text: string) {
   const rawRevision = revMatch
     ? revMatch[1].replace(/\[소제목\][\s\S]*?\[\/소제목\]\s*/g, "").trim()
     : "";
-  const revision = subtitle ? `[${subtitle}]\n\n${rawRevision}` : rawRevision;
+  const revision = rawRevision;
   const changes = chgMatch ? chgMatch[1].trim() : "";
   const partialChanges = partialChgMatch ? partialChgMatch[1].trim() : "";
 
@@ -236,7 +236,7 @@ function StreamingRevisionCard({ text }: { text: string }) {
     .replace(/\[\/수정본\][\s\S]*/, "")
     .replace(/\[소제목\][\s\S]*?\[\/소제목\]\s*/g, "")
     .trim();
-  const partialRevision = subtitle && rawPartial ? `[${subtitle}]\n\n${rawPartial}` : rawPartial;
+  const partialRevision = rawPartial;
 
   return (
     <div className="flex flex-col gap-3 w-full">
