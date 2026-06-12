@@ -12,10 +12,18 @@ import { fileURLToPath } from "url";
 const __dir = dirname(fileURLToPath(import.meta.url));
 const envPath = resolve(__dir, "../../.env.local");
 if (existsSync(envPath)) {
-  const lines = readFileSync(envPath, "utf-8").split("\n");
+  const lines = readFileSync(envPath, "utf-8").split(/\r?\n/);
   for (const line of lines) {
-    const m = line.match(/^([^#][^=]*)=(.+)$/);
-    if (m) process.env[m[1].trim()] = m[2].trim();
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const eqIdx = trimmed.indexOf("=");
+    if (eqIdx === -1) continue;
+    const key = trimmed.slice(0, eqIdx).trim();
+    let val = trimmed.slice(eqIdx + 1).trim();
+    if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+      val = val.slice(1, -1);
+    }
+    if (key) process.env[key] = val;
   }
 }
 
