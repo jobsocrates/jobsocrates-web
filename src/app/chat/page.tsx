@@ -1178,7 +1178,7 @@ export default function ChatPage() {
   }
 
   const canStart =
-    !!selected?.question.trim() && !!selected?.draft.trim() && selected?.status === "idle";
+    !!jobTitle.trim() && !!selected?.question.trim() && !!selected?.charLimit.trim() && !!selected?.draft.trim() && selected?.status === "idle";
 
   const hasAnyRevision = selected?.msgs.some(
     (m) => m.role === "bot" && m.text.includes("[수정본]") && m.text.includes("[/수정본]")
@@ -1518,7 +1518,7 @@ export default function ChatPage() {
                     ) : (
                       <button
                         onClick={handleStartClick}
-                        disabled={selected?.status !== "idle"}
+                        disabled={!canStart}
                         className="w-full py-4 rounded-2xl text-sm lg:text-base font-semibold text-white transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-20 disabled:cursor-not-allowed"
                         style={{
                           background: canStart ? ACCENT : "rgba(255,255,255,0.08)",
@@ -1535,7 +1535,7 @@ export default function ChatPage() {
                         ? ""
                         : canStart
                         ? "논리 흐름 · 문맥 연결 · 직무 이해도를 진단하고 질문으로 이어가요"
-                        : "문항과 초안을 모두 입력하면 분석을 시작할 수 있어요"}
+                        : "직무, 문항, 글자수 제한, 초안을 모두 입력하면 시작할 수 있어요"}
                     </p>
                   </div>
 
