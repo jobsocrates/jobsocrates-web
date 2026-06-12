@@ -1055,6 +1055,22 @@ export default function ChatPage() {
     await fetchBotReply(newHistory, selectedId, selected.draft, selected.question, selected.charLimit, selected.dbId);
   }
 
+  async function handleAdminRegenerate() {
+    if (!selected || isStreaming) return;
+    const revIdx = selected.msgs.findIndex(m => m.role === "user" && m.text === "완성본을 작성해줘.");
+    const histIdx = selected.apiHistory.findIndex(h => h.role === "user" && h.content === "완성본을 작성해줘.");
+    const newMsgs = revIdx !== -1 ? selected.msgs.slice(0, revIdx) : selected.msgs;
+    const newHistory = histIdx !== -1 ? selected.apiHistory.slice(0, histIdx) : selected.apiHistory;
+    const t = "완성본을 작성해줘.";
+    const newHistoryWithReq = [...newHistory, { role: "user", content: t }];
+    setItems(prev => prev.map(it => it.id === selectedId
+      ? { ...it, msgs: [...newMsgs, { id: uid(), role: "user" as const, text: t }], apiHistory: newHistoryWithReq, interviewQs: [] }
+      : it
+    ));
+    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 0);
+    await fetchBotReply(newHistoryWithReq, selectedId, selected.draft, selected.question, selected.charLimit, selected.dbId);
+  }
+
   async function fetchInterviewQuestions() {
     if (!selected) return;
     updateItem(selectedId, { isLoadingQs: true });
@@ -1753,6 +1769,18 @@ export default function ChatPage() {
                         </div>
                       </div>
                     ) : null}
+
+                    {/* 어드민 전용: 완성본 재생성 */}
+                    {currentUser?.email === ADMIN_EMAIL && hasAnyRevision && (
+                      <button
+                        onClick={handleAdminRegenerate}
+                        disabled={isStreaming}
+                        className="w-full py-2.5 rounded-xl text-xs font-semibold transition-all hover:opacity-80 disabled:opacity-30 flex items-center justify-center gap-1.5"
+                        style={{ background: "rgba(255,209,102,0.08)", border: "1px solid rgba(255,209,102,0.25)", color: "rgba(255,209,102,0.7)" }}
+                      >
+                        🔄 완성본 재생성 (어드민)
+                      </button>
+                    )}
 
                     {/* 대화 정리하기 + 홈 — 면접 Q&A 완료 후에만 노출 */}
                     {showSummaryButton && (
