@@ -38,6 +38,7 @@ interface CoverItemFull {
   id: string;
   question: string;
   draft: string;
+  char_limit: number | null;
   status: string;
   order_index: number;
   messages: { id: string; role: string; content: string; created_at: string }[];
@@ -89,6 +90,7 @@ export default function AdminPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [coverItems, setCoverItems] = useState<CoverItemFull[]>([]);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [regenItemId, setRegenItemId] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
   const [rating, setRating] = useState<"good" | "bad" | null>(null);
   const [comment, setComment] = useState("");
@@ -308,12 +310,51 @@ export default function AdminPage() {
     const { data } = await supabase
       .from("cover_items")
       .select(
-        "id, question, draft, status, order_index, messages(id, role, content, created_at), interview_questions(id, question, order_index, interview_answers(user_answer, ai_feedback))"
+        "id, question, draft, char_limit, status, order_index, messages(id, role, content, created_at), interview_questions(id, question, order_index, interview_answers(user_answer, ai_feedback))"
       )
       .eq("session_id", id)
       .order("order_index");
     setCoverItems((data as unknown as CoverItemFull[]) || []);
     setDetailLoading(false);
+  }
+
+  async function regenCoverLetter(item: CoverItemFull) {
+    if (regenItemId) return;
+    setRegenItemId(item.id);
+    try {
+      const sorted = [...item.messages].sort((a, b) => a.created_at.localeCompare(b.created_at));
+      const cutIdx = sorted.findIndex(m => m.role === "user" && m.content === "완성본을 작성해줘.");
+      const baseHistory = (cutIdx !== -1 ? sorted.slice(0, cutIdx) : sorted).map(m => ({ role: m.role === "user" ? "user" : "assistant", content: m.content }));
+
+      // DB에서 완성본 요청 이후 메시지 삭제
+      if (cutIdx !== -1) {
+        const toDelete = sorted.slice(cutIdx).map(m => m.id);
+        await supabase.from("messages").delete().in("id", toDelete);
+      }
+
+      const newHistory = [...baseHistory, { role: "user", content: "완성본을 작성해줘." }];
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "analyze", jobTitle: selectedSession?.job_title || "", question: item.question, draft: item.draft, charLimit: item.char_limit ? String(item.char_limit) : "", messages: newHistory }),
+      });
+      if (!res.body) throw new Error();
+      const reader = res.body.getReader();
+      const dec = new TextDecoder();
+      let full = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        full += dec.decode(value, { stream: true });
+      }
+      await supabase.from("messages").insert([
+        { cover_item_id: item.id, role: "user", content: "완성본을 작성해줘." },
+        { cover_item_id: item.id, role: "assistant", content: full },
+      ]);
+      // 리로드
+      if (selectedId) await selectSession(selectedId);
+    } catch { /* 무시 */ }
+    setRegenItemId(null);
   }
 
   async function saveReview() {
@@ -962,6 +1003,17 @@ export default function AdminPage() {
                             </div>
                           </div>
                         ))}
+
+                      {/* 완성본 재생성 버튼 */}
+                      {item.messages.some(m => m.role === "assistant" && m.content.includes("[수정본]")) && (
+                        <button
+                          onClick={() => regenCoverLetter(item)}
+                          disabled={!!regenItemId}
+                          style={{ marginTop: 10, marginBottom: 6, width: "100%", padding: "8px 0", borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: regenItemId ? "default" : "pointer", border: "1px solid rgba(255,209,102,0.25)", background: "rgba(255,209,102,0.07)", color: "rgba(255,209,102,0.75)", opacity: regenItemId ? 0.5 : 1 }}
+                        >
+                          {regenItemId === item.id ? "재생성 중..." : "🔄 완성본 재생성"}
+                        </button>
+                      )}
 
                       {/* Interview questions */}
                       {item.interview_questions.length > 0 && (
