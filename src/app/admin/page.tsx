@@ -351,8 +351,15 @@ export default function AdminPage() {
         { cover_item_id: item.id, role: "user", content: "완성본을 작성해줘." },
         { cover_item_id: item.id, role: "assistant", content: full },
       ]);
-      // 리로드
-      if (selectedId) await selectSession(selectedId);
+      // 직접 리로드 (selectSession은 같은 ID면 무시하므로)
+      if (selectedId) {
+        const { data } = await supabase
+          .from("cover_items")
+          .select("id, question, draft, char_limit, status, order_index, messages(id, role, content, created_at), interview_questions(id, question, order_index, interview_answers(user_answer, ai_feedback))")
+          .eq("session_id", selectedId)
+          .order("order_index");
+        setCoverItems((data as unknown as CoverItemFull[]) || []);
+      }
     } catch { /* 무시 */ }
     setRegenItemId(null);
   }
