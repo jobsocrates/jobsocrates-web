@@ -120,6 +120,7 @@ export default function AdminPage() {
   const [boardPostsLoading, setBoardPostsLoading] = useState(false);
   const [boardVisible, setBoardVisible] = useState(false);
   const [boardVisibleSaving, setBoardVisibleSaving] = useState(false);
+  const [boardCatOptions, setBoardCatOptions] = useState<string[]>(["공지·업데이트","쥔장 잡담","자소서 팁","면접 팁","뉴스","경제","기술","사회","글로벌","쥔장에게 묻고 바란다"]);
   const [writeTitle, setWriteTitle] = useState("");
   const [writeCategory, setWriteCategory] = useState("쥔장 잡담");
   const [writeContent, setWriteContent] = useState("");
@@ -155,12 +156,19 @@ export default function AdminPage() {
 
   async function fetchBoard() {
     setBoardPostsLoading(true);
-    const [{ data: postsData }, { data: config }] = await Promise.all([
+    const [{ data: postsData }, { data: config }, { data: catConfig }] = await Promise.all([
       supabase.from("posts").select("*").order("is_pinned", { ascending: false }).order("created_at", { ascending: false }),
       supabase.from("site_config").select("value").eq("key", "board_visible").single(),
+      supabase.from("site_config").select("value").eq("key", "board_categories").single(),
     ]);
     setBoardPosts(postsData || []);
     setBoardVisible(config?.value === true);
+    if (catConfig?.value) {
+      type CatNode = { type: "sep" } | { type: "item"; name: string; children?: string[] };
+      const tree = catConfig.value as CatNode[];
+      const options = tree.flatMap(c => c.type === "item" ? [c.name, ...(c.children || [])] : []);
+      if (options.length > 0) setBoardCatOptions(options);
+    }
     setBoardPostsLoading(false);
   }
 
@@ -1566,7 +1574,7 @@ export default function AdminPage() {
                 <div className="admin-board-write-top" style={{ display: "flex", gap: 10, marginBottom: 10 }}>
                   <select value={writeCategory} onChange={e => setWriteCategory(e.target.value)}
                     style={{ padding: "9px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: "#1a1a2e", color: "rgba(255,255,255,0.8)", fontSize: 15, fontFamily: "inherit", cursor: "pointer", flexShrink: 0 }}>
-                    {["쥔장 잡담","자소서 팁","면접 팁","공지·업데이트","뉴스","경제","기술","사회","글로벌","쥔장에게 묻고 바란다"].map(c => <option key={c} value={c}>{c}</option>)}
+                    {boardCatOptions.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                   <input value={writeTitle} onChange={e => setWriteTitle(e.target.value)} placeholder="제목"
                     style={{ flex: 1, padding: "9px 14px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: "#1a1a2e", color: "rgba(255,255,255,0.88)", fontSize: 16, fontFamily: "inherit", outline: "none" }} />
@@ -1664,7 +1672,7 @@ export default function AdminPage() {
                         onChange={e => setEditCategory(e.target.value)}
                         style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 6, padding: "4px 8px", fontSize: 12, color: "rgba(255,255,255,0.7)", fontFamily: "inherit", cursor: "pointer" }}
                       >
-                        {["쥔장 잡담","자소서 팁","면접 팁","공지·업데이트","경제","기술","사회","글로벌","쥔장에게 묻고 바란다"].map(c => <option key={c} value={c}>{c}</option>)}
+                        {boardCatOptions.map(c => <option key={c} value={c}>{c}</option>)}
                       </select>
                     ) : (
                       <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 9px", borderRadius: 20, background: `${ACCENT}22`, border: `1px solid ${ACCENT}44`, color: ACCENT }}>{viewPost.category}</span>
