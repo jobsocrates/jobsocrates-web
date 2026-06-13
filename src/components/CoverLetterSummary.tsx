@@ -90,7 +90,7 @@ export function buildPrintHtml(
     if (isDiag) {
       return `
         <div class="diag-box">
-          <div class="diag-label-row"><img class="avatar" src="${baseUrl}/ai-avatar.webp" alt="" style="object-fit:cover"> 초안 진단</div>
+          <div class="diag-label-row"><img class="avatar" src="${baseUrl}/logo.jpg" alt="" style="object-fit:contain;background:#fff;padding:1px;border-radius:4px"> 초안 진단</div>
           <p class="diag-text">${escHtml(text)}</p>
         </div>`;
     }
@@ -98,7 +98,7 @@ export function buildPrintHtml(
       return `
         <div class="msg-wrap">
           <div class="msg-ai">
-            <img class="avatar" src="${baseUrl}/ai-avatar.webp" alt="" style="object-fit:cover">
+            <img class="avatar" src="${baseUrl}/logo.jpg" alt="" style="object-fit:contain;background:#fff;padding:1px;border-radius:4px">
             <div class="bubble-ai">${escHtml(text)}</div>
           </div>
         </div>`;
@@ -507,7 +507,7 @@ function SummaryMsgRow({
   return (
     <div className={`flex gap-3 ${isBot ? "" : "flex-row-reverse"}`}>
       {isBot ? (
-        <img src="/ai-avatar.webp" alt="" className="w-7 h-7 rounded-full object-cover flex-shrink-0 mt-1" />
+        <img src="/logo.jpg" alt="" className="w-7 h-7 rounded-lg object-contain flex-shrink-0 mt-1" style={{ background: "#fff", padding: "1px" }} />
       ) : (
         <div
           className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-1"

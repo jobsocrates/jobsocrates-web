@@ -352,7 +352,7 @@ function InterviewQCard({
                   className={`flex items-end gap-2 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
                 >
                   {msg.role === "bot" && (
-                    <img src="/ai-avatar.webp" alt="" className="w-6 h-6 rounded-full object-cover flex-shrink-0 mb-0.5" />
+                    <img src="/logo.jpg" alt="" className="w-6 h-6 rounded-md object-contain flex-shrink-0 mb-0.5" style={{ background: "#fff", padding: "1px" }} />
                   )}
                   <div
                     className="max-w-[85%] px-4 py-3 text-sm lg:text-[15px] leading-[1.8] whitespace-pre-wrap"
