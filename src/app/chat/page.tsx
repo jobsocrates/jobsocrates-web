@@ -229,16 +229,18 @@ function ChangesCard({ text }: { text: string }) {
 /* ── 완성본 생성 중 로딩 카드 ── */
 const REVISION_LOADING_MSGS = [
   "잠시만 기다려주세요",
-  "지금 내용을 분석하고 있어요",
-  "작성 방향을 정리하고 있어요",
+  "대화 내용을 꼼꼼히 읽고 있어요",
+  "지원 직무와 문항을 분석하고 있어요",
+  "어떤 역량을 드러낼지 정리하고 있어요",
   "자소서를 작성하고 있어요",
-  "마지막으로 다듬고 있어요",
+  "문장 흐름을 다듬고 있어요",
+  "거의 다 됐어요",
 ];
 
 function RevisionLoadingCard() {
   const [idx, setIdx] = useState(0);
   useEffect(() => {
-    const t = setInterval(() => setIdx(p => Math.min(p + 1, REVISION_LOADING_MSGS.length - 1)), 2500);
+    const t = setInterval(() => setIdx(p => Math.min(p + 1, REVISION_LOADING_MSGS.length - 1)), 4000);
     return () => clearInterval(t);
   }, []);
   return (
@@ -1232,7 +1234,7 @@ export default function ChatPage() {
 
   const interviewQs = selected?.interviewQs ?? [];
   const isLoadingQs = selected?.isLoadingQs ?? false;
-  const showInterviewButton = hasAnyRevision && interviewQs.length === 0 && !isLoadingQs;
+  const showInterviewButton = !isStreaming && hasAnyRevision && interviewQs.length === 0 && !isLoadingQs;
   const showSummaryButton = hasAnyRevision && interviewQs.length > 0;
 
 
