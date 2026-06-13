@@ -1097,7 +1097,7 @@ export default function ChatPage() {
   }
 
   async function fetchInterviewQuestions() {
-    if (!selected) return;
+    if (!selected || selected.isLoadingQs || selected.interviewQs.length > 0) return;
     updateItem(selectedId, { isLoadingQs: true });
     const revMsg = selected.msgs.find(
       (m) => m.role === "bot" && m.text.includes("[수정본]") && m.text.includes("[/수정본]")
