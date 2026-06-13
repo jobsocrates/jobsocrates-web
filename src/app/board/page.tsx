@@ -54,6 +54,7 @@ export default function BoardPage() {
   const [catSaving, setCatSaving] = useState(false);
 
   useEffect(() => {
+    supabase.from("page_views").insert({ path: "/board" });
     async function init() {
       const [{ data: config }, { data: catConfig }, { data: authData }] = await Promise.all([
         supabase.from("site_config").select("value").eq("key", "board_visible").single(),
