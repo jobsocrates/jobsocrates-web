@@ -46,6 +46,7 @@ interface CoverItemFull {
     id: string;
     question: string;
     order_index: number;
+    created_at: string;
     interview_answers: { user_answer: string; ai_feedback: string }[];
   }[];
 }
@@ -310,7 +311,7 @@ export default function AdminPage() {
     const { data } = await supabase
       .from("cover_items")
       .select(
-        "id, question, draft, char_limit, status, order_index, messages(id, role, content, created_at), interview_questions(id, question, order_index, interview_answers(user_answer, ai_feedback))"
+        "id, question, draft, char_limit, status, order_index, messages(id, role, content, created_at), interview_questions(id, question, order_index, created_at, interview_answers(user_answer, ai_feedback))"
       )
       .eq("session_id", id)
       .order("order_index");
@@ -355,7 +356,7 @@ export default function AdminPage() {
       if (selectedId) {
         const { data } = await supabase
           .from("cover_items")
-          .select("id, question, draft, char_limit, status, order_index, messages(id, role, content, created_at), interview_questions(id, question, order_index, interview_answers(user_answer, ai_feedback))")
+          .select("id, question, draft, char_limit, status, order_index, messages(id, role, content, created_at), interview_questions(id, question, order_index, created_at, interview_answers(user_answer, ai_feedback))")
           .eq("session_id", selectedId)
           .order("order_index");
         setCoverItems((data as unknown as CoverItemFull[]) || []);
@@ -983,8 +984,12 @@ export default function AdminPage() {
                     const sortedForTime = [...item.messages].sort((a, b) => a.created_at.localeCompare(b.created_at));
                     const firstMsg = sortedForTime[0];
                     const lastMsg = sortedForTime[sortedForTime.length - 1];
+                    const lastIqTime = item.interview_questions.length > 0
+                      ? item.interview_questions.reduce((max, iq) => iq.created_at > max ? iq.created_at : max, item.interview_questions[0].created_at)
+                      : null;
+                    const endTime = lastIqTime ?? lastMsg?.created_at ?? null;
                     const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" });
-                    const durationMin = firstMsg && lastMsg ? Math.round((new Date(lastMsg.created_at).getTime() - new Date(firstMsg.created_at).getTime()) / 60000) : null;
+                    const durationMin = firstMsg && endTime ? Math.round((new Date(endTime).getTime() - new Date(firstMsg.created_at).getTime()) / 60000) : null;
                     return (
                     <div key={item.id} style={{ marginBottom: 36 }}>
                       {/* Cover letter question + draft */}
@@ -1006,11 +1011,11 @@ export default function AdminPage() {
                       </div>
 
                       {/* 시작/완성 시간 */}
-                      {firstMsg && lastMsg && durationMin !== null && (
+                      {firstMsg && endTime && durationMin !== null && (
                         <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 12, fontSize: 11, color: "rgba(255,255,255,0.35)" }}>
                           <span>시작 {fmtTime(firstMsg.created_at)}</span>
                           <span style={{ color: "rgba(255,255,255,0.15)" }}>→</span>
-                          <span>완성 {fmtTime(lastMsg.created_at)}</span>
+                          <span>완성 {fmtTime(endTime)}</span>
                           <span style={{ color: "rgba(255,255,255,0.15)" }}>·</span>
                           <span style={{ color: "rgba(255,255,255,0.5)", fontWeight: 600 }}>{durationMin}분</span>
                         </div>
