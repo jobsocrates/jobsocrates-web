@@ -35,8 +35,12 @@ function countFor(posts: Post[], cat: string) {
 }
 
 function fmt(d: string) {
-  const dt = new Date(d);
-  return `${String(dt.getFullYear()).slice(2)}.${String(dt.getMonth() + 1).padStart(2, "0")}.${String(dt.getDate()).padStart(2, "0")}`;
+  return new Date(d).toLocaleDateString("ko-KR", {
+    timeZone: "Asia/Seoul",
+    year: "2-digit",
+    month: "2-digit",
+    day: "2-digit",
+  }).replace(/\.\s*/g, ".").replace(/\.$/, "");
 }
 
 export default function BoardPage() {

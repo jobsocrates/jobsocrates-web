@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 import { readFileSync } from "fs";
 import { join } from "path";
 import type { DiggingContext } from "@/types";
@@ -168,6 +169,40 @@ export async function POST(req: Request) {
         "학생 답변에 피드백을 줘라. 잘한 점과 보완할 점을 구체적으로 짚어줘. \"~요\" 체로 따뜻하게. 4~5문장 이내. 마크다운 볼드(**) 절대 금지. 쉼표(,) 남발 금지. 명사·항목 나열 외에는 쓰지 마라.";
       const messages: MsgParam[] = [{ role: "user", content: body.answer }];
       return stream(sys, messages);
+    }
+
+    case "polish": {
+      const draft = body.draft as string;
+      const revision = body.revision as string;
+      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      const enc = new TextEncoder();
+      const charLimit = body.charLimit ? Number(body.charLimit) : null;
+      const charLimitRule = charLimit
+        ? `- 글자 수 ${charLimit}자 이내로 맞춰라 (공백 포함)\n`
+        : "";
+      const polishPrompt = `완성본 자연스럽게 다듬어줘. 쉼표(,) 남발 금지. 명사·항목 나열 외에는 쓰지 마라.\n\n${revision}`;
+      const openaiStream = openai.chat.completions.stream({
+        model: "gpt-4.1-mini",
+        messages: [{ role: "user", content: polishPrompt }],
+      });
+      return new Response(
+        new ReadableStream({
+          async start(ctrl) {
+            try {
+              for await (const chunk of openaiStream) {
+                const text = chunk.choices[0]?.delta?.content ?? "";
+                if (text) ctrl.enqueue(enc.encode(text));
+              }
+            } catch (e) {
+              const msg = e instanceof Error ? e.message : "GPT 오류";
+              try { ctrl.enqueue(enc.encode(`\n오류: ${msg}`)); } catch { /* 무시 */ }
+            } finally {
+              try { ctrl.close(); } catch { /* 무시 */ }
+            }
+          },
+        }),
+        { headers: { "Content-Type": "text/plain; charset=utf-8" } }
+      );
     }
 
     default:

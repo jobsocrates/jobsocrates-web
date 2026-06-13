@@ -226,38 +226,34 @@ function ChangesCard({ text }: { text: string }) {
   );
 }
 
-/* ── 수정본 스트리밍 카드 ([수정본] 마커 감지 후, 완성 전) ── */
-function StreamingRevisionCard({ text }: { text: string }) {
-  const subMatch = text.match(/\[소제목\]([\s\S]*?)\[\/소제목\]/);
-  const subtitle = subMatch ? subMatch[1].trim() : "";
-  const parts = text.split("[수정본]");
-  const afterMarker = parts.length > 1 ? parts[1] : "";
-  const rawPartial = afterMarker
-    .replace(/\[\/수정본\][\s\S]*/, "")
-    .replace(/\[소제목\][\s\S]*?\[\/소제목\]\s*/g, "")
-    .trim();
-  const partialRevision = rawPartial;
+/* ── 완성본 생성 중 로딩 카드 ── */
+const REVISION_LOADING_MSGS = [
+  "잠시만 기다려주세요",
+  "지금 내용을 분석하고 있어요",
+  "작성 방향을 정리하고 있어요",
+  "자소서를 작성하고 있어요",
+  "마지막으로 다듬고 있어요",
+];
 
+function RevisionLoadingCard() {
+  const [idx, setIdx] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setIdx(p => Math.min(p + 1, REVISION_LOADING_MSGS.length - 1)), 2500);
+    return () => clearInterval(t);
+  }, []);
   return (
-    <div className="flex flex-col gap-3 w-full">
-      <div className="rounded-2xl overflow-hidden" style={{ background: `${BLUE}0D`, border: `1px solid ${BLUE}28` }}>
-        <div className="flex items-center gap-2 px-4 py-2.5 border-b" style={{ borderColor: `${BLUE}20` }}>
-          <img src="/ai-avatar.webp" alt="" className="w-5 h-5 rounded-full object-cover flex-shrink-0" />
-          <span className="text-xs lg:text-[15px] font-semibold" style={{ color: BLUE }}>완성본</span>
+    <div className="rounded-2xl overflow-hidden" style={{ background: `${BLUE}0D`, border: `1px solid ${BLUE}28` }}>
+      <div className="flex items-center gap-2 px-4 py-2.5 border-b" style={{ borderColor: `${BLUE}20` }}>
+        <img src="/ai-avatar.webp" alt="" className="w-5 h-5 rounded-full object-cover flex-shrink-0" />
+        <span className="text-xs lg:text-[15px] font-semibold" style={{ color: BLUE }}>완성본</span>
+      </div>
+      <div className="px-5 py-5 flex items-center gap-3">
+        <div className="flex gap-1.5">
+          {DOTS.map(({ delay, color }) => (
+            <span key={delay} className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: color, animationDelay: `${delay}ms` }} />
+          ))}
         </div>
-        <div className="px-4 py-4">
-          {partialRevision ? (
-            <p className="text-sm lg:text-base leading-[1.9] whitespace-pre-wrap" style={{ color: "rgba(255,255,255,0.9)", wordBreak: "keep-all" }}>
-              {partialRevision}
-            </p>
-          ) : (
-            <div className="flex gap-1.5 items-center h-5">
-              {DOTS.map(({ delay, color }) => (
-                <span key={delay} className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: color, animationDelay: `${delay}ms` }} />
-              ))}
-            </div>
-          )}
-        </div>
+        <span className="text-sm" style={{ color: "rgba(255,255,255,0.45)" }}>{REVISION_LOADING_MSGS[idx]}</span>
       </div>
     </div>
   );
@@ -267,6 +263,7 @@ function StreamingRevisionCard({ text }: { text: string }) {
 function RevisionMessage({ text }: { text: string }) {
   const { revision, changes, partialChanges, rest } = parseRevisionMsg(text);
   const displayChanges = changes || partialChanges;
+
   return (
     <div className="flex flex-col gap-3 w-full">
       {revision && (
@@ -699,6 +696,42 @@ export default function ChatPage() {
           await saveDbRevision(itemDbId, revMatch[1].trim(), chgMatch[1].trim());
         }
       }
+
+      // ── GPT 다듬기: 완성본이 있을 때만 ──
+      const revMatchForPolish = full.match(/\[수정본\]([\s\S]*?)\[\/수정본\]/);
+      if (revMatchForPolish) {
+        try {
+          const polishRes = await fetch("/api/generate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ type: "polish", revision: revMatchForPolish[1].trim() }),
+          });
+          if (polishRes.body) {
+            const polishReader = polishRes.body.getReader();
+            const polishDec = new TextDecoder();
+            let polished = "";
+            while (true) {
+              const { done, value } = await polishReader.read();
+              if (done) break;
+              polished += polishDec.decode(value, { stream: true });
+              if (polished.trim()) {
+                const updatedText = full.replace(/\[수정본\][\s\S]*?\[\/수정본\]/, `[수정본]${polished}[/수정본]`);
+                setItems((prev) =>
+                  prev.map((it) =>
+                    it.id === itemId
+                      ? { ...it, msgs: it.msgs.map((m) => (m.id === msgId ? { ...m, text: updatedText } : m)) }
+                      : it
+                  )
+                );
+              }
+              bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+            }
+          }
+        } catch (e) {
+          console.error("[GPT Polish]", e);
+          // 실패 시 Claude 버전 그대로 유지
+        }
+      }
     } catch {
       setItems((prev) =>
         prev.map((it) =>
@@ -952,21 +985,11 @@ export default function ChatPage() {
     if (!selected.question.trim()) { showToast("자소서 문항을 먼저 입력해주세요", "question"); return; }
     if (!selected.charLimit.trim()) { showToast("글자수 제한을 먼저 입력해주세요", "charLimit"); return; }
     if (!selected.draft.trim()) { showToast("자소서 초안을 먼저 입력해주세요", "draft"); return; }
-    if (selected.draft.length > DRAFT_MAX) { showToast(`초안이 너무 길어요. ${DRAFT_MAX}자까지만 가능해요`, "draft"); return; }
 
     const isAdmin = currentUser?.email === ADMIN_EMAIL;
     if (!isAdmin && userCredits !== null && userCredits <= 0) {
       showToast("뱃지가 없어요. 관리자에게 문의해주세요", "");
       return;
-    }
-
-    if (currentUser) {
-      const duplicate = await checkDuplicateDraft(selected.draft);
-      if (duplicate) {
-        setDuplicateDraftInfo(duplicate);
-        setShowDuplicateDraft(true);
-        return;
-      }
     }
 
     proceedWithAnalysis();
@@ -1525,14 +1548,6 @@ export default function ChatPage() {
 
                   {/* 시작 버튼 */}
                   <div className="flex flex-col gap-2.5 pb-4 sm:pb-0">
-                    {selected.draft.length > DRAFT_MAX ? (
-                      <div
-                        className="w-full py-4 rounded-2xl text-sm font-semibold text-center cursor-not-allowed"
-                        style={{ background: "rgba(255,107,107,0.12)", border: "1px solid rgba(255,107,107,0.3)", color: "rgba(255,107,107,0.8)" }}
-                      >
-                        초안을 {DRAFT_MAX}자 이하로 줄여주세요 ({selected.draft.length - DRAFT_MAX}자 초과)
-                      </div>
-                    ) : (
                       <button
                         onClick={handleStartClick}
                         disabled={!canStart}
@@ -1545,12 +1560,9 @@ export default function ChatPage() {
                       >
                         분석 시작하기 →
                       </button>
-                    )}
 
                     <p className="text-xs text-center" style={{ color: "rgba(255,255,255,0.18)" }}>
-                      {selected.draft.length > DRAFT_MAX
-                        ? ""
-                        : canStart
+                      {canStart
                         ? "논리 흐름 · 문맥 연결 · 직무 이해도를 진단하고 질문으로 이어가요"
                         : "직무, 문항, 글자수 제한, 초안을 모두 입력하면 시작할 수 있어요"}
                     </p>
@@ -1636,13 +1648,19 @@ export default function ChatPage() {
                         && msg.role === "bot"
                         && msg.text.includes("[수정본]")
                         && !msg.text.includes("[/수정본]");
+                      const isPrevRevisionRequest = msgIdx > 0
+                        && selected.msgs[msgIdx - 1]?.role === "user"
+                        && selected.msgs[msgIdx - 1]?.text === "완성본을 작성해줘.";
+                      const isRevisionInProgress = (isStreaming && isPrevRevisionRequest && msg.role === "bot" && !isRevisionComplete)
+                        || isRevisionStreaming
+                        || (isRevisionComplete && isStreaming);
 
                       if (isDiagnosis) {
                         return <DiagnosisCard key={msg.id} text={msg.text} streaming={isStreaming} />;
                       }
 
-                      if (isRevisionStreaming) {
-                        return <StreamingRevisionCard key={msg.id} text={msg.text} />;
+                      if (isRevisionInProgress) {
+                        return <RevisionLoadingCard key={msg.id} />;
                       }
 
                       if (isRevisionComplete) {
