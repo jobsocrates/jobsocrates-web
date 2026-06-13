@@ -49,6 +49,7 @@ interface CoverItemFull {
     created_at: string;
     interview_answers: { user_answer: string; ai_feedback: string }[];
   }[];
+  revisions: { id: string; content: string; polished_content: string | null; created_at: string }[];
 }
 
 interface UserProfile { id: string; email: string; credits: number; created_at?: string; }
@@ -319,7 +320,7 @@ export default function AdminPage() {
     const { data } = await supabase
       .from("cover_items")
       .select(
-        "id, question, draft, char_limit, status, order_index, messages(id, role, content, created_at), interview_questions(id, question, order_index, created_at, interview_answers(user_answer, ai_feedback))"
+        "id, question, draft, char_limit, status, order_index, messages(id, role, content, created_at), interview_questions(id, question, order_index, created_at, interview_answers(user_answer, ai_feedback)), revisions(id, content, polished_content, created_at)"
       )
       .eq("session_id", id)
       .order("order_index");
@@ -1049,6 +1050,36 @@ export default function AdminPage() {
                         >
                           {regenItemId === item.id ? "재생성 중..." : "🔄 완성본 재생성"}
                         </button>
+                      )}
+
+                      {/* 소넷 원본 vs GPT 최종본 비교 */}
+                      {item.revisions?.length > 0 && item.revisions[0].content && (
+                        <div style={{ marginTop: 16, padding: "16px", borderRadius: 12, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                          <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: ACCENT, marginBottom: 12 }}>완성본 비교</p>
+                          <div style={{ display: "grid", gridTemplateColumns: item.revisions[0].polished_content ? "1fr 1fr" : "1fr", gap: 16 }}>
+                            <div>
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                                <span style={{ fontSize: 10, fontWeight: 700, color: BLUE }}>소넷 원본</span>
+                                <span style={{ fontSize: 10, color: "rgba(255,255,255,0.35)" }}>{item.revisions[0].content.length}자</span>
+                              </div>
+                              <p style={{ fontSize: 12, lineHeight: 1.75, color: "rgba(255,255,255,0.6)", whiteSpace: "pre-wrap", wordBreak: "keep-all" }}>{item.revisions[0].content}</p>
+                            </div>
+                            {item.revisions[0].polished_content && (
+                              <div>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                                  <span style={{ fontSize: 10, fontWeight: 700, color: VIOLET }}>GPT 최종본</span>
+                                  <span style={{ fontSize: 10, color: "rgba(255,255,255,0.35)" }}>
+                                    {item.revisions[0].polished_content.length}자
+                                    <span style={{ marginLeft: 4, color: item.revisions[0].polished_content.length > item.revisions[0].content.length ? "rgba(248,113,113,0.8)" : "rgba(74,222,128,0.8)" }}>
+                                      ({item.revisions[0].polished_content.length - item.revisions[0].content.length > 0 ? "+" : ""}{item.revisions[0].polished_content.length - item.revisions[0].content.length}자)
+                                    </span>
+                                  </span>
+                                </div>
+                                <p style={{ fontSize: 12, lineHeight: 1.75, color: "rgba(255,255,255,0.6)", whiteSpace: "pre-wrap", wordBreak: "keep-all" }}>{item.revisions[0].polished_content}</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       )}
 
                       {/* Interview questions */}

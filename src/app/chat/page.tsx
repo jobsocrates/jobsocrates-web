@@ -618,17 +618,18 @@ export default function ChatPage() {
   }
 
   // revisions 테이블에 수정본 저장 + cover_item 상태 done으로 갱신
-  async function saveDbRevision(coverItemDbId: string, content: string, changesText: string) {
+  async function saveDbRevision(coverItemDbId: string, content: string, changesText: string): Promise<string | null> {
     const changes = changesText
       .split("\n")
       .map(l => l.replace(/^[-·•]\s*/, "").trim())
       .filter(Boolean);
-    const { error: revErr } = await supabase.from("revisions").insert({ cover_item_id: coverItemDbId, content, changes });
+    const { data, error: revErr } = await supabase.from("revisions").insert({ cover_item_id: coverItemDbId, content, changes }).select("id").single();
     if (revErr) console.error("[DB] revisions insert error:", revErr);
     const { error: updateErr } = await supabase.from("cover_items")
       .update({ status: "done", updated_at: new Date().toISOString() })
       .eq("id", coverItemDbId);
     if (updateErr) console.error("[DB] cover_items update error:", updateErr);
+    return data?.id ?? null;
   }
 
   // ─────────────────────────────────────────────────────────────────
@@ -684,6 +685,7 @@ export default function ChatPage() {
       );
 
       // ── DB 저장: 유저 메시지 + AI 응답 ──
+      let savedRevisionId: string | null = null;
       if (itemDbId) {
         const userMsg = history[history.length - 1];
         if (userMsg?.role === "user") {
@@ -695,7 +697,7 @@ export default function ChatPage() {
         const revMatch = full.match(/\[수정본\]([\s\S]*?)\[\/수정본\]/);
         const chgMatch = full.match(/\[변경사항\]([\s\S]*?)\[\/변경사항\]/);
         if (revMatch && chgMatch) {
-          await saveDbRevision(itemDbId, revMatch[1].trim(), chgMatch[1].trim());
+          savedRevisionId = await saveDbRevision(itemDbId, revMatch[1].trim(), chgMatch[1].trim());
         }
       }
 
@@ -727,6 +729,9 @@ export default function ChatPage() {
                 );
               }
               bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+            }
+            if (polished.trim() && savedRevisionId) {
+              await supabase.from("revisions").update({ polished_content: polished.trim() }).eq("id", savedRevisionId);
             }
           }
         } catch (e) {
