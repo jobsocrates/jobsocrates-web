@@ -704,7 +704,7 @@ export default function ChatPage() {
           const polishRes = await fetch("/api/generate", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ type: "polish", revision: revMatchForPolish[1].trim() }),
+            body: JSON.stringify({ type: "polish", revision: revMatchForPolish[1].trim(), charLimit: charLimit ? Number(charLimit) : null }),
           });
           if (polishRes.body) {
             const polishReader = polishRes.body.getReader();
@@ -1220,9 +1220,11 @@ export default function ChatPage() {
   const canStart =
     !!jobTitle.trim() && !!selected?.question.trim() && !!selected?.charLimit.trim() && !!selected?.draft.trim() && selected?.status === "idle";
 
-  const hasAnyRevision = selected?.msgs.some(
-    (m) => m.role === "bot" && m.text.includes("[수정본]") && m.text.includes("[/수정본]")
-  ) ?? false;
+  const hasAnyRevision = !isStreaming && (selected?.msgs.some(
+    (m) => m.role === "bot"
+      && m.text.includes("[수정본]") && m.text.includes("[/수정본]")
+      && m.text.includes("[변경사항]") && m.text.includes("[/변경사항]")
+  ) ?? false);
 
   const revisionReady = (selected?.msgs.some(
     (m) => m.role === "bot" && m.text.includes("[완성준비]")

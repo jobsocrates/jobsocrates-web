@@ -180,7 +180,7 @@ export async function POST(req: Request) {
       const charLimitRule = charLimit
         ? `- 글자 수 ${charLimit}자 이내로 맞춰라 (공백 포함)\n`
         : "";
-      const polishPrompt = `완성본 자연스럽게 다듬어줘. 쉼표(,) 남발 금지. 명사·항목 나열 외에는 쓰지 마라.\n\n${revision}`;
+      const polishPrompt = `완성본 자연스럽게 다듬어줘. 쉼표(,) 남발 금지. 명사·항목 나열 외에는 쓰지 마라.${charLimit ? `\n글자 수 ${charLimit}자 이내로 자연스럽게 다듬어라 (공백 포함).` : ""}\n\n${revision}`;
       const openaiStream = openai.chat.completions.stream({
         model: "gpt-4.1-mini",
         messages: [{ role: "user", content: polishPrompt }],
