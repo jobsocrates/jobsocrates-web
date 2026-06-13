@@ -24,6 +24,7 @@ const RED = "rgb(248,113,113)";
 
 type Tab = "dashboard" | "review" | "notes" | "users" | "funnel" | "board";
 type Filter = "all" | "good" | "bad" | "none";
+type CatNode = { type: "sep" } | { type: "item"; name: string; children?: string[] };
 
 interface SessionItem {
   id: string;
@@ -122,6 +123,11 @@ export default function AdminPage() {
   const [boardVisible, setBoardVisible] = useState(false);
   const [boardVisibleSaving, setBoardVisibleSaving] = useState(false);
   const [boardCatOptions, setBoardCatOptions] = useState<string[]>(["공지·업데이트","쥔장 잡담","자소서 팁","면접 팁","뉴스","경제","기술","사회","글로벌","쥔장에게 묻고 바란다"]);
+  const [boardCatTree, setBoardCatTree] = useState<CatNode[]>([]);
+  const [boardCatEditMode, setBoardCatEditMode] = useState(false);
+  const [boardCatEditTree, setBoardCatEditTree] = useState<CatNode[]>([]);
+  const [boardCatNewName, setBoardCatNewName] = useState("");
+  const [boardCatSaving, setBoardCatSaving] = useState(false);
   const [writeTitle, setWriteTitle] = useState("");
   const [writeCategory, setWriteCategory] = useState("쥔장 잡담");
   const [writeContent, setWriteContent] = useState("");
@@ -165,8 +171,8 @@ export default function AdminPage() {
     setBoardPosts(postsData || []);
     setBoardVisible(config?.value === true);
     if (catConfig?.value) {
-      type CatNode = { type: "sep" } | { type: "item"; name: string; children?: string[] };
       const tree = catConfig.value as CatNode[];
+      setBoardCatTree(tree);
       const options = tree.flatMap(c => c.type === "item" ? [c.name, ...(c.children || [])] : []);
       if (options.length > 0) setBoardCatOptions(options);
     }
@@ -1521,52 +1527,142 @@ export default function AdminPage() {
 
       {/* ─── BOARD ─── */}
       {tab === "board" && (() => {
-        const NEWS_CH = ["경제", "기술", "사회", "글로벌"];
-        interface BCNode { name: string; children?: string[] }
-        const BTREE: BCNode[] = [
-          { name: "공지·업데이트" },
-          { name: "──" },
-          { name: "쥔장 잡담" }, { name: "자소서 팁" }, { name: "면접 팁" },
-          { name: "뉴스", children: NEWS_CH },
-          { name: "쥔장에게 묻고 바란다" },
-        ];
+        const tree = boardCatTree;
+        const allNames = tree.flatMap(n => n.type === "item" ? [n.name, ...(n.children || [])] : []);
         function bCount(cat: string) {
           if (cat === "전체") return boardPosts.length;
-          if (cat === "뉴스") return boardPosts.filter(p => ["뉴스", ...NEWS_CH].includes(p.category)).length;
+          const node = tree.find(n => n.type === "item" && n.name === cat);
+          if (node && node.type === "item" && node.children?.length) {
+            return boardPosts.filter(p => [cat, ...node.children!].includes(p.category)).length;
+          }
           return boardPosts.filter(p => p.category === cat).length;
         }
         function bFilter(cat: string) {
           if (cat === "전체") return boardPosts;
-          if (cat === "뉴스") return boardPosts.filter(p => ["뉴스", ...NEWS_CH].includes(p.category));
+          const node = tree.find(n => n.type === "item" && n.name === cat);
+          if (node && node.type === "item" && node.children?.length) {
+            return boardPosts.filter(p => [cat, ...node.children!].includes(p.category));
+          }
           return boardPosts.filter(p => p.category === cat);
         }
         const visiblePosts = bFilter(boardCategory);
+
+        async function saveCatTree(newTree: CatNode[]) {
+          setBoardCatSaving(true);
+          await supabase.from("site_config").update({ value: newTree }).eq("key", "board_categories");
+          setBoardCatTree(newTree);
+          const options = newTree.flatMap(n => n.type === "item" ? [n.name, ...(n.children || [])] : []);
+          setBoardCatOptions(options);
+          setBoardCatEditMode(false);
+          setBoardCatEditTree([]);
+          setBoardCatNewName("");
+          setBoardCatSaving(false);
+        }
+
+        function startCatEdit() {
+          setBoardCatEditTree(JSON.parse(JSON.stringify(tree)));
+          setBoardCatEditMode(true);
+        }
+
+        const et = boardCatEditTree;
+        function setEt(newTree: CatNode[]) { setBoardCatEditTree([...newTree]); }
 
         return (
         <>
         <div className="admin-board-wrap" style={{ display: "flex", height: "calc(100vh - 56px)" }}>
           {/* 사이드바 (모바일 숨김) */}
-          <aside className="admin-board-sidebar" style={{ width: 192, flexShrink: 0, borderRight: "1px solid rgba(255,255,255,0.07)", paddingTop: 24, overflowY: "auto" }}>
-            {/* 전체 */}
-            <button onClick={() => setBoardCategory("전체")} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 14px", background: boardCategory === "전체" ? "rgba(255,255,255,0.06)" : "transparent", border: "none", borderLeft: `3px solid ${boardCategory === "전체" ? ACCENT : "transparent"}`, color: boardCategory === "전체" ? "rgba(255,255,255,0.94)" : "rgba(255,255,255,0.48)", fontSize: 15, fontWeight: boardCategory === "전체" ? 600 : 400, cursor: "pointer", textAlign: "left", fontFamily: "inherit", whiteSpace: "nowrap" }}>
-              <span>전체</span><span style={{ fontSize: 13, color: "rgba(255,255,255,0.28)", marginLeft: 6 }}>{boardPosts.length}</span>
-            </button>
-            <div style={{ height: 1, background: "rgba(255,255,255,0.07)", margin: "6px 14px" }} />
-            {BTREE.map(node =>
-              node.name === "──"
-                ? <div key="sep2" style={{ height: 1, background: "rgba(255,255,255,0.07)", margin: "8px 14px" }} />
-                : (
-                  <div key={node.name}>
-                    <button onClick={() => setBoardCategory(node.name)} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 14px", background: boardCategory === node.name ? "rgba(255,255,255,0.06)" : "transparent", border: "none", borderLeft: `3px solid ${boardCategory === node.name ? ACCENT : "transparent"}`, color: boardCategory === node.name ? "rgba(255,255,255,0.94)" : "rgba(255,255,255,0.48)", fontSize: node.name === "쥔장에게 묻고 바란다" ? 13 : 15, fontWeight: boardCategory === node.name ? 600 : 400, cursor: "pointer", textAlign: "left", fontFamily: "inherit", whiteSpace: "nowrap" }}>
-                      <span>{node.name}</span>{bCount(node.name) > 0 && <span style={{ fontSize: 13, color: "rgba(255,255,255,0.28)", marginLeft: 6 }}>{bCount(node.name)}</span>}
-                    </button>
-                    {node.children?.map(child => (
-                      <button key={child} onClick={() => setBoardCategory(child)} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 14px 11px 28px", background: boardCategory === child ? "rgba(255,255,255,0.05)" : "transparent", border: "none", borderLeft: `3px solid ${boardCategory === child ? ACCENT : "transparent"}`, color: boardCategory === child ? "rgba(255,255,255,0.88)" : "rgba(255,255,255,0.38)", fontSize: 13, fontWeight: boardCategory === child ? 600 : 400, cursor: "pointer", textAlign: "left", fontFamily: "inherit", whiteSpace: "nowrap" }}>
-                        <span>{child}</span>{bCount(child) > 0 && <span style={{ fontSize: 12, color: "rgba(255,255,255,0.22)", marginLeft: 6 }}>{bCount(child)}</span>}
-                      </button>
-                    ))}
+          <aside className="admin-board-sidebar" style={{ width: 210, flexShrink: 0, borderRight: "1px solid rgba(255,255,255,0.07)", overflowY: "auto", display: "flex", flexDirection: "column" }}>
+            {/* 헤더 */}
+            <div style={{ padding: "16px 14px 10px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.25)", letterSpacing: "0.1em" }}>CATEGORY</span>
+              {!boardCatEditMode
+                ? <button onClick={startCatEdit} style={{ fontSize: 11, padding: "3px 8px", borderRadius: 5, border: "1px solid rgba(255,255,255,0.12)", background: "none", color: "rgba(255,255,255,0.35)", cursor: "pointer", fontFamily: "inherit" }}>편집</button>
+                : <div style={{ display: "flex", gap: 4 }}>
+                    <button onClick={() => { setBoardCatEditMode(false); setBoardCatNewName(""); }} style={{ fontSize: 11, padding: "3px 8px", borderRadius: 5, border: "1px solid rgba(255,90,90,0.3)", background: "none", color: "rgba(255,90,90,0.7)", cursor: "pointer", fontFamily: "inherit" }}>취소</button>
+                    <button onClick={() => saveCatTree(et)} disabled={boardCatSaving} style={{ fontSize: 11, padding: "3px 8px", borderRadius: 5, border: `1px solid ${ACCENT}55`, background: `${ACCENT}18`, color: ACCENT, cursor: "pointer", fontFamily: "inherit" }}>{boardCatSaving ? "저장 중" : "저장"}</button>
                   </div>
-                )
+              }
+            </div>
+
+            {!boardCatEditMode ? (
+              /* ── 일반 모드 ── */
+              <div style={{ flex: 1, overflowY: "auto" }}>
+                <button onClick={() => setBoardCategory("전체")} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 14px", background: boardCategory === "전체" ? "rgba(255,255,255,0.06)" : "transparent", border: "none", borderLeft: `3px solid ${boardCategory === "전체" ? ACCENT : "transparent"}`, color: boardCategory === "전체" ? "rgba(255,255,255,0.94)" : "rgba(255,255,255,0.48)", fontSize: 15, fontWeight: boardCategory === "전체" ? 600 : 400, cursor: "pointer", textAlign: "left", fontFamily: "inherit" }}>
+                  <span>전체</span><span style={{ fontSize: 13, color: "rgba(255,255,255,0.28)", marginLeft: 6 }}>{boardPosts.length}</span>
+                </button>
+                <div style={{ height: 1, background: "rgba(255,255,255,0.07)", margin: "4px 14px" }} />
+                {tree.map((node, i) =>
+                  node.type === "sep"
+                    ? <div key={`sep-${i}`} style={{ height: 1, background: "rgba(255,255,255,0.07)", margin: "8px 14px" }} />
+                    : (
+                      <div key={node.name}>
+                        <button onClick={() => setBoardCategory(node.name)} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 14px", background: boardCategory === node.name ? "rgba(255,255,255,0.06)" : "transparent", border: "none", borderLeft: `3px solid ${boardCategory === node.name ? ACCENT : "transparent"}`, color: boardCategory === node.name ? "rgba(255,255,255,0.94)" : "rgba(255,255,255,0.48)", fontSize: 15, fontWeight: boardCategory === node.name ? 600 : 400, cursor: "pointer", textAlign: "left", fontFamily: "inherit" }}>
+                          <span>{node.name}</span>{bCount(node.name) > 0 && <span style={{ fontSize: 13, color: "rgba(255,255,255,0.28)", marginLeft: 6 }}>{bCount(node.name)}</span>}
+                        </button>
+                        {node.children?.map(child => (
+                          <button key={child} onClick={() => setBoardCategory(child)} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "9px 14px 9px 26px", background: boardCategory === child ? "rgba(255,255,255,0.05)" : "transparent", border: "none", borderLeft: `3px solid ${boardCategory === child ? ACCENT : "transparent"}`, color: boardCategory === child ? "rgba(255,255,255,0.88)" : "rgba(255,255,255,0.38)", fontSize: 13, fontWeight: boardCategory === child ? 600 : 400, cursor: "pointer", textAlign: "left", fontFamily: "inherit" }}>
+                            <span>{child}</span>{bCount(child) > 0 && <span style={{ fontSize: 12, color: "rgba(255,255,255,0.22)", marginLeft: 6 }}>{bCount(child)}</span>}
+                          </button>
+                        ))}
+                      </div>
+                    )
+                )}
+              </div>
+            ) : (
+              /* ── 편집 모드 ── */
+              <div style={{ flex: 1, overflowY: "auto", padding: "4px 0" }}>
+                {et.map((node, i) =>
+                  node.type === "sep" ? (
+                    <div key={`sep-${i}`} style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 10px" }}>
+                      <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.12)" }} />
+                      <button onClick={() => { const t2 = [...et]; t2.splice(i, 1); setEt(t2); }} style={{ fontSize: 10, color: "rgba(255,90,90,0.6)", background: "none", border: "none", cursor: "pointer", padding: "0 2px" }}>×</button>
+                    </div>
+                  ) : (
+                    <div key={`item-${i}`} style={{ padding: "3px 10px" }}>
+                      {/* 상위 카테고리 행 */}
+                      <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                          <button onClick={() => { if (i === 0) return; const t2 = [...et]; [t2[i-1], t2[i]] = [t2[i], t2[i-1]]; setEt(t2); }} style={{ fontSize: 8, lineHeight: 1, background: "none", border: "none", color: "rgba(255,255,255,0.25)", cursor: "pointer", padding: "1px 2px" }}>▲</button>
+                          <button onClick={() => { if (i === et.length-1) return; const t2 = [...et]; [t2[i], t2[i+1]] = [t2[i+1], t2[i]]; setEt(t2); }} style={{ fontSize: 8, lineHeight: 1, background: "none", border: "none", color: "rgba(255,255,255,0.25)", cursor: "pointer", padding: "1px 2px" }}>▼</button>
+                        </div>
+                        <input
+                          value={node.name}
+                          onChange={e => { const t2 = [...et]; (t2[i] as { type: "item"; name: string; children?: string[] }).name = e.target.value; setEt(t2); }}
+                          style={{ flex: 1, fontSize: 13, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 4, padding: "4px 6px", color: "rgba(255,255,255,0.85)", fontFamily: "inherit", outline: "none" }}
+                        />
+                        <button onClick={() => { const t2 = [...et]; t2.splice(i, 1); setEt(t2); }} style={{ fontSize: 12, color: "rgba(255,90,90,0.6)", background: "none", border: "none", cursor: "pointer", padding: "0 2px", flexShrink: 0 }}>×</button>
+                      </div>
+                      {/* 하위 카테고리 */}
+                      {node.children?.map((child, ci) => (
+                        <div key={`child-${ci}`} style={{ display: "flex", alignItems: "center", gap: 3, marginTop: 2, paddingLeft: 14 }}>
+                          <input
+                            value={child}
+                            onChange={e => { const t2 = [...et]; const n = t2[i] as { type: "item"; name: string; children: string[] }; n.children = [...n.children]; n.children[ci] = e.target.value; setEt(t2); }}
+                            style={{ flex: 1, fontSize: 12, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 4, padding: "3px 6px", color: "rgba(255,255,255,0.7)", fontFamily: "inherit", outline: "none" }}
+                          />
+                          <button onClick={() => { const t2 = [...et]; const n = t2[i] as { type: "item"; name: string; children: string[] }; n.children = n.children.filter((_, j) => j !== ci); setEt(t2); }} style={{ fontSize: 12, color: "rgba(255,90,90,0.5)", background: "none", border: "none", cursor: "pointer", padding: "0 2px", flexShrink: 0 }}>×</button>
+                        </div>
+                      ))}
+                      {/* 하위 추가 버튼 */}
+                      <button onClick={() => { const t2 = [...et]; const n = t2[i] as { type: "item"; name: string; children?: string[] }; n.children = [...(n.children || []), "새 하위항목"]; setEt(t2); }} style={{ marginTop: 3, marginLeft: 14, fontSize: 10, color: "rgba(255,255,255,0.25)", background: "none", border: "none", cursor: "pointer", padding: "2px 0", fontFamily: "inherit" }}>+ 하위</button>
+                    </div>
+                  )
+                )}
+                {/* 새 카테고리 추가 */}
+                <div style={{ padding: "8px 10px", borderTop: "1px solid rgba(255,255,255,0.07)", marginTop: 6 }}>
+                  <div style={{ display: "flex", gap: 4 }}>
+                    <input
+                      value={boardCatNewName}
+                      onChange={e => setBoardCatNewName(e.target.value)}
+                      placeholder="새 카테고리"
+                      style={{ flex: 1, fontSize: 12, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 4, padding: "4px 6px", color: "rgba(255,255,255,0.8)", fontFamily: "inherit", outline: "none" }}
+                      onKeyDown={e => { if (e.key === "Enter" && boardCatNewName.trim()) { setEt([...et, { type: "item", name: boardCatNewName.trim() }]); setBoardCatNewName(""); } }}
+                    />
+                    <button onClick={() => { if (!boardCatNewName.trim()) return; setEt([...et, { type: "item", name: boardCatNewName.trim() }]); setBoardCatNewName(""); }} style={{ fontSize: 11, padding: "0 8px", borderRadius: 4, border: `1px solid ${ACCENT}44`, background: `${ACCENT}12`, color: ACCENT, cursor: "pointer", fontFamily: "inherit" }}>추가</button>
+                  </div>
+                  <button onClick={() => setEt([...et, { type: "sep" }])} style={{ marginTop: 4, fontSize: 10, color: "rgba(255,255,255,0.25)", background: "none", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 4, padding: "3px 8px", cursor: "pointer", fontFamily: "inherit", width: "100%" }}>─ 구분선 추가</button>
+                </div>
+              </div>
             )}
           </aside>
 
