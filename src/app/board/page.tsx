@@ -9,9 +9,9 @@ const ACCENT = "#C96442";
 const BORDER = "rgba(255,255,255,0.07)";
 const ADMIN_EMAIL = "ijhan6403@gmail.com";
 
-export type CatNode = { type: "sep" } | { type: "item"; name: string; children?: string[] };
+type CatNode = { type: "sep" } | { type: "item"; name: string; children?: string[] };
 
-export const DEFAULT_CATS: CatNode[] = [
+const DEFAULT_CATS: CatNode[] = [
   { type: "item", name: "공지·업데이트" },
   { type: "sep" },
   { type: "item", name: "쥔장 잡담" },
