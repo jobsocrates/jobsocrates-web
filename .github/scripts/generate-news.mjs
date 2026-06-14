@@ -406,25 +406,34 @@ async function saveToSupabase(title, content, category) {
 // ── 메인 ──
 async function main() {
   const argIdx = process.argv.indexOf("--category");
-  const category = argIdx !== -1 ? process.argv[argIdx + 1] : todayCategory();
   const dateStr = todayStr();
 
-  console.log(`\n📅 ${dateStr} | 카테고리: ${category}`);
+  const now = new Date();
+  const kst = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
+  const start = new Date(START_DATE.toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
+  const diff = Math.floor((kst - start) / 86400000);
+  const pair = argIdx !== -1
+    ? [process.argv[argIdx + 1]]
+    : CATEGORY_PAIRS[((diff % CATEGORY_PAIRS.length) + CATEGORY_PAIRS.length) % CATEGORY_PAIRS.length];
 
-  console.log(`\n─── 뉴스: ${category} ───`);
-  console.log("🔍 뉴스 수집 중...");
-  const articles = await fetchArticles(category);
-  if (articles.length === 0) throw new Error(`${category}: 기사를 가져오지 못했습니다`);
-  console.log(`   ${articles.length}개 기사 수집 완료`);
-  articles.forEach((a, i) => console.log(`   [${i+1}] ${a.title}`));
+  console.log(`\n📅 ${dateStr} | 카테고리: ${pair.join(", ")}`);
 
-  console.log("🤖 AI 정리 중...");
-  const { generatedTitle, content } = await summarize(category, articles);
-  const finalTitle = generatedTitle ?? `${category} 뉴스 ${dateStr}`;
+  for (const category of pair) {
+    console.log(`\n─── 뉴스: ${category} ───`);
+    console.log("🔍 뉴스 수집 중...");
+    const articles = await fetchArticles(category);
+    if (articles.length === 0) throw new Error(`${category}: 기사를 가져오지 못했습니다`);
+    console.log(`   ${articles.length}개 기사 수집 완료`);
+    articles.forEach((a, i) => console.log(`   [${i+1}] ${a.title}`));
 
-  console.log("💾 Supabase 임시저장 중...");
-  await saveToSupabase(finalTitle, content, category);
-  console.log(`   ✅ 완료! 제목: "${finalTitle}"`);
+    console.log("🤖 AI 정리 중...");
+    const { generatedTitle, content } = await summarize(category, articles);
+    const finalTitle = generatedTitle ?? `${category} 뉴스 ${dateStr}`;
+
+    console.log("💾 Supabase 임시저장 중...");
+    await saveToSupabase(finalTitle, content, category);
+    console.log(`   ✅ 완료! 제목: "${finalTitle}"`);
+  }
 
   const roles = todayRoles();
   for (const role of roles) {
