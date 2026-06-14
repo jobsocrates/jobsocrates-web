@@ -733,7 +733,11 @@ export default function ChatPage() {
               bottomRef.current?.scrollIntoView({ behavior: "smooth" });
             }
             if (polished.trim() && savedRevisionId) {
-              await supabase.from("revisions").update({ polished_content: polished.trim() }).eq("id", savedRevisionId);
+              await fetch("/api/generate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ type: "update-polish", revision_id: savedRevisionId, polished_content: polished.trim() }),
+              });
             }
           }
         } catch (e) {
