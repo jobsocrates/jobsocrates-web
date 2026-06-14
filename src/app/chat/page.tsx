@@ -74,8 +74,6 @@ function stripMd(t: string) {
     .replace(/\[소제목\][\s\S]*?\[\/소제목\]/g, "")
     .replace(/\[수정본\][\s\S]*?\[\/수정본\]/g, "")
     .replace(/\[변경사항\][\s\S]*?\[\/변경사항\]/g, "")
-    .replace(/\[참조\]([\s\S]*?)\[\/참조\]/g, "$1")
-    .replace(/\[참조\]|\[\/참조\]/g, "")
     .replace(/\[완성준비\]/g, "")
     .trim();
 }

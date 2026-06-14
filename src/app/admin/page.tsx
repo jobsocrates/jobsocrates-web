@@ -11,8 +11,6 @@ function stripMsg(t: string) {
     .replace(/\*(.*?)\*/g, "$1")
     .replace(/\[수정본\]([\s\S]*?)\[\/수정본\]/g, (_, content) => `\n📝 수정본:\n${content.trim()}\n`)
     .replace(/\[변경사항\]([\s\S]*?)\[\/변경사항\]/g, (_, content) => `\n✏️ 바뀐점:\n${content.trim()}\n`)
-    .replace(/\[참조\]([\s\S]*?)\[\/참조\]/g, "$1")
-    .replace(/\[참조\]|\[\/참조\]/g, "")
     .trim();
 }
 const BG = "#0D0D18";
