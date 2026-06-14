@@ -708,6 +708,9 @@ export default function ChatPage() {
         }
       }
 
+      // 완성본이 나왔으면 스트리밍 종료 — polish는 백그라운드로
+      setIsStreaming(false);
+
       // ── GPT 다듬기: 완성본이 있을 때만 ──
       if (revMatch) {
         try {
