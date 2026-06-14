@@ -135,10 +135,9 @@ export async function POST(req: Request) {
     }
 
     case "analyze": {
-      const sysText = prompt("analyze_v2") +
-        `\n\n## 세션 정보\n직무: ${body.jobTitle}\n문항: ${body.question || "미입력"}\n글자 수 제한: ${body.charLimit ? `${body.charLimit}자 (수정본 작성 시 이 글자 수에 맞춰야 함)` : "미입력"}\n\n## 자소서 초안\n${body.draft}`;
       const sys: Anthropic.Messages.TextBlockParam[] = [
-        { type: "text", text: sysText, cache_control: { type: "ephemeral" } },
+        { type: "text", text: prompt("analyze_v2"), cache_control: { type: "ephemeral" } },
+        { type: "text", text: `## 세션 정보\n직무: ${body.jobTitle}\n문항: ${body.question || "미입력"}\n글자 수 제한: ${body.charLimit ? `${body.charLimit}자 (수정본 작성 시 이 글자 수에 맞춰야 함)` : "미입력"}\n\n## 자소서 초안\n${body.draft}` },
       ];
       const msgs: MsgParam[] = body.messages?.length > 0
         ? body.messages
