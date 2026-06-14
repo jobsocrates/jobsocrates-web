@@ -525,7 +525,7 @@ function SummaryMsgRow({
           maxWidth: "86%",
         }}
       >
-        {stripMd(msg.text)}
+        {stripMd(msg.text).replace(/^AI:\s*/i, "")}
       </div>
     </div>
   );

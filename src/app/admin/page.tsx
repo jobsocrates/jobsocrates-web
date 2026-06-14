@@ -1054,8 +1054,9 @@ export default function AdminPage() {
                                     <p style={{ fontSize: 13, color: "rgba(255,255,255,0.6)", marginBottom: 6, lineHeight: 1.7, wordBreak: "keep-all" }}>
                                       <span style={{ color: "rgba(255,255,255,0.35)", fontWeight: 600 }}>유저: </span>{a.user_answer}
                                     </p>
-                                    <p style={{ fontSize: 13, color: `rgba(107,142,255,0.85)`, lineHeight: 1.7, wordBreak: "keep-all" }}>
-                                      <span style={{ fontWeight: 600 }}>AI: </span>{a.ai_feedback}
+                                    <p style={{ fontSize: 13, color: `rgba(107,142,255,0.85)`, lineHeight: 1.7, wordBreak: "keep-all", display: "flex", alignItems: "flex-start", gap: 6 }}>
+                                      <img src="/logo.jpg" alt="" style={{ width: 16, height: 16, borderRadius: 3, objectFit: "contain", background: "#fff", padding: "1px", flexShrink: 0, marginTop: 3 }} />
+                                      <span>{a.ai_feedback}</span>
                                     </p>
                                   </div>
                                 ))}
