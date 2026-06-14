@@ -171,6 +171,34 @@ export async function POST(req: Request) {
       return stream(sys, messages);
     }
 
+    case "save-revision": {
+      const { createClient } = await import("@supabase/supabase-js");
+      const adminClient = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      );
+      const id = crypto.randomUUID();
+      const changes = (body.changesText as string)
+        .split("\n")
+        .map((l: string) => l.replace(/^[-·•]\s*/, "").trim())
+        .filter(Boolean);
+      const { error: revErr } = await adminClient.from("revisions").insert({
+        id,
+        cover_item_id: body.cover_item_id,
+        content: body.content,
+        changes,
+      });
+      if (revErr) {
+        console.error("[DB] revisions insert error:", revErr);
+        return Response.json({ error: revErr.message }, { status: 500 });
+      }
+      await adminClient
+        .from("cover_items")
+        .update({ status: "done", updated_at: new Date().toISOString() })
+        .eq("id", body.cover_item_id);
+      return Response.json({ id });
+    }
+
     case "polish": {
       const draft = body.draft as string;
       const revision = body.revision as string;
