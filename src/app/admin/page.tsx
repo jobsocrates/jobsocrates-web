@@ -26,6 +26,16 @@ type Tab = "dashboard" | "review" | "notes" | "users" | "funnel" | "board";
 type Filter = "all" | "good" | "bad" | "none";
 type CatNode = { type: "sep" } | { type: "item"; name: string; children?: string[] };
 
+const DEFAULT_CATS: CatNode[] = [
+  { type: "item", name: "공지·업데이트" },
+  { type: "sep" },
+  { type: "item", name: "쥔장 잡담" },
+  { type: "item", name: "자소서 팁" },
+  { type: "item", name: "면접 팁" },
+  { type: "item", name: "뉴스", children: ["경제", "기술", "사회", "글로벌"] },
+  { type: "item", name: "쥔장에게 묻고 바란다" },
+];
+
 
 interface SessionItem {
   id: string;
@@ -123,7 +133,7 @@ export default function AdminPage() {
   const [boardVisible, setBoardVisible] = useState(false);
   const [boardVisibleSaving, setBoardVisibleSaving] = useState(false);
   const [boardCatOptions, setBoardCatOptions] = useState<string[]>(["공지·업데이트","쥔장 잡담","자소서 팁","면접 팁","뉴스","경제","기술","사회","글로벌","쥔장에게 묻고 바란다"]);
-  const [boardCatTree, setBoardCatTree] = useState<CatNode[]>([]);
+  const [boardCatTree, setBoardCatTree] = useState<CatNode[]>(DEFAULT_CATS);
   const [writeTitle, setWriteTitle] = useState("");
   const [writeCategory, setWriteCategory] = useState("쥔장 잡담");
   const [writeContent, setWriteContent] = useState("");
@@ -166,12 +176,10 @@ export default function AdminPage() {
     ]);
     setBoardPosts(postsData || []);
     setBoardVisible(config?.value === true);
-    if (catConfig?.value) {
-      const tree = catConfig.value as CatNode[];
-      setBoardCatTree(tree);
-      const options = tree.flatMap(c => c.type === "item" ? [c.name, ...(c.children || [])] : []);
-      if (options.length > 0) setBoardCatOptions(options);
-    }
+    const tree = (catConfig?.value as CatNode[] | null) || DEFAULT_CATS;
+    setBoardCatTree(tree);
+    const options = tree.flatMap(c => c.type === "item" ? [c.name, ...(c.children || [])] : []);
+    if (options.length > 0) setBoardCatOptions(options);
     setBoardPostsLoading(false);
   }
 
