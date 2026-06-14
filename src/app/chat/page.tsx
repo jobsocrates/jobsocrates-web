@@ -737,12 +737,18 @@ export default function ChatPage() {
             }
             if (polished.trim() && assistantMsgDbId) {
               const polishedFull = full.replace(/\[수정본\][\s\S]*?\[\/수정본\]/, `[수정본]${polished.trim()}[/수정본]`);
-              const updateRes = await fetch("/api/generate", {
+              const tryUpdate = () => fetch("/api/generate", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ type: "update-message", message_id: assistantMsgDbId, content: polishedFull }),
               });
-              if (!updateRes.ok) console.error("[DB] update-message failed:", await updateRes.json());
+              let updateRes = await tryUpdate();
+              if (!updateRes.ok) {
+                console.warn("[DB] update-message 1차 실패, 재시도...");
+                await new Promise(r => setTimeout(r, 1500));
+                updateRes = await tryUpdate();
+                if (!updateRes.ok) console.error("[DB] update-message 재시도 실패:", await updateRes.json());
+              }
             }
           }
         } catch (e) {
