@@ -698,8 +698,8 @@ export default function ChatPage() {
         // 수정본 감지 → revisions 테이블에도 저장
         const revMatch = full.match(/\[수정본\]([\s\S]*?)\[\/수정본\]/);
         const chgMatch = full.match(/\[변경사항\]([\s\S]*?)\[\/변경사항\]/);
-        if (revMatch && chgMatch) {
-          savedRevisionId = await saveDbRevision(itemDbId, revMatch[1].trim(), chgMatch[1].trim());
+        if (revMatch) {
+          savedRevisionId = await saveDbRevision(itemDbId, revMatch[1].trim(), chgMatch ? chgMatch[1].trim() : "");
         }
       }
 
