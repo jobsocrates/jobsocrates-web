@@ -44,6 +44,7 @@ interface CoverItemFull {
   status: string;
   order_index: number;
   messages: { id: string; role: string; content: string; created_at: string }[];
+  revisions: { id: string; content: string; created_at: string }[];
   interview_questions: {
     id: string;
     question: string;
@@ -321,7 +322,7 @@ export default function AdminPage() {
     const { data } = await supabase
       .from("cover_items")
       .select(
-        "id, question, draft, char_limit, status, order_index, messages(id, role, content, created_at), interview_questions(id, question, order_index, created_at, interview_answers(user_answer, ai_feedback))"
+        "id, question, draft, char_limit, status, order_index, messages(id, role, content, created_at), revisions(id, content, created_at), interview_questions(id, question, order_index, created_at, interview_answers(user_answer, ai_feedback))"
       )
       .eq("session_id", id)
       .order("order_index");
@@ -997,6 +998,41 @@ export default function AdminPage() {
                           </div>
                         ))}
 
+
+                      {/* 소넷 원본 vs 미니 다듬기 비교 */}
+                      {(() => {
+                        const lastRevision = (item.revisions || []).sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
+                        const lastAssistant = [...item.messages].filter(m => m.role === "assistant").sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
+                        const miniMatch = lastAssistant?.content.match(/\[수정본\]([\s\S]*?)\[\/수정본\]/);
+                        const sonnetText = lastRevision?.content?.trim() ?? "";
+                        const miniText = miniMatch?.[1]?.trim() ?? "";
+                        if (!sonnetText || !miniText || sonnetText === miniText) return null;
+                        const charLimit = item.char_limit;
+                        return (
+                          <div style={{ marginTop: 16, marginBottom: 8, borderRadius: 12, border: "1px solid rgba(255,255,255,0.08)", overflow: "hidden" }}>
+                            <div style={{ padding: "8px 14px", background: "rgba(255,255,255,0.04)", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", gap: 8 }}>
+                              <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "rgba(255,255,255,0.35)" }}>소넷 원본 vs 미니 다듬기</span>
+                              {charLimit && <span style={{ fontSize: 10, color: "rgba(255,255,255,0.2)" }}>글자 제한 {charLimit}자</span>}
+                            </div>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr" }}>
+                              {[
+                                { label: "소넷 원본", text: sonnetText, color: BLUE },
+                                { label: "미니 다듬기", text: miniText, color: GREEN },
+                              ].map(({ label, text, color }) => (
+                                <div key={label} style={{ padding: "12px 14px", borderRight: label === "소넷 원본" ? "1px solid rgba(255,255,255,0.06)" : undefined }}>
+                                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                                    <span style={{ fontSize: 10, fontWeight: 700, color }}>{label}</span>
+                                    <span style={{ fontSize: 10, color: charLimit && text.length > charLimit ? "rgb(248,113,113)" : "rgba(255,255,255,0.3)" }}>
+                                      {text.length}자{charLimit ? ` / ${charLimit}` : ""}
+                                    </span>
+                                  </div>
+                                  <p style={{ fontSize: 12, lineHeight: 1.75, color: "rgba(255,255,255,0.65)", whiteSpace: "pre-wrap", wordBreak: "keep-all", margin: 0 }}>{text}</p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })()}
 
                       {/* Interview questions */}
                       {item.interview_questions.length > 0 && (
