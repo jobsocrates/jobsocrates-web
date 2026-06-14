@@ -177,7 +177,20 @@ export async function POST(req: Request) {
       const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
       const enc = new TextEncoder();
       const charLimit = body.charLimit ? Number(body.charLimit) : null;
-      const polishPrompt = `아래 자소서 완성본을 가독성 좋고 자연스럽게 다듬어라. 쉼표(,) 남발 금지. 명사·항목 나열 외에는 쓰지 마라. "단순히 ~에 그치지 않고" 표현 사용 금지, 다른 표현으로 대체해라.${charLimit ? `\n\n글자 수 기준 ${charLimit}자:\n- 미달이라면 자연스럽고 가독성이 가장 좋은 형태로 다듬어라.\n- 초과라면 ${charLimit}자 미만으로 가독성 좋게 자연스럽게 다듬어라.` : ""}\n\n${revision}`;
+      const polishPrompt = `아래 자소서 완성본을 가독성 좋고 자연스럽게 다듬어라.
+
+쉼표(,) 규칙 — 가장 중요:
+- 명사·항목을 나열할 때만 허용한다. (예: "기획, 실행, 검토")
+- 절 연결(~하면서, ~하고, ~하여 등), 시간 표현, 조건 표현에는 절대 쓰지 마라.
+- 쉼표 없이도 읽히면 반드시 제거해라.
+- 기존 문장에 쉼표가 있으면 위 기준에 맞지 않는 것은 전부 제거해라.
+
+추가 규칙:
+- "단순히 ~에 그치지 않고" 표현 사용 금지, 다른 표현으로 대체해라.
+- 문장 흐름과 가독성을 해치지 않는 선에서만 수정해라. 내용은 바꾸지 마라.
+${charLimit ? `\n글자 수 기준 ${charLimit}자:\n- 미달이라면 자연스럽고 가독성이 가장 좋은 형태로 다듬어라.\n- 초과라면 ${charLimit}자 미만으로 가독성 좋게 자연스럽게 다듬어라.` : ""}
+
+${revision}`;
       const openaiStream = openai.chat.completions.stream({
         model: "gpt-4.1-mini",
         messages: [{ role: "user", content: polishPrompt }],
