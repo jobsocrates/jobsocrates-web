@@ -128,7 +128,6 @@ export default function MyPage() {
         changes = Array.isArray(rawChanges) ? rawChanges.join("\n") : String(rawChanges || "");
         if (revMsgIdx >= 0) {
           const { subtitle } = parseRevisionMsg(msgs[revMsgIdx].text);
-          if (subtitle && !revision.startsWith("[")) revision = `[${subtitle}]\n\n${revision}`;
         }
       } else if (revMsgIdx >= 0) {
         const parsed = parseRevisionMsg(msgs[revMsgIdx].text);
@@ -202,7 +201,6 @@ export default function MyPage() {
         changes = Array.isArray(rawChanges) ? rawChanges.join("\n") : String(rawChanges || "");
         if (revMsgIdx >= 0) {
           const { subtitle } = parseRevisionMsg(msgs[revMsgIdx].text);
-          if (subtitle && !revision.startsWith("[")) revision = `[${subtitle}]\n\n${revision}`;
         }
       } else if (revMsgIdx >= 0) {
         const parsed = parseRevisionMsg(msgs[revMsgIdx].text);

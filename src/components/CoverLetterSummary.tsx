@@ -48,7 +48,7 @@ export function parseRevisionMsg(text: string) {
   const rawRevision = revMatch
     ? revMatch[1].replace(/\[소제목\][\s\S]*?\[\/소제목\]\s*/g, "").trim()
     : "";
-  const revision = subtitle ? `[${subtitle}]\n\n${rawRevision}` : rawRevision;
+  const revision = rawRevision;
   const changes = chgMatch ? chgMatch[1].trim() : "";
   const rest = text
     .replace(/\[소제목\][\s\S]*?\[\/소제목\]/g, "")
