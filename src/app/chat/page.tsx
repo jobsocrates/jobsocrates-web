@@ -87,7 +87,10 @@ function parseRevisionMsg(text: string) {
 
   const subtitle = subMatch ? subMatch[1].trim() : "";
   const rawRevision = revMatch
-    ? revMatch[1].replace(/\[소제목\][\s\S]*?\[\/소제목\]\s*/g, "").trim()
+    ? revMatch[1]
+        .replace(/\[소제목\][\s\S]*?\[\/소제목\]\s*/g, "")
+        .replace(/\[소제목\]|\[\/소제목\]/g, "")
+        .trim()
     : "";
   const revision = rawRevision;
   const changes = chgMatch ? chgMatch[1].trim() : "";
