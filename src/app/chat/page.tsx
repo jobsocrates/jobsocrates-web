@@ -611,10 +611,14 @@ export default function ChatPage() {
     return data.id;
   }
 
-  // messages 테이블에 단일 메시지 저장
-  async function saveDbMessage(coverItemDbId: string, role: "user" | "assistant", content: string) {
-    const { error } = await supabase.from("messages").insert({ cover_item_id: coverItemDbId, role, content });
-    if (error) console.error("[DB] messages insert error:", error);
+  // messages 테이블에 단일 메시지 저장. id를 넘기면 명시적 UUID로 저장 후 반환
+  async function saveDbMessage(coverItemDbId: string, role: "user" | "assistant", content: string, id?: string): Promise<string | null> {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const row: any = { cover_item_id: coverItemDbId, role, content };
+    if (id) row.id = id;
+    const { error } = await supabase.from("messages").insert(row);
+    if (error) { console.error("[DB] messages insert error:", error); return null; }
+    return id ?? null;
   }
 
   // revisions 테이블에 수정본 저장 + cover_item 상태 done으로 갱신 (서버 API 경유 — RLS 우회)
@@ -687,18 +691,19 @@ export default function ChatPage() {
       );
 
       // ── DB 저장: 유저 메시지 + AI 응답 ──
-      let savedRevisionId: string | null = null;
       const revMatch = full.match(/\[수정본\]([\s\S]*?)\[\/수정본\]/);
       const chgMatch = full.match(/\[변경사항\]([\s\S]*?)\[\/변경사항\]/);
+      let assistantMsgDbId: string | null = null;
       if (itemDbId) {
         const userMsg = history[history.length - 1];
         if (userMsg?.role === "user") {
           await saveDbMessage(itemDbId, "user", userMsg.content);
         }
-        await saveDbMessage(itemDbId, "assistant", full);
+        const aId = crypto.randomUUID();
+        assistantMsgDbId = await saveDbMessage(itemDbId, "assistant", full, aId);
 
         if (revMatch) {
-          savedRevisionId = await saveDbRevision(itemDbId, revMatch[1].trim(), chgMatch ? chgMatch[1].trim() : "");
+          await saveDbRevision(itemDbId, revMatch[1].trim(), chgMatch ? chgMatch[1].trim() : "");
         }
       }
 
@@ -730,15 +735,14 @@ export default function ChatPage() {
               }
               bottomRef.current?.scrollIntoView({ behavior: "smooth" });
             }
-            if (polished.trim() && savedRevisionId) {
+            if (polished.trim() && assistantMsgDbId) {
+              const polishedFull = full.replace(/\[수정본\][\s\S]*?\[\/수정본\]/, `[수정본]${polished.trim()}[/수정본]`);
               const updateRes = await fetch("/api/generate", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ type: "update-polish", revision_id: savedRevisionId, polished_content: polished.trim() }),
+                body: JSON.stringify({ type: "update-message", message_id: assistantMsgDbId, content: polishedFull }),
               });
-              if (!updateRes.ok) console.error("[DB] update-polish failed:", await updateRes.json());
-            } else {
-              console.warn("[DB] update-polish skipped — polished:", !!polished.trim(), "savedRevisionId:", savedRevisionId);
+              if (!updateRes.ok) console.error("[DB] update-message failed:", await updateRes.json());
             }
           }
         } catch (e) {

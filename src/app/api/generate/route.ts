@@ -170,18 +170,18 @@ export async function POST(req: Request) {
       return stream(sys, messages);
     }
 
-    case "update-polish": {
+    case "update-message": {
       const { createClient } = await import("@supabase/supabase-js");
       const adminClient = createClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!
       );
       const { error } = await adminClient
-        .from("revisions")
-        .update({ polished_content: body.polished_content })
-        .eq("id", body.revision_id);
+        .from("messages")
+        .update({ content: body.content })
+        .eq("id", body.message_id);
       if (error) {
-        console.error("[DB] polished_content update error:", error);
+        console.error("[DB] messages update error:", error);
         return Response.json({ error: error.message }, { status: 500 });
       }
       return Response.json({ ok: true });
