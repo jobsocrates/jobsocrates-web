@@ -623,13 +623,14 @@ export default function ChatPage() {
       .split("\n")
       .map(l => l.replace(/^[-·•]\s*/, "").trim())
       .filter(Boolean);
-    const { data, error: revErr } = await supabase.from("revisions").insert({ cover_item_id: coverItemDbId, content, changes }).select("id").single();
-    if (revErr) console.error("[DB] revisions insert error:", revErr);
+    const id = crypto.randomUUID();
+    const { error: revErr } = await supabase.from("revisions").insert({ id, cover_item_id: coverItemDbId, content, changes });
+    if (revErr) { console.error("[DB] revisions insert error:", revErr); return null; }
     const { error: updateErr } = await supabase.from("cover_items")
       .update({ status: "done", updated_at: new Date().toISOString() })
       .eq("id", coverItemDbId);
     if (updateErr) console.error("[DB] cover_items update error:", updateErr);
-    return data?.id ?? null;
+    return id;
   }
 
   // ─────────────────────────────────────────────────────────────────
