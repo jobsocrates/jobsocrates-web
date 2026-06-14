@@ -31,7 +31,7 @@ async function stream(system: SystemParam, messages: MsgParam[]) {
   try {
     s = await client.messages.stream({
       model: "claude-sonnet-4-6",
-      max_tokens: 1500,
+      max_tokens: 2048,
       system,
       messages,
     });

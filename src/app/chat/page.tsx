@@ -688,6 +688,8 @@ export default function ChatPage() {
 
       // ── DB 저장: 유저 메시지 + AI 응답 ──
       let savedRevisionId: string | null = null;
+      const revMatch = full.match(/\[수정본\]([\s\S]*?)\[\/수정본\]/);
+      const chgMatch = full.match(/\[변경사항\]([\s\S]*?)\[\/변경사항\]/);
       if (itemDbId) {
         const userMsg = history[history.length - 1];
         if (userMsg?.role === "user") {
@@ -695,22 +697,18 @@ export default function ChatPage() {
         }
         await saveDbMessage(itemDbId, "assistant", full);
 
-        // 수정본 감지 → revisions 테이블에도 저장
-        const revMatch = full.match(/\[수정본\]([\s\S]*?)\[\/수정본\]/);
-        const chgMatch = full.match(/\[변경사항\]([\s\S]*?)\[\/변경사항\]/);
         if (revMatch) {
           savedRevisionId = await saveDbRevision(itemDbId, revMatch[1].trim(), chgMatch ? chgMatch[1].trim() : "");
         }
       }
 
       // ── GPT 다듬기: 완성본이 있을 때만 ──
-      const revMatchForPolish = full.match(/\[수정본\]([\s\S]*?)\[\/수정본\]/);
-      if (revMatchForPolish) {
+      if (revMatch) {
         try {
           const polishRes = await fetch("/api/generate", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ type: "polish", revision: revMatchForPolish[1].trim(), charLimit: charLimit ? Number(charLimit) : null }),
+            body: JSON.stringify({ type: "polish", revision: revMatch[1].trim(), charLimit: charLimit ? Number(charLimit) : null }),
           });
           if (polishRes.body) {
             const polishReader = polishRes.body.getReader();
@@ -733,16 +731,18 @@ export default function ChatPage() {
               bottomRef.current?.scrollIntoView({ behavior: "smooth" });
             }
             if (polished.trim() && savedRevisionId) {
-              await fetch("/api/generate", {
+              const updateRes = await fetch("/api/generate", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ type: "update-polish", revision_id: savedRevisionId, polished_content: polished.trim() }),
               });
+              if (!updateRes.ok) console.error("[DB] update-polish failed:", await updateRes.json());
+            } else {
+              console.warn("[DB] update-polish skipped — polished:", !!polished.trim(), "savedRevisionId:", savedRevisionId);
             }
           }
         } catch (e) {
           console.error("[GPT Polish]", e);
-          // 실패 시 Claude 버전 그대로 유지
         }
       }
     } catch {
