@@ -18,7 +18,7 @@ const DEFAULT_CATS: CatNode[] = [
   { type: "item", name: "쥔장 잡담" },
   { type: "item", name: "자소서 팁" },
   { type: "item", name: "면접 팁" },
-  { type: "item", name: "뉴스", children: ["경제", "기술", "사회", "글로벌"] },
+  { type: "item", name: "뉴스", children: ["반도체", "자동차", "디스플레이", "IT", "식품/화장품", "제약/바이오", "공기업/금융"] },
   { type: "item", name: Q_CAT },
 ];
 
