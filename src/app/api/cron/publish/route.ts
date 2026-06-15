@@ -1,8 +1,17 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 
+// 요일별 발행 카테고리 (UTC 기준, 0=일 ~ 6=토)
+// 한국 9시 = UTC 0시
+const SCHEDULE: Record<number, string[]> = {
+  1: ["반도체", "자동차"],   // 월
+  2: ["디스플레이", "IT"],   // 화
+  3: ["식품/화장품"],         // 수
+  4: ["제약/바이오"],         // 목
+  5: ["공기업/금융"],         // 금
+};
+
 export async function GET(req: NextRequest) {
-  // Vercel cron 인증 확인
   const authHeader = req.headers.get("authorization");
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -14,33 +23,44 @@ export async function GET(req: NextRequest) {
     { auth: { autoRefreshToken: false, persistSession: false } }
   );
 
-  // is_published: false 인 뉴스 draft 전부 발행
-  const { data: drafts, error: fetchErr } = await supabase
-    .from("posts")
-    .select("id, title, category")
-    .eq("is_published", false)
-    .is("nickname", null);
+  const dayOfWeek = new Date().getUTCDay();
+  const categories = SCHEDULE[dayOfWeek];
 
-  if (fetchErr) {
-    return NextResponse.json({ error: fetchErr.message }, { status: 500 });
+  if (!categories) {
+    return NextResponse.json({ message: "오늘은 발행 없음", day: dayOfWeek });
   }
 
-  if (!drafts || drafts.length === 0) {
-    return NextResponse.json({ message: "발행할 draft 없음", published: [] });
+  const published: string[] = [];
+
+  for (const category of categories) {
+    // 해당 카테고리에서 가장 오래된 draft 1개 발행
+    const { data, error: fetchErr } = await supabase
+      .from("posts")
+      .select("id, title")
+      .eq("category", category)
+      .eq("is_published", false)
+      .is("nickname", null)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .single();
+
+    if (fetchErr || !data) {
+      console.log(`[${category}] draft 없음`);
+      continue;
+    }
+
+    const { error: updateErr } = await supabase
+      .from("posts")
+      .update({ is_published: true })
+      .eq("id", data.id);
+
+    if (updateErr) {
+      console.error(`[${category}] 발행 실패:`, updateErr.message);
+    } else {
+      published.push(`[${category}] ${data.title}`);
+      console.log(`✓ 발행: [${category}] ${data.title}`);
+    }
   }
 
-  const ids = drafts.map((d) => d.id);
-  const { error: updateErr } = await supabase
-    .from("posts")
-    .update({ is_published: true })
-    .in("id", ids);
-
-  if (updateErr) {
-    return NextResponse.json({ error: updateErr.message }, { status: 500 });
-  }
-
-  const published = drafts.map((d) => `[${d.category}] ${d.title}`);
-  console.log("✓ 자동 발행 완료:", published);
-
-  return NextResponse.json({ message: "발행 완료", published });
+  return NextResponse.json({ message: "완료", published });
 }
