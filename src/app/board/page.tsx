@@ -664,12 +664,12 @@ function BoardPage() {
 }
 
 function splitTitleMain(title: string): string {
-  const m = title.match(/^(.*?)\s*(\[.*\])$/s);
+  const m = title.match(/^(.*?)\s*(\[.*\])$/);
   return m ? m[1] : title;
 }
 
 function splitTitleSub(title: string): string | null {
-  const m = title.match(/^(.*?)\s*(\[.*\])$/s);
+  const m = title.match(/^(.*?)\s*(\[.*\])$/);
   return m ? m[2] : null;
 }
 
