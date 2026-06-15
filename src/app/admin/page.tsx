@@ -136,6 +136,7 @@ export default function AdminPage() {
   const [writeTitle, setWriteTitle] = useState("");
   const [writeCategory, setWriteCategory] = useState("쥔장 잡담");
   const [writeContent, setWriteContent] = useState("");
+  const [writePinned, setWritePinned] = useState(false);
   const [writeSaving, setWriteSaving] = useState(false);
   const [writeOpen, setWriteOpen] = useState(false);
   const [boardCategory, setBoardCategory] = useState("전체");
@@ -232,14 +233,15 @@ export default function AdminPage() {
     setWriteSaving(true);
     const { data } = await supabase
       .from("posts")
-      .insert({ title: writeTitle.trim(), content: writeContent.trim(), category: writeCategory, is_published: true })
+      .insert({ title: writeTitle.trim(), content: writeContent.trim(), category: writeCategory, is_published: true, is_pinned: writePinned })
       .select()
       .single();
     if (data) {
-      setBoardPosts((prev) => [data, ...prev]);
+      setBoardPosts((prev) => writePinned ? [data, ...prev] : [...prev, data].sort((a, b) => (b.is_pinned ? 1 : 0) - (a.is_pinned ? 1 : 0) || b.created_at.localeCompare(a.created_at)));
       setWriteTitle("");
       setWriteContent("");
       setWriteCategory("쥔장 잡담");
+      setWritePinned(false);
       setWriteOpen(false);
     }
     setWriteSaving(false);
@@ -1588,7 +1590,13 @@ export default function AdminPage() {
                 </div>
                 <textarea value={writeContent} onChange={e => setWriteContent(e.target.value)} placeholder="본문" rows={6}
                   style={{ width: "100%", padding: "12px 14px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.12)", background: "#1a1a2e", color: "rgba(255,255,255,0.82)", fontSize: 15, fontFamily: "inherit", resize: "vertical", outline: "none", lineHeight: 1.75 }} />
-                <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 10 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 10 }}>
+                  <button
+                    onClick={() => setWritePinned(v => !v)}
+                    style={{ padding: "9px 16px", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: "pointer", border: writePinned ? "1px solid rgba(255,200,0,0.5)" : "1px solid rgba(255,255,255,0.12)", background: writePinned ? "rgba(255,200,0,0.12)" : "rgba(255,255,255,0.05)", color: writePinned ? "#FFD166" : "rgba(255,255,255,0.4)", fontFamily: "inherit", transition: "all 0.15s" }}
+                  >
+                    📌 {writePinned ? "고정 ON" : "고정"}
+                  </button>
                   <button onClick={submitPost} disabled={writeSaving || !writeTitle.trim() || !writeContent.trim()}
                     style={{ padding: "9px 28px", borderRadius: 8, fontSize: 15, fontWeight: 700, cursor: "pointer", border: `1px solid ${ACCENT}88`, background: `${ACCENT}2a`, color: ACCENT, fontFamily: "inherit", opacity: writeSaving || !writeTitle.trim() || !writeContent.trim() ? 0.45 : 1 }}>
                     {writeSaving ? "등록 중..." : "등록"}
