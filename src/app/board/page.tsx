@@ -8,6 +8,7 @@ const BG = "#0D0D18";
 const ACCENT = "#C96442";
 const BORDER = "rgba(255,255,255,0.07)";
 const ADMIN_EMAIL = "ijhan6403@gmail.com";
+const Q_CAT = "쥔장에게 묻고 바란다";
 
 type CatNode = { type: "sep" } | { type: "item"; name: string; children?: string[] };
 
@@ -18,10 +19,18 @@ const DEFAULT_CATS: CatNode[] = [
   { type: "item", name: "자소서 팁" },
   { type: "item", name: "면접 팁" },
   { type: "item", name: "뉴스", children: ["경제", "기술", "사회", "글로벌"] },
-  { type: "item", name: "쥔장에게 묻고 바란다" },
+  { type: "item", name: Q_CAT },
 ];
 
-interface Post { id: string; title: string; category: string; created_at: string; is_pinned: boolean }
+interface Post {
+  id: string;
+  title: string;
+  category: string;
+  created_at: string;
+  is_pinned: boolean;
+  nickname?: string | null;
+  admin_reply?: string | null;
+}
 
 function filterPosts(posts: Post[], cat: string, cats: CatNode[]) {
   if (cat === "전체") return posts;
@@ -38,6 +47,11 @@ function fmt(d: string) {
   }).replace(/\.\s*/g, ".").replace(/\.$/, "");
 }
 
+async function hashPw(pw: string) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(pw));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
 export default function BoardPage() {
   const router = useRouter();
   const [posts, setPosts] = useState<Post[]>([]);
@@ -45,13 +59,30 @@ export default function BoardPage() {
   const [loading, setLoading] = useState(true);
   const [visible, setVisible] = useState<boolean | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
-
   const [cats, setCats] = useState<CatNode[]>(DEFAULT_CATS);
   const [editMode, setEditMode] = useState(false);
   const [editTree, setEditTree] = useState<CatNode[]>([]);
   const [newCatName, setNewCatName] = useState("");
   const [newChildName, setNewChildName] = useState<Record<string, string>>({});
   const [catSaving, setCatSaving] = useState(false);
+
+  // 글쓰기 모달
+  const [writeOpen, setWriteOpen] = useState(false);
+  const [wNick, setWNick] = useState("");
+  const [wPw, setWPw] = useState("");
+  const [wTitle, setWTitle] = useState("");
+  const [wContent, setWContent] = useState("");
+  const [wErrors, setWErrors] = useState<Record<string, string>>({});
+  const [wLoading, setWLoading] = useState(false);
+
+  // 비밀번호 확인 + 내용 보기 모달
+  const [pwPost, setPwPost] = useState<Post | null>(null);
+  const [pwInput, setPwInput] = useState("");
+  const [pwError, setPwError] = useState("");
+  const [pwLoading, setPwLoading] = useState(false);
+  const [viewData, setViewData] = useState<{ content: string; admin_reply: string | null } | null>(null);
+  const [replyText, setReplyText] = useState("");
+  const [replySaving, setReplySaving] = useState(false);
 
   useEffect(() => {
     supabase.from("page_views").insert({ path: "/board" });
@@ -69,7 +100,7 @@ export default function BoardPage() {
       if (show) {
         const { data } = await supabase
           .from("posts")
-          .select("id, title, category, created_at, is_pinned")
+          .select("id, title, category, created_at, is_pinned, nickname, admin_reply")
           .eq("is_published", true)
           .order("is_pinned", { ascending: false })
           .order("created_at", { ascending: false });
@@ -80,6 +111,79 @@ export default function BoardPage() {
     init();
   }, []);
 
+  async function submitWrite() {
+    const errs: Record<string, string> = {};
+    if (!wNick.trim()) errs.nick = "닉네임을 입력해주세요";
+    if (!wPw.trim()) errs.pw = "비밀번호를 입력해주세요";
+    if (!wTitle.trim()) errs.title = "제목을 입력해주세요";
+    if (!wContent.trim()) errs.content = "내용을 입력해주세요";
+    if (Object.keys(errs).length) { setWErrors(errs); return; }
+    setWLoading(true);
+    const hash = await hashPw(wPw.trim());
+    const { data, error } = await supabase.from("posts").insert({
+      title: wTitle.trim(),
+      content: wContent.trim(),
+      category: Q_CAT,
+      is_published: true,
+      nickname: wNick.trim(),
+      password_hash: hash,
+    }).select("id, title, category, created_at, is_pinned, nickname, admin_reply").single();
+    setWLoading(false);
+    if (error) { setWErrors({ content: "저장에 실패했어요. 다시 시도해주세요." }); return; }
+    setPosts(prev => [data as Post, ...prev]);
+    setWriteOpen(false);
+    setWNick(""); setWPw(""); setWTitle(""); setWContent(""); setWErrors({});
+  }
+
+  async function verifyPw() {
+    if (!pwInput.trim()) { setPwError("비밀번호를 입력해주세요"); return; }
+    setPwLoading(true);
+    const { data, error } = await supabase
+      .from("posts")
+      .select("content, password_hash, admin_reply")
+      .eq("id", pwPost!.id)
+      .single();
+    if (error || !data) { setPwLoading(false); setPwError("글을 불러오지 못했습니다"); return; }
+    const hash = await hashPw(pwInput.trim());
+    if (hash !== (data as { password_hash: string }).password_hash) {
+      setPwLoading(false); setPwError("비밀번호가 틀렸어요"); return;
+    }
+    setPwLoading(false);
+    setViewData({ content: data.content, admin_reply: data.admin_reply });
+  }
+
+  async function openAdminView(post: Post) {
+    const { data } = await supabase
+      .from("posts")
+      .select("content, admin_reply")
+      .eq("id", post.id)
+      .single();
+    setPwPost(post);
+    setViewData({ content: data?.content ?? "", admin_reply: data?.admin_reply ?? null });
+    setReplyText(data?.admin_reply ?? "");
+  }
+
+  async function saveReply() {
+    if (!pwPost) return;
+    setReplySaving(true);
+    const reply = replyText.trim() || null;
+    await supabase.from("posts").update({ admin_reply: reply }).eq("id", pwPost.id);
+    setViewData(v => v ? { ...v, admin_reply: reply } : v);
+    setPosts(prev => prev.map(p => p.id === pwPost.id ? { ...p, admin_reply: reply } : p));
+    setReplySaving(false);
+  }
+
+  function closePwModal() {
+    setPwPost(null); setPwInput(""); setPwError(""); setPwLoading(false);
+    setViewData(null); setReplyText("");
+  }
+
+  function handlePostClick(post: Post) {
+    if (post.category !== Q_CAT) { router.push(`/board/${post.id}`); return; }
+    if (isAdmin) { openAdminView(post); return; }
+    setPwPost(post); setPwInput(""); setPwError(""); setViewData(null);
+  }
+
   function startEdit() {
     setEditTree(cats.map(c =>
       c.type === "sep" ? { type: "sep" as const } : { ...c, children: c.children ? [...c.children] : undefined }
@@ -87,11 +191,7 @@ export default function BoardPage() {
     setEditMode(true);
   }
 
-  function cancelEdit() {
-    setEditMode(false);
-    setNewCatName("");
-    setNewChildName({});
-  }
+  function cancelEdit() { setEditMode(false); setNewCatName(""); setNewChildName({}); }
 
   async function saveEdit() {
     setCatSaving(true);
@@ -111,9 +211,7 @@ export default function BoardPage() {
     setEditTree(t);
   }
 
-  function deleteItem(idx: number) {
-    setEditTree(editTree.filter((_, i) => i !== idx));
-  }
+  function deleteItem(idx: number) { setEditTree(editTree.filter((_, i) => i !== idx)); }
 
   function addItem() {
     const name = newCatName.trim();
@@ -122,9 +220,7 @@ export default function BoardPage() {
     setNewCatName("");
   }
 
-  function addSep() {
-    setEditTree([...editTree, { type: "sep" }]);
-  }
+  function addSep() { setEditTree([...editTree, { type: "sep" }]); }
 
   function deleteChild(parentIdx: number, child: string) {
     const t = [...editTree];
@@ -164,7 +260,7 @@ export default function BoardPage() {
 
   return (
     <div style={{ background: BG, minHeight: "100vh", fontFamily: `"Pretendard Variable", Pretendard, sans-serif`, display: "flex", flexDirection: "column" }}>
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}} *{box-sizing:border-box} input:focus{outline:none}`}</style>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}} *{box-sizing:border-box} input:focus,textarea:focus{outline:none}`}</style>
 
       <header style={{ height: 54, padding: "0 24px", display: "flex", alignItems: "center", gap: 12, borderBottom: `1px solid ${BORDER}`, position: "sticky", top: 0, background: "rgba(13,13,24,0.97)", backdropFilter: "blur(10px)", zIndex: 20, flexShrink: 0 }}>
         <a href="/" style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 15, color: "rgba(255,255,255,0.35)", textDecoration: "none" }}>
@@ -180,8 +276,6 @@ export default function BoardPage() {
       <div style={{ display: "flex", flex: 1 }}>
         {/* 사이드바 */}
         <aside style={{ width: 210, flexShrink: 0, borderRight: `1px solid ${BORDER}`, position: "sticky", top: 54, height: "calc(100vh - 54px)", overflowY: "auto", display: "flex", flexDirection: "column" }}>
-
-          {/* 카테고리 헤더 */}
           <div style={{ padding: "20px 16px 10px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
             <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.3)", letterSpacing: "0.1em" }}>CATEGORY</span>
             {isAdmin && (
@@ -226,7 +320,6 @@ export default function BoardPage() {
             </div>
           ) : (
             <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-              {/* 저장 버튼 */}
               <div style={{ padding: "0 16px 12px", flexShrink: 0 }}>
                 <button
                   onClick={saveEdit}
@@ -236,8 +329,6 @@ export default function BoardPage() {
                   {catSaving ? "저장 중..." : "저장하기"}
                 </button>
               </div>
-
-              {/* 편집 목록 */}
               <div style={{ flex: 1, overflowY: "auto" }}>
                 {editTree.map((node, idx) =>
                   node.type === "sep" ? (
@@ -279,8 +370,6 @@ export default function BoardPage() {
                   )
                 )}
               </div>
-
-              {/* 새 카테고리 추가 */}
               <div style={{ padding: "12px 16px", borderTop: `1px solid ${BORDER}`, flexShrink: 0 }}>
                 <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
                   <input
@@ -290,15 +379,9 @@ export default function BoardPage() {
                     placeholder="카테고리 이름 입력"
                     style={{ flex: 1, background: "rgba(255,255,255,0.06)", border: `1px solid rgba(255,255,255,0.1)`, borderRadius: 7, color: "rgba(255,255,255,0.82)", fontSize: 13, padding: "7px 10px", fontFamily: "inherit", minWidth: 0 }}
                   />
-                  <button
-                    onClick={addItem}
-                    style={{ background: ACCENT + "33", border: `1px solid ${ACCENT}55`, borderRadius: 7, color: ACCENT, fontSize: 18, cursor: "pointer", padding: "0 12px", fontFamily: "inherit", fontWeight: 700, lineHeight: 1 }}
-                  >+</button>
+                  <button onClick={addItem} style={{ background: ACCENT + "33", border: `1px solid ${ACCENT}55`, borderRadius: 7, color: ACCENT, fontSize: 18, cursor: "pointer", padding: "0 12px", fontFamily: "inherit", fontWeight: 700, lineHeight: 1 }}>+</button>
                 </div>
-                <button
-                  onClick={addSep}
-                  style={{ width: "100%", background: "rgba(255,255,255,0.03)", border: `1px solid ${BORDER}`, borderRadius: 7, color: "rgba(255,255,255,0.28)", fontSize: 12, padding: "7px 0", cursor: "pointer", fontFamily: "inherit" }}
-                >
+                <button onClick={addSep} style={{ width: "100%", background: "rgba(255,255,255,0.03)", border: `1px solid ${BORDER}`, borderRadius: 7, color: "rgba(255,255,255,0.28)", fontSize: 12, padding: "7px 0", cursor: "pointer", fontFamily: "inherit" }}>
                   ── 구분선 추가
                 </button>
               </div>
@@ -308,9 +391,17 @@ export default function BoardPage() {
 
         {/* 본문 */}
         <main style={{ flex: 1, minWidth: 0, padding: "32px 40px" }}>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 12, paddingBottom: 16, borderBottom: `1px solid ${BORDER}`, marginBottom: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, paddingBottom: 16, borderBottom: `1px solid ${BORDER}`, marginBottom: 10 }}>
             <span style={{ fontSize: 22, fontWeight: 700, color: "rgba(255,255,255,0.92)" }}>{category}</span>
             <span style={{ fontSize: 15, color: "rgba(255,255,255,0.3)" }}>총 {filtered.length}개</span>
+            {category === Q_CAT && !isAdmin && (
+              <button
+                onClick={() => setWriteOpen(true)}
+                style={{ marginLeft: "auto", padding: "8px 18px", background: ACCENT, border: "none", borderRadius: 8, color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+              >
+                ✏️ 글쓰기
+              </button>
+            )}
           </div>
 
           {filtered.length > 0 && (
@@ -322,28 +413,237 @@ export default function BoardPage() {
           )}
 
           {filtered.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "100px 0", color: "rgba(255,255,255,0.2)", fontSize: 16 }}>아직 글이 없어요</div>
+            <div style={{ textAlign: "center", padding: "100px 0", color: "rgba(255,255,255,0.2)", fontSize: 16 }}>
+              {category === Q_CAT ? (
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
+                  <span>아직 글이 없어요</span>
+                  {!isAdmin && (
+                    <button
+                      onClick={() => setWriteOpen(true)}
+                      style={{ padding: "10px 24px", background: ACCENT, border: "none", borderRadius: 8, color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+                    >
+                      첫 글 남기기
+                    </button>
+                  )}
+                </div>
+              ) : "아직 글이 없어요"}
+            </div>
           ) : (
-            filtered.map((post, i) => (
-              <div
-                key={post.id}
-                onClick={() => router.push(`/board/${post.id}`)}
-                style={{ display: "grid", gridTemplateColumns: "48px 1fr 130px 96px", padding: "16px 12px", borderBottom: `1px solid rgba(255,255,255,0.04)`, cursor: "pointer", borderRadius: 6, transition: "background 0.1s", alignItems: "center", background: post.is_pinned ? "rgba(255,200,0,0.04)" : "transparent", borderLeft: post.is_pinned ? "2px solid rgba(255,200,0,0.35)" : "2px solid transparent" }}
-                onMouseEnter={e => (e.currentTarget.style.background = post.is_pinned ? "rgba(255,200,0,0.07)" : "rgba(255,255,255,0.04)")}
-                onMouseLeave={e => (e.currentTarget.style.background = post.is_pinned ? "rgba(255,200,0,0.04)" : "transparent")}
-              >
-                <span style={{ fontSize: 14, color: "rgba(255,255,255,0.22)", textAlign: "center" }}>{filtered.length - i}</span>
-                <span style={{ fontSize: 16, color: post.is_pinned ? "rgba(255,255,255,0.97)" : "rgba(255,255,255,0.88)", fontWeight: post.is_pinned ? 700 : 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 20, display: "flex", alignItems: "center", gap: 6 }}>
-                  {post.is_pinned && <span style={{ fontSize: 13, flexShrink: 0 }}>📌</span>}
-                  {post.title || "(제목 없음)"}
-                </span>
-                <span style={{ fontSize: 14, color: "rgba(255,255,255,0.42)" }}>{post.category}</span>
-                <span style={{ fontSize: 14, color: "rgba(255,255,255,0.32)" }}>{fmt(post.created_at)}</span>
-              </div>
-            ))
+            filtered.map((post, i) => {
+              const isQ = post.category === Q_CAT;
+              const hasReply = isQ && !!post.admin_reply;
+              return (
+                <div
+                  key={post.id}
+                  onClick={() => handlePostClick(post)}
+                  style={{ display: "grid", gridTemplateColumns: "48px 1fr 130px 96px", padding: "16px 12px", borderBottom: `1px solid rgba(255,255,255,0.04)`, cursor: "pointer", borderRadius: 6, transition: "background 0.1s", alignItems: "center", background: post.is_pinned ? "rgba(255,200,0,0.04)" : "transparent", borderLeft: post.is_pinned ? "2px solid rgba(255,200,0,0.35)" : "2px solid transparent" }}
+                  onMouseEnter={e => (e.currentTarget.style.background = post.is_pinned ? "rgba(255,200,0,0.07)" : "rgba(255,255,255,0.04)")}
+                  onMouseLeave={e => (e.currentTarget.style.background = post.is_pinned ? "rgba(255,200,0,0.04)" : "transparent")}
+                >
+                  <span style={{ fontSize: 14, color: "rgba(255,255,255,0.22)", textAlign: "center" }}>
+                    {isQ ? "🔒" : filtered.length - i}
+                  </span>
+                  <span style={{ fontSize: 16, color: post.is_pinned ? "rgba(255,255,255,0.97)" : "rgba(255,255,255,0.88)", fontWeight: post.is_pinned ? 700 : 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 20, display: "flex", alignItems: "center", gap: 6 }}>
+                    {post.is_pinned && <span style={{ fontSize: 13, flexShrink: 0 }}>📌</span>}
+                    {post.title || "(제목 없음)"}
+                    {isQ && post.nickname && (
+                      <span style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", fontWeight: 400, flexShrink: 0 }}>· {post.nickname}</span>
+                    )}
+                  </span>
+                  <span style={{ fontSize: 13, color: "rgba(255,255,255,0.42)" }}>
+                    {isQ ? (
+                      hasReply
+                        ? <span style={{ padding: "2px 8px", background: "rgba(100,200,100,0.15)", border: "1px solid rgba(100,200,100,0.3)", borderRadius: 4, color: "rgba(120,220,120,0.9)", fontSize: 12 }}>답변완료</span>
+                        : <span style={{ padding: "2px 8px", background: "rgba(255,255,255,0.05)", border: `1px solid ${BORDER}`, borderRadius: 4, color: "rgba(255,255,255,0.3)", fontSize: 12 }}>답변대기</span>
+                    ) : post.category}
+                  </span>
+                  <span style={{ fontSize: 14, color: "rgba(255,255,255,0.32)" }}>{fmt(post.created_at)}</span>
+                </div>
+              );
+            })
           )}
         </main>
       </div>
+
+      {/* ── 글쓰기 모달 ── */}
+      {writeOpen && (
+        <div
+          onClick={e => { if (e.target === e.currentTarget) setWriteOpen(false); }}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
+        >
+          <div style={{ background: "#13131F", border: `1px solid rgba(255,255,255,0.1)`, borderRadius: 14, width: "100%", maxWidth: 560, maxHeight: "90vh", overflowY: "auto", padding: 32 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 28 }}>
+              <span style={{ fontSize: 18, fontWeight: 700, color: "rgba(255,255,255,0.92)" }}>쥔장에게 묻고 바란다</span>
+              <button onClick={() => setWriteOpen(false)} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", fontSize: 22, cursor: "pointer", lineHeight: 1, padding: 4 }}>×</button>
+            </div>
+
+            <Field label="닉네임" required error={wErrors.nick} hint="본인이 알아볼 수 있는 이름 (예: 취준생A)">
+              <input
+                value={wNick}
+                onChange={e => { setWNick(e.target.value); setWErrors(p => ({ ...p, nick: "" })); }}
+                placeholder="닉네임 입력"
+                style={inputStyle(!!wErrors.nick)}
+              />
+            </Field>
+
+            <Field label="비밀번호" required error={wErrors.pw} hint="내 글을 다시 확인할 때 필요해요. 꼭 기억해주세요!">
+              <input
+                type="password"
+                value={wPw}
+                onChange={e => { setWPw(e.target.value); setWErrors(p => ({ ...p, pw: "" })); }}
+                placeholder="비밀번호 설정"
+                style={inputStyle(!!wErrors.pw)}
+              />
+            </Field>
+
+            <Field label="제목" required error={wErrors.title}>
+              <input
+                value={wTitle}
+                onChange={e => { setWTitle(e.target.value); setWErrors(p => ({ ...p, title: "" })); }}
+                placeholder="제목을 입력해주세요"
+                style={inputStyle(!!wErrors.title)}
+              />
+            </Field>
+
+            <Field label="내용" required error={wErrors.content}>
+              <textarea
+                value={wContent}
+                onChange={e => { setWContent(e.target.value); setWErrors(p => ({ ...p, content: "" })); }}
+                placeholder="궁금한 점이나 건의사항을 자유롭게 남겨주세요"
+                rows={6}
+                style={{ ...inputStyle(!!wErrors.content), resize: "vertical", lineHeight: 1.7 }}
+              />
+            </Field>
+
+            <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+              <button
+                onClick={() => setWriteOpen(false)}
+                style={{ flex: 1, padding: "12px 0", background: "rgba(255,255,255,0.06)", border: `1px solid ${BORDER}`, borderRadius: 8, color: "rgba(255,255,255,0.5)", fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
+              >
+                취소
+              </button>
+              <button
+                onClick={submitWrite}
+                disabled={wLoading}
+                style={{ flex: 2, padding: "12px 0", background: wLoading ? "rgba(201,100,66,0.5)" : ACCENT, border: "none", borderRadius: 8, color: "#fff", fontSize: 15, fontWeight: 700, cursor: wLoading ? "not-allowed" : "pointer", fontFamily: "inherit" }}
+              >
+                {wLoading ? "제출 중..." : "제출하기"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── 비밀번호 확인 + 내용 보기 모달 ── */}
+      {pwPost && (
+        <div
+          onClick={e => { if (e.target === e.currentTarget) closePwModal(); }}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
+        >
+          <div style={{ background: "#13131F", border: `1px solid rgba(255,255,255,0.1)`, borderRadius: 14, width: "100%", maxWidth: 560, maxHeight: "90vh", overflowY: "auto", padding: 32 }}>
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 20, gap: 16 }}>
+              <div>
+                <p style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "rgba(255,255,255,0.92)", lineHeight: 1.4 }}>{pwPost.title}</p>
+                {pwPost.nickname && (
+                  <p style={{ margin: "6px 0 0", fontSize: 13, color: "rgba(255,255,255,0.35)" }}>{pwPost.nickname} · {fmt(pwPost.created_at)}</p>
+                )}
+              </div>
+              <button onClick={closePwModal} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", fontSize: 22, cursor: "pointer", lineHeight: 1, padding: 4, flexShrink: 0 }}>×</button>
+            </div>
+
+            {!viewData ? (
+              /* 비밀번호 입력 */
+              <div>
+                <div style={{ height: 1, background: BORDER, marginBottom: 24 }} />
+                <p style={{ margin: "0 0 14px", fontSize: 14, color: "rgba(255,255,255,0.5)" }}>🔒 비밀번호를 입력하면 내용을 볼 수 있어요</p>
+                <input
+                  type="password"
+                  value={pwInput}
+                  onChange={e => { setPwInput(e.target.value); setPwError(""); }}
+                  onKeyDown={e => e.key === "Enter" && verifyPw()}
+                  placeholder="비밀번호"
+                  autoFocus
+                  style={inputStyle(!!pwError)}
+                />
+                {pwError && <p style={{ margin: "8px 0 0", fontSize: 13, color: "rgba(255,100,100,0.9)" }}>{pwError}</p>}
+                <button
+                  onClick={verifyPw}
+                  disabled={pwLoading}
+                  style={{ width: "100%", marginTop: 16, padding: "12px 0", background: pwLoading ? "rgba(201,100,66,0.5)" : ACCENT, border: "none", borderRadius: 8, color: "#fff", fontSize: 15, fontWeight: 700, cursor: pwLoading ? "not-allowed" : "pointer", fontFamily: "inherit" }}
+                >
+                  {pwLoading ? "확인 중..." : "확인"}
+                </button>
+              </div>
+            ) : (
+              /* 내용 보기 */
+              <div>
+                <div style={{ height: 1, background: BORDER, marginBottom: 24 }} />
+                <p style={{ margin: 0, fontSize: 16, color: "rgba(255,255,255,0.82)", lineHeight: 1.9, whiteSpace: "pre-wrap", wordBreak: "keep-all" }}>
+                  {viewData.content}
+                </p>
+
+                {/* 답변 영역 */}
+                <div style={{ marginTop: 28, padding: 20, background: "rgba(255,255,255,0.03)", border: `1px solid ${BORDER}`, borderRadius: 10 }}>
+                  <p style={{ margin: "0 0 12px", fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.4)", letterSpacing: "0.05em" }}>쥔장 답변</p>
+                  {isAdmin ? (
+                    <div>
+                      <textarea
+                        value={replyText}
+                        onChange={e => setReplyText(e.target.value)}
+                        placeholder="답변을 입력하세요"
+                        rows={4}
+                        style={{ ...inputStyle(false), resize: "vertical", lineHeight: 1.7 }}
+                      />
+                      <button
+                        onClick={saveReply}
+                        disabled={replySaving}
+                        style={{ marginTop: 10, padding: "10px 20px", background: replySaving ? "rgba(201,100,66,0.5)" : ACCENT, border: "none", borderRadius: 8, color: "#fff", fontSize: 14, fontWeight: 700, cursor: replySaving ? "not-allowed" : "pointer", fontFamily: "inherit" }}
+                      >
+                        {replySaving ? "저장 중..." : "답변 저장"}
+                      </button>
+                    </div>
+                  ) : viewData.admin_reply ? (
+                    <p style={{ margin: 0, fontSize: 15, color: "rgba(255,255,255,0.75)", lineHeight: 1.9, whiteSpace: "pre-wrap", wordBreak: "keep-all" }}>
+                      {viewData.admin_reply}
+                    </p>
+                  ) : (
+                    <p style={{ margin: 0, fontSize: 14, color: "rgba(255,255,255,0.25)" }}>아직 답변이 없어요. 쥔장이 곧 답변할게요!</p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function inputStyle(hasError: boolean): React.CSSProperties {
+  return {
+    width: "100%",
+    background: "rgba(255,255,255,0.05)",
+    border: `1px solid ${hasError ? "rgba(255,80,80,0.6)" : "rgba(255,255,255,0.1)"}`,
+    borderRadius: 8,
+    color: "rgba(255,255,255,0.88)",
+    fontSize: 15,
+    padding: "11px 14px",
+    fontFamily: `"Pretendard Variable", Pretendard, sans-serif`,
+    transition: "border-color 0.15s",
+  };
+}
+
+function Field({ label, required, error, hint, children }: {
+  label: string; required?: boolean; error?: string; hint?: string; children: React.ReactNode;
+}) {
+  return (
+    <div style={{ marginBottom: 20 }}>
+      <label style={{ display: "block", fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.65)", marginBottom: 8 }}>
+        {label} {required && <span style={{ color: ACCENT }}>*</span>}
+      </label>
+      {children}
+      {hint && !error && <p style={{ margin: "6px 0 0", fontSize: 12, color: "rgba(255,255,255,0.28)" }}>{hint}</p>}
+      {error && <p style={{ margin: "6px 0 0", fontSize: 13, color: "rgba(255,100,100,0.9)" }}>{error}</p>}
     </div>
   );
 }
