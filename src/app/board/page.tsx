@@ -482,11 +482,16 @@ function BoardPage() {
                   <span style={{ fontSize: 14, color: "rgba(255,255,255,0.22)", textAlign: "center" }}>
                     {isQ && post.nickname ? "🔒" : filtered.length - i}
                   </span>
-                  <span className="post-title" style={{ fontSize: 16, color: post.is_pinned ? "rgba(255,255,255,0.97)" : "rgba(255,255,255,0.88)", fontWeight: post.is_pinned ? 700 : 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 12, display: "flex", alignItems: "center", gap: 6 }}>
-                    {post.is_pinned && <span style={{ fontSize: 13, flexShrink: 0 }}>📌</span>}
-                    {post.title || "(제목 없음)"}
-                    {isQ && post.nickname && (
-                      <span style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", fontWeight: 400, flexShrink: 0 }}>· {post.nickname}</span>
+                  <span className="post-title" style={{ fontSize: 16, color: post.is_pinned ? "rgba(255,255,255,0.97)" : "rgba(255,255,255,0.88)", fontWeight: post.is_pinned ? 700 : 500, paddingRight: 12, display: "flex", flexDirection: "column", gap: 2, overflow: "hidden" }}>
+                    <span style={{ display: "flex", alignItems: "center", gap: 6, overflow: "hidden" }}>
+                      {post.is_pinned && <span style={{ fontSize: 13, flexShrink: 0 }}>📌</span>}
+                      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{splitTitleMain(post.title || "(제목 없음)")}</span>
+                      {isQ && post.nickname && (
+                        <span style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", fontWeight: 400, flexShrink: 0 }}>· {post.nickname}</span>
+                      )}
+                    </span>
+                    {splitTitleSub(post.title || "") && (
+                      <span style={{ fontSize: 12, color: "rgba(255,255,255,0.38)", fontWeight: 400, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{splitTitleSub(post.title || "")}</span>
                     )}
                   </span>
                   <span className="post-col-cat" style={{ fontSize: 13, color: "rgba(255,255,255,0.42)" }}>
@@ -656,6 +661,16 @@ function BoardPage() {
       )}
     </div>
   );
+}
+
+function splitTitleMain(title: string): string {
+  const m = title.match(/^(.*?)\s*(\[.*\])$/s);
+  return m ? m[1] : title;
+}
+
+function splitTitleSub(title: string): string | null {
+  const m = title.match(/^(.*?)\s*(\[.*\])$/s);
+  return m ? m[2] : null;
 }
 
 function inputStyle(hasError: boolean): React.CSSProperties {
