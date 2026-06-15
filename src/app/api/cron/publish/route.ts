@@ -4,11 +4,11 @@ import { NextRequest, NextResponse } from "next/server";
 // 요일별 발행 카테고리 (UTC 기준, 0=일 ~ 6=토)
 // 한국 9시 = UTC 0시
 const SCHEDULE: Record<number, string[]> = {
-  1: ["반도체", "자동차"],   // 월
-  2: ["디스플레이", "IT"],   // 화
-  3: ["식품/화장품"],         // 수
-  4: ["제약/바이오"],         // 목
-  5: ["공기업/금융"],         // 금
+  2: ["반도체", "자동차"],   // 화
+  3: ["디스플레이", "IT"],   // 수
+  4: ["식품/화장품"],         // 목
+  5: ["제약/바이오"],         // 금
+  6: ["공기업/금융"],         // 토
 };
 
 export async function GET(req: NextRequest) {
