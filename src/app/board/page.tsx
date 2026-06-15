@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
@@ -52,7 +52,11 @@ async function hashPw(pw: string) {
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
-export default function BoardPage() {
+export default function BoardPageWrapper() {
+  return <Suspense><BoardPage /></Suspense>;
+}
+
+function BoardPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [posts, setPosts] = useState<Post[]>([]);

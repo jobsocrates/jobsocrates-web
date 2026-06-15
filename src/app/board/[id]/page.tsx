@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
@@ -127,7 +127,11 @@ function ArticleCard({ block }: { block: string }) {
   );
 }
 
-export default function PostPage() {
+export default function PostPageWrapper() {
+  return <Suspense><PostPage /></Suspense>;
+}
+
+function PostPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const searchParams = useSearchParams();
