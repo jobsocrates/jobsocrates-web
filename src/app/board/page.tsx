@@ -8,7 +8,7 @@ const BG = "#0D0D18";
 const ACCENT = "#C96442";
 const BORDER = "rgba(255,255,255,0.07)";
 const ADMIN_EMAIL = "ijhan6403@gmail.com";
-const Q_CAT = "쥔장에게 묻고 바란다";
+const Q_CAT = "Q&A";
 
 type CatNode = { type: "sep" } | { type: "item"; name: string; children?: string[] };
 
@@ -483,7 +483,7 @@ function BoardPage() {
         >
           <div style={{ background: "#13131F", border: `1px solid rgba(255,255,255,0.1)`, borderRadius: 14, width: "100%", maxWidth: 560, maxHeight: "90vh", overflowY: "auto", padding: 32 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 28 }}>
-              <span style={{ fontSize: 18, fontWeight: 700, color: "rgba(255,255,255,0.92)" }}>쥔장에게 묻고 바란다</span>
+              <span style={{ fontSize: 18, fontWeight: 700, color: "rgba(255,255,255,0.92)" }}>Q&A</span>
               <button onClick={() => setWriteOpen(false)} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.4)", fontSize: 22, cursor: "pointer", lineHeight: 1, padding: 4 }}>×</button>
             </div>
 

@@ -31,7 +31,7 @@ const DEFAULT_CATS: CatNode[] = [
   { type: "item", name: "자소서 팁" },
   { type: "item", name: "면접 팁" },
   { type: "item", name: "뉴스", children: ["경제", "기술", "사회", "글로벌"] },
-  { type: "item", name: "쥔장에게 묻고 바란다" },
+  { type: "item", name: "Q&A" },
 ];
 
 
@@ -131,7 +131,7 @@ export default function AdminPage() {
   const [boardPostsLoading, setBoardPostsLoading] = useState(false);
   const [boardVisible, setBoardVisible] = useState(false);
   const [boardVisibleSaving, setBoardVisibleSaving] = useState(false);
-  const [boardCatOptions, setBoardCatOptions] = useState<string[]>(["공지·업데이트","쥔장 잡담","자소서 팁","면접 팁","뉴스","경제","기술","사회","글로벌","쥔장에게 묻고 바란다"]);
+  const [boardCatOptions, setBoardCatOptions] = useState<string[]>(["공지·업데이트","쥔장 잡담","자소서 팁","면접 팁","뉴스","경제","기술","사회","글로벌","Q&A"]);
   const [boardCatTree, setBoardCatTree] = useState<CatNode[]>(DEFAULT_CATS);
   const [writeTitle, setWriteTitle] = useState("");
   const [writeCategory, setWriteCategory] = useState("쥔장 잡담");
