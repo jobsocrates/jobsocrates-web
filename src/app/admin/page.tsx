@@ -72,6 +72,7 @@ interface PostItem {
   is_published: boolean;
   is_pinned: boolean;
   created_at: string;
+  view_count?: number;
 }
 
 interface FunnelRow { userId: string; email: string; createdAt: string; stageIndex: number; stageLabel: string; diggingAsked: number; diggingAnswered: number; interviewAnswered: number; interviewTotal: number; dropReason: string; }
@@ -1597,8 +1598,8 @@ export default function AdminPage() {
                 <div style={{ textAlign: "center", padding: "60px 0", color: "rgba(255,255,255,0.28)", fontSize: 16 }}>글이 없어요</div>
               ) : (
                 <>
-                  <div className="admin-board-header-row" style={{ display: "grid", gridTemplateColumns: "1fr 120px 90px 96px 156px", padding: "10px 28px", background: "rgba(255,255,255,0.03)", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
-                    {["제목", "카테고리", "날짜", "상태", ""].map(h => (
+                  <div className="admin-board-header-row" style={{ display: "grid", gridTemplateColumns: "1fr 120px 90px 60px 96px 156px", padding: "10px 28px", background: "rgba(255,255,255,0.03)", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+                    {["제목", "카테고리", "날짜", "조회", "상태", ""].map(h => (
                       <span key={h} style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.3)", letterSpacing: "0.04em" }}>{h}</span>
                     ))}
                   </div>
@@ -1607,7 +1608,7 @@ export default function AdminPage() {
                       key={post.id}
                       className="admin-board-item-row"
                       onClick={() => openViewPost(post)}
-                      style={{ display: "grid", gridTemplateColumns: "1fr 120px 90px 96px 156px", padding: "15px 28px", borderBottom: i < arr.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none", alignItems: "center", cursor: "pointer" }}
+                      style={{ display: "grid", gridTemplateColumns: "1fr 120px 90px 60px 96px 156px", padding: "15px 28px", borderBottom: i < arr.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none", alignItems: "center", cursor: "pointer" }}
                       onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.03)")}
                       onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
                     >
@@ -1618,6 +1619,7 @@ export default function AdminPage() {
                       <div className="admin-board-item-meta" style={{ display: "contents" }}>
                         <span style={{ fontSize: 13, padding: "3px 10px", borderRadius: 20, background: `${ACCENT}22`, border: `1px solid ${ACCENT}44`, color: ACCENT, fontWeight: 600, justifySelf: "start", whiteSpace: "nowrap" }}>{post.category}</span>
                         <span style={{ fontSize: 14, color: "rgba(255,255,255,0.32)", whiteSpace: "nowrap" }}>{new Date(post.created_at).toLocaleDateString("ko-KR", { month: "2-digit", day: "2-digit" })}</span>
+                        <span style={{ fontSize: 14, color: "rgba(255,255,255,0.45)", whiteSpace: "nowrap" }}>👁 {post.view_count ?? 0}</span>
                         <span style={{ fontSize: 14, fontWeight: 600, color: post.is_published ? GREEN : "rgba(255,255,255,0.35)", whiteSpace: "nowrap" }}>{post.is_published ? "공개" : "비공개"}</span>
                       </div>
                       <div className="admin-board-item-actions" onClick={e => e.stopPropagation()} style={{ display: "flex", gap: 6 }}>

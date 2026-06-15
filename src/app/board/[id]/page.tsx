@@ -15,6 +15,7 @@ interface Post {
   content: string;
   category: string;
   created_at: string;
+  view_count: number;
 }
 
 // 🔗 원문: URL 추출
@@ -142,13 +143,16 @@ function PostPage() {
   useEffect(() => {
     supabase
       .from("posts")
-      .select("id, title, content, category, created_at")
+      .select("id, title, content, category, created_at, view_count")
       .eq("id", id)
       .eq("is_published", true)
       .single()
       .then(({ data }) => {
         setPost(data);
         setLoading(false);
+        if (data) {
+          supabase.rpc("increment_view_count", { post_id: id });
+        }
       });
   }, [id]);
 
