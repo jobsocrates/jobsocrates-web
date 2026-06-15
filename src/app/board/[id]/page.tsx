@@ -109,14 +109,6 @@ function CommentSection({ postId, isAdmin }: { postId: string; isAdmin: boolean 
                 >
                   답글
                 </button>
-                {isAdmin && (
-                  <button
-                    onClick={() => deleteComment(c.id)}
-                    style={{ marginLeft: "auto", fontSize: 12, color: "rgba(255,100,100,0.5)", background: "none", border: "none", cursor: "pointer", padding: 0, fontFamily: "inherit" }}
-                  >
-                    삭제
-                  </button>
-                )}
               </div>
               <p style={{ fontSize: 15, color: "rgba(255,255,255,0.78)", lineHeight: 1.7, margin: 0, whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
                 {c.content}
@@ -135,14 +127,6 @@ function CommentSection({ postId, isAdmin }: { postId: string; isAdmin: boolean 
                     {r.nickname}
                   </span>
                   <span style={{ fontSize: 12, color: "rgba(255,255,255,0.22)" }}>{fmt(r.created_at)}</span>
-                  {isAdmin && (
-                    <button
-                      onClick={() => deleteComment(r.id)}
-                      style={{ marginLeft: "auto", fontSize: 12, color: "rgba(255,100,100,0.5)", background: "none", border: "none", cursor: "pointer", padding: 0, fontFamily: "inherit" }}
-                    >
-                      삭제
-                    </button>
-                  )}
                 </div>
                 <p style={{ fontSize: 15, color: "rgba(255,255,255,0.78)", lineHeight: 1.7, margin: 0, whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
                   {r.content}

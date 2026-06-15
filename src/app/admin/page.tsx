@@ -147,6 +147,7 @@ export default function AdminPage() {
   const [editSaving, setEditSaving] = useState(false);
   const [deletePostTarget, setDeletePostTarget] = useState<PostItem | null>(null);
   const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
+  const [viewPostComments, setViewPostComments] = useState<{ id: string; parent_id: string | null; nickname: string; content: string; created_at: string }[]>([]);
 
   // Notes
   const [goodNotes, setGoodNotes] = useState("");
@@ -184,12 +185,20 @@ export default function AdminPage() {
     setBoardPostsLoading(false);
   }
 
-  function openViewPost(post: PostItem) {
+  async function openViewPost(post: PostItem) {
     setViewPost(post);
     setEditMode(false);
     setEditTitle(post.title);
     setEditContent(post.content);
     setEditCategory(post.category);
+    setViewPostComments([]);
+    const { data } = await supabase.from("comments").select("id, parent_id, nickname, content, created_at").eq("post_id", post.id).order("created_at", { ascending: true });
+    setViewPostComments(data || []);
+  }
+
+  async function deleteViewComment(id: string) {
+    await supabase.from("comments").delete().eq("id", id);
+    setViewPostComments(prev => prev.filter(c => c.id !== id));
   }
 
   async function savePostEdit() {
@@ -1699,6 +1708,28 @@ export default function AdminPage() {
                   <p style={{ fontSize: 14, lineHeight: 2, color: "rgba(255,255,255,0.78)", whiteSpace: "pre-wrap", wordBreak: "keep-all" }}>{viewPost.content}</p>
                 )}
               </div>
+
+              {/* 댓글 목록 */}
+              {viewPostComments.length > 0 && (
+                <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: 16 }}>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.35)", marginBottom: 12 }}>댓글 {viewPostComments.length}</p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 2, maxHeight: 200, overflowY: "auto" }}>
+                    {viewPostComments.map(c => (
+                      <div key={c.id} style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "8px 10px", borderRadius: 8, background: "rgba(255,255,255,0.03)", marginLeft: c.parent_id ? 20 : 0, borderLeft: c.parent_id ? "2px solid rgba(255,255,255,0.08)" : "none" }}>
+                        {c.parent_id && <span style={{ fontSize: 11, color: "rgba(255,255,255,0.2)", flexShrink: 0, marginTop: 2 }}>↳</span>}
+                        <span style={{ fontSize: 12, fontWeight: 700, color: c.nickname === "쥔장★" ? ACCENT : "rgba(255,255,255,0.5)", flexShrink: 0 }}>{c.nickname}</span>
+                        <span style={{ fontSize: 13, color: "rgba(255,255,255,0.65)", flex: 1, wordBreak: "break-all" }}>{c.content}</span>
+                        <button
+                          onClick={() => deleteViewComment(c.id)}
+                          style={{ flexShrink: 0, fontSize: 11, color: "rgba(255,100,100,0.6)", background: "none", border: "none", cursor: "pointer", padding: "2px 6px", borderRadius: 4, fontFamily: "inherit" }}
+                        >
+                          삭제
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* 액션 버튼 */}
               <div className="admin-board-modal-actions" style={{ display: "flex", gap: 8, justifyContent: "space-between", alignItems: "center" }}>
