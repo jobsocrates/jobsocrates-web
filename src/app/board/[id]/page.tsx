@@ -217,9 +217,11 @@ export default function PostPage() {
             ))}
           </div>
         ) : (
-          <p style={{ fontSize: 17, color: "rgba(255,255,255,0.82)", lineHeight: 2.1, wordBreak: "keep-all", whiteSpace: "pre-wrap", margin: 0 }}>
-            {post.content}
-          </p>
+          <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 22, padding: "36px 40px" }}>
+            <p style={{ fontSize: 17, color: "rgba(255,255,255,0.82)", lineHeight: 2.1, wordBreak: "keep-all", whiteSpace: "pre-wrap", margin: 0 }}>
+              {post.content}
+            </p>
+          </div>
         )}
       </div>
     </div>
