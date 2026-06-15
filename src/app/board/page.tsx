@@ -283,9 +283,11 @@ function BoardPage() {
           .board-cat-bar{display:flex;overflow-x:auto;scrollbar-width:none;gap:6px;padding:10px 14px;margin:-16px -14px 8px;border-bottom:1px solid rgba(255,255,255,0.06)}
           .board-cat-bar::-webkit-scrollbar{display:none}
           .board-main{padding:16px 14px!important}
-          .post-grid{grid-template-columns:36px 1fr 76px;padding:8px 4px}
-          .post-row{grid-template-columns:36px 1fr 76px;padding:13px 4px}
+          .post-grid{grid-template-columns:36px 1fr 72px;padding:8px 4px}
+          .post-row{grid-template-columns:36px 1fr 72px;padding:13px 4px}
           .post-col-cat{display:none}
+          .post-title{font-size:14px!important;padding-right:6px!important}
+          .post-date{font-size:12px!important}
         }
       `}</style>
 
@@ -480,7 +482,7 @@ function BoardPage() {
                   <span style={{ fontSize: 14, color: "rgba(255,255,255,0.22)", textAlign: "center" }}>
                     {isQ && post.nickname ? "🔒" : filtered.length - i}
                   </span>
-                  <span style={{ fontSize: 16, color: post.is_pinned ? "rgba(255,255,255,0.97)" : "rgba(255,255,255,0.88)", fontWeight: post.is_pinned ? 700 : 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 12, display: "flex", alignItems: "center", gap: 6 }}>
+                  <span className="post-title" style={{ fontSize: 16, color: post.is_pinned ? "rgba(255,255,255,0.97)" : "rgba(255,255,255,0.88)", fontWeight: post.is_pinned ? 700 : 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 12, display: "flex", alignItems: "center", gap: 6 }}>
                     {post.is_pinned && <span style={{ fontSize: 13, flexShrink: 0 }}>📌</span>}
                     {post.title || "(제목 없음)"}
                     {isQ && post.nickname && (
@@ -494,7 +496,7 @@ function BoardPage() {
                         : <span style={{ padding: "2px 8px", background: "rgba(255,255,255,0.05)", border: `1px solid ${BORDER}`, borderRadius: 4, color: "rgba(255,255,255,0.3)", fontSize: 12 }}>답변대기</span>
                     ) : post.category}
                   </span>
-                  <span style={{ fontSize: 13, color: "rgba(255,255,255,0.32)" }}>{fmt(post.created_at)}</span>
+                  <span className="post-date" style={{ fontSize: 13, color: "rgba(255,255,255,0.32)" }}>{fmt(post.created_at)}</span>
                 </div>
               );
             })
