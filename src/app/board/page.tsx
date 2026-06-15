@@ -277,9 +277,14 @@ function BoardPage() {
         .post-grid{display:grid;grid-template-columns:48px 1fr 130px 96px;padding:8px 12px;margin-bottom:2px}
         .post-row{display:grid;grid-template-columns:48px 1fr 130px 96px;padding:16px 12px;border-bottom:1px solid rgba(255,255,255,0.04);cursor:pointer;border-radius:6px;transition:background 0.1s;align-items:center}
         .post-col-cat{display:block}
+        .board-cat-bar{display:none}
         @media(max-width:640px){
-          .post-grid{grid-template-columns:36px 1fr 80px;padding:8px 8px}
-          .post-row{grid-template-columns:36px 1fr 80px;padding:14px 8px}
+          .board-sidebar{display:none!important}
+          .board-cat-bar{display:flex;overflow-x:auto;scrollbar-width:none;gap:6px;padding:10px 14px;margin:-16px -14px 8px;border-bottom:1px solid rgba(255,255,255,0.06)}
+          .board-cat-bar::-webkit-scrollbar{display:none}
+          .board-main{padding:16px 14px!important}
+          .post-grid{grid-template-columns:36px 1fr 76px;padding:8px 4px}
+          .post-row{grid-template-columns:36px 1fr 76px;padding:13px 4px}
           .post-col-cat{display:none}
         }
       `}</style>
@@ -297,7 +302,7 @@ function BoardPage() {
 
       <div style={{ display: "flex", flex: 1 }}>
         {/* 사이드바 */}
-        <aside style={{ width: 210, flexShrink: 0, borderRight: `1px solid ${BORDER}`, position: "sticky", top: 54, height: "calc(100vh - 54px)", overflowY: "auto", display: "flex", flexDirection: "column" }}>
+        <aside className="board-sidebar" style={{ width: 210, flexShrink: 0, borderRight: `1px solid ${BORDER}`, position: "sticky", top: 54, height: "calc(100vh - 54px)", overflowY: "auto", display: "flex", flexDirection: "column" }}>
           <div style={{ padding: "20px 16px 10px", display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
             <span style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.3)", letterSpacing: "0.1em" }}>CATEGORY</span>
             {isAdmin && (
@@ -412,7 +417,15 @@ function BoardPage() {
         </aside>
 
         {/* 본문 */}
-        <main style={{ flex: 1, minWidth: 0, padding: "32px 40px" }}>
+        <main className="board-main" style={{ flex: 1, minWidth: 0, padding: "32px 40px" }}>
+          {/* 모바일 카테고리 바 */}
+          <div className="board-cat-bar">
+            {(["전체", ...cats.flatMap(c => c.type === "item" ? [c.name, ...(c.children || [])] : [])] as string[]).map(cat => (
+              <button key={cat} onClick={() => setCategory(cat)} style={{ flexShrink: 0, padding: "6px 14px", borderRadius: 20, fontSize: 13, fontWeight: category === cat ? 700 : 400, border: `1px solid ${category === cat ? ACCENT : "rgba(255,255,255,0.12)"}`, background: category === cat ? `${ACCENT}22` : "transparent", color: category === cat ? ACCENT : "rgba(255,255,255,0.5)", cursor: "pointer", fontFamily: "inherit" }}>
+                {cat}
+              </button>
+            ))}
+          </div>
           <div style={{ display: "flex", alignItems: "center", gap: 12, paddingBottom: 16, borderBottom: `1px solid ${BORDER}`, marginBottom: 10 }}>
             <span style={{ fontSize: 22, fontWeight: 700, color: "rgba(255,255,255,0.92)" }}>{category}</span>
             <span style={{ fontSize: 15, color: "rgba(255,255,255,0.3)" }}>총 {filtered.length}개</span>
