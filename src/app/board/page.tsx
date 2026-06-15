@@ -270,7 +270,19 @@ function BoardPage() {
 
   return (
     <div style={{ background: BG, minHeight: "100vh", fontFamily: `"Pretendard Variable", Pretendard, sans-serif`, display: "flex", flexDirection: "column" }}>
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}} *{box-sizing:border-box} input:focus,textarea:focus{outline:none}`}</style>
+      <style>{`
+        @keyframes spin{to{transform:rotate(360deg)}}
+        *{box-sizing:border-box}
+        input:focus,textarea:focus{outline:none}
+        .post-grid{display:grid;grid-template-columns:48px 1fr 130px 96px;padding:8px 12px;margin-bottom:2px}
+        .post-row{display:grid;grid-template-columns:48px 1fr 130px 96px;padding:16px 12px;border-bottom:1px solid rgba(255,255,255,0.04);cursor:pointer;border-radius:6px;transition:background 0.1s;align-items:center}
+        .post-col-cat{display:block}
+        @media(max-width:640px){
+          .post-grid{grid-template-columns:36px 1fr 80px;padding:8px 8px}
+          .post-row{grid-template-columns:36px 1fr 80px;padding:14px 8px}
+          .post-col-cat{display:none}
+        }
+      `}</style>
 
       <header style={{ height: 54, padding: "0 24px", display: "flex", alignItems: "center", gap: 12, borderBottom: `1px solid ${BORDER}`, position: "sticky", top: 0, background: "rgba(13,13,24,0.97)", backdropFilter: "blur(10px)", zIndex: 20, flexShrink: 0 }}>
         <a href="/" style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 15, color: "rgba(255,255,255,0.35)", textDecoration: "none" }}>
@@ -415,10 +427,11 @@ function BoardPage() {
           </div>
 
           {filtered.length > 0 && (
-            <div style={{ display: "grid", gridTemplateColumns: "48px 1fr 130px 96px", padding: "8px 12px", marginBottom: 2 }}>
-              {["번호", "제목", "카테고리", "날짜"].map(h => (
-                <span key={h} style={{ fontSize: 13, color: "rgba(255,255,255,0.25)", fontWeight: 600 }}>{h}</span>
-              ))}
+            <div className="post-grid">
+              <span style={{ fontSize: 13, color: "rgba(255,255,255,0.25)", fontWeight: 600 }}>번호</span>
+              <span style={{ fontSize: 13, color: "rgba(255,255,255,0.25)", fontWeight: 600 }}>제목</span>
+              <span className="post-col-cat" style={{ fontSize: 13, color: "rgba(255,255,255,0.25)", fontWeight: 600 }}>카테고리</span>
+              <span style={{ fontSize: 13, color: "rgba(255,255,255,0.25)", fontWeight: 600 }}>날짜</span>
             </div>
           )}
 
@@ -446,28 +459,29 @@ function BoardPage() {
                 <div
                   key={post.id}
                   onClick={() => handlePostClick(post)}
-                  style={{ display: "grid", gridTemplateColumns: "48px 1fr 130px 96px", padding: "16px 12px", borderBottom: `1px solid rgba(255,255,255,0.04)`, cursor: "pointer", borderRadius: 6, transition: "background 0.1s", alignItems: "center", background: post.is_pinned ? "rgba(255,200,0,0.04)" : "transparent", borderLeft: post.is_pinned ? "2px solid rgba(255,200,0,0.35)" : "2px solid transparent" }}
+                  className="post-row"
+                  style={{ background: post.is_pinned ? "rgba(255,200,0,0.04)" : "transparent", borderLeft: post.is_pinned ? "2px solid rgba(255,200,0,0.35)" : "2px solid transparent" }}
                   onMouseEnter={e => (e.currentTarget.style.background = post.is_pinned ? "rgba(255,200,0,0.07)" : "rgba(255,255,255,0.04)")}
                   onMouseLeave={e => (e.currentTarget.style.background = post.is_pinned ? "rgba(255,200,0,0.04)" : "transparent")}
                 >
                   <span style={{ fontSize: 14, color: "rgba(255,255,255,0.22)", textAlign: "center" }}>
                     {isQ ? "🔒" : filtered.length - i}
                   </span>
-                  <span style={{ fontSize: 16, color: post.is_pinned ? "rgba(255,255,255,0.97)" : "rgba(255,255,255,0.88)", fontWeight: post.is_pinned ? 700 : 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 20, display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ fontSize: 16, color: post.is_pinned ? "rgba(255,255,255,0.97)" : "rgba(255,255,255,0.88)", fontWeight: post.is_pinned ? 700 : 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 12, display: "flex", alignItems: "center", gap: 6 }}>
                     {post.is_pinned && <span style={{ fontSize: 13, flexShrink: 0 }}>📌</span>}
                     {post.title || "(제목 없음)"}
                     {isQ && post.nickname && (
                       <span style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", fontWeight: 400, flexShrink: 0 }}>· {post.nickname}</span>
                     )}
                   </span>
-                  <span style={{ fontSize: 13, color: "rgba(255,255,255,0.42)" }}>
+                  <span className="post-col-cat" style={{ fontSize: 13, color: "rgba(255,255,255,0.42)" }}>
                     {isQ ? (
                       hasReply
                         ? <span style={{ padding: "2px 8px", background: "rgba(100,200,100,0.15)", border: "1px solid rgba(100,200,100,0.3)", borderRadius: 4, color: "rgba(120,220,120,0.9)", fontSize: 12 }}>답변완료</span>
                         : <span style={{ padding: "2px 8px", background: "rgba(255,255,255,0.05)", border: `1px solid ${BORDER}`, borderRadius: 4, color: "rgba(255,255,255,0.3)", fontSize: 12 }}>답변대기</span>
                     ) : post.category}
                   </span>
-                  <span style={{ fontSize: 14, color: "rgba(255,255,255,0.32)" }}>{fmt(post.created_at)}</span>
+                  <span style={{ fontSize: 13, color: "rgba(255,255,255,0.32)" }}>{fmt(post.created_at)}</span>
                 </div>
               );
             })
