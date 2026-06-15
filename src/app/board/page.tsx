@@ -38,6 +38,11 @@ function filterPosts(posts: Post[], cat: string, cats: CatNode[]) {
   if (node?.children?.length) {
     return posts.filter(p => [node.name, ...node.children!].includes(p.category));
   }
+  // 하위 탭일 경우 상위 카테고리 글도 포함
+  const parent = cats.find(c => c.type === "item" && (c as Extract<CatNode, { type: "item" }>).children?.includes(cat)) as Extract<CatNode, { type: "item" }> | undefined;
+  if (parent) {
+    return posts.filter(p => p.category === cat || p.category === parent.name);
+  }
   return posts.filter(p => p.category === cat);
 }
 
