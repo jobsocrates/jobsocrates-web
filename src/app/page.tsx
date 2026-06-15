@@ -210,7 +210,7 @@ export default function Home() {
 
             <Link
               href="/board"
-              className="hidden sm:flex items-center text-sm font-semibold transition-opacity hover:opacity-70"
+              className="hidden sm:flex items-center text-base font-bold transition-opacity hover:opacity-70"
               style={{ color: "rgba(255,255,255,0.88)" }}
             >
               커뮤니티
