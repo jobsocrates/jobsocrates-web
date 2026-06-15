@@ -190,6 +190,8 @@ function BoardPage() {
 
   function handlePostClick(post: Post) {
     if (post.category !== Q_CAT) { router.push(`/board/${post.id}?from=${encodeURIComponent(category)}`); return; }
+    // 어드민이 쓴 Q&A 글(닉네임 없음) → 바로 이동
+    if (!post.nickname) { router.push(`/board/${post.id}?from=${encodeURIComponent(category)}`); return; }
     if (isAdmin) { openAdminView(post); return; }
     setPwPost(post); setPwInput(""); setPwError(""); setViewData(null);
   }
@@ -465,7 +467,7 @@ function BoardPage() {
                   onMouseLeave={e => (e.currentTarget.style.background = post.is_pinned ? "rgba(255,200,0,0.04)" : "transparent")}
                 >
                   <span style={{ fontSize: 14, color: "rgba(255,255,255,0.22)", textAlign: "center" }}>
-                    {isQ ? "🔒" : filtered.length - i}
+                    {isQ && post.nickname ? "🔒" : filtered.length - i}
                   </span>
                   <span style={{ fontSize: 16, color: post.is_pinned ? "rgba(255,255,255,0.97)" : "rgba(255,255,255,0.88)", fontWeight: post.is_pinned ? 700 : 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 12, display: "flex", alignItems: "center", gap: 6 }}>
                     {post.is_pinned && <span style={{ fontSize: 13, flexShrink: 0 }}>📌</span>}
