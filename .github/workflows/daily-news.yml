@@ -2,8 +2,8 @@ name: 뉴스 자동 수집
 
 on:
   schedule:
-    # 매일 한국시간 오전 9시 (UTC 00:00)
-    - cron: "0 0 * * *"
+    - cron: "0 4 15 6 *"  # 6/15 오늘만: KST 13:00 (UTC 04:00) 테스트
+    - cron: "0 0 * * *"   # 매일 KST 09:00 (UTC 00:00)
   workflow_dispatch:  # GitHub Actions 탭에서 수동 실행 가능
 
 jobs:

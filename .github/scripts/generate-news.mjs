@@ -32,39 +32,6 @@ if (existsSync(envPath)) {
 const START_DATE = new Date("2026-06-12T00:00:00+09:00");
 const CATEGORIES = ["경제", "기술", "사회", "글로벌"];
 
-// ── 자소서 팁 직무 순환 (20개, 날짜 기반) ──
-const JASOSEO_ROLES = [
-  // 경영/전략
-  "경영기획",
-  "사업개발",
-  // 영업/마케팅
-  "B2B 영업",
-  "해외영업",
-  "영업지원",
-  "콘텐츠 마케터",
-  "브랜드 마케터",
-  "CRM 마케터",
-  "퍼포먼스 마케터",
-  // 개발/IT
-  "백엔드 개발자",
-  "프론트엔드 개발자",
-  "데이터 분석가",
-  "PM (프로덕트 매니저)",
-  // 제조/생산
-  "생산기술 엔지니어",
-  "생산관리 (제조/화학)",
-  "품질관리 (제조/화학)",
-  "설계 엔지니어",
-  "공정 엔지니어",
-  // 연구개발
-  "연구개발 (R&D)",
-  "기구/기계 설계",
-  // 경영지원
-  "HR (인사/채용)",
-  "회계/재무",
-  "구매/SCM",
-  "물류/무역",
-];
 const CATEGORY_PAIRS = [["경제", "기술"], ["사회", "글로벌"]];
 
 // 각 카테고리별 RSS 후보 (앞에서부터 시도)
@@ -100,18 +67,6 @@ function todayCategory() {
   const start = new Date(START_DATE.toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
   const diff = Math.floor((kst - start) / 86400000);
   return CATEGORIES[((diff % CATEGORIES.length) + CATEGORIES.length) % CATEGORIES.length];
-}
-
-function todayRoles() {
-  const now = new Date();
-  const kst = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
-  const start = new Date(START_DATE.toLocaleString("en-US", { timeZone: "Asia/Seoul" }));
-  const diff = Math.floor((kst - start) / 86400000) * 2;
-  const len = JASOSEO_ROLES.length;
-  return [
-    JASOSEO_ROLES[((diff % len) + len) % len],
-    JASOSEO_ROLES[(((diff + 1) % len) + len) % len],
-  ];
 }
 
 function todayStr() {
@@ -244,146 +199,6 @@ ${list}`;
   return { generatedTitle, content };
 }
 
-// ── 자소서 팁 생성 ──
-async function generateJasoserTip(role) {
-  const isDual = role.includes("/");
-  const dualDescriptions = {
-    "품질관리 (제조/화학)": "제조 품질(치수·외관 불량, 라인 불량률, MES)과 화학 품질(성분 분석, 배치 기록, HPLC)의 차이가 자연스럽게 드러나도록 작성하세요.",
-    "생산관리 (제조/화학)": "일반 제조 생관(생산 계획·공정 관리·납기 대응)과 화학 계열 생관(배치 생산·수율 관리·GMP 준수)의 차이가 자연스럽게 드러나도록 작성하세요.",
-    "물류/무역": "물류(선적 일정·포워더·3PL 관리·재고 흐름)와 무역(L/C·B/L·통관·무역서류 처리)이 실무에서 어떻게 맞닿는지 두 맥락이 모두 드러나도록 작성하세요.",
-  };
-  const dualNote = isDual && dualDescriptions[role]
-    ? `\n이 직무는 두 가지 맥락을 함께 다룹니다.\n${dualDescriptions[role]}`
-    : isDual
-    ? `\n이 직무는 두 가지 맥락을 함께 다룹니다. BEFORE/질문/AFTER 전반에 두 맥락의 차이가 자연스럽게 드러나도록 작성하세요.`
-    : "";
-
-  const prompt = `당신은 취업 전문가입니다. 자소서 비포·애프터 예시 게시물을 하나 만들어주세요.
-
-직무: ${role}
-문항: 지원 직무에 적합하다고 생각하는 이유를 서술하시오.
-${dualNote}
-작성 규칙:
-- BEFORE (~300자): 결과 없음 / 선택 기준 없음 / 경쟁사 대비 빈자리 없음, 이 3가지 약점이 자연스럽게 드러나는 자소서 초안
-- 질문 3개: 어느 문장을 보고 → 어떤 질문을 던졌는지 → 왜 그 질문인지 설명 → 사용자 답변 (구체적 수치 포함)
-- AFTER (~300자): 3개 질문의 답변이 모두 자연스럽게 녹아든 개선 버전
-
-구체성 규칙 (반드시 준수):
-- 수치는 반드시 맥락과 함께: "불량률" (X) → "라인 불량률 0.8%→0.3% 개선" (O), "저장률" (X) → "인스타그램 게시물 저장수" (O)
-- 숫자는 실제처럼 구체적으로: "많이 개선" (X) → "3개월 만에 불량률 0.8%에서 0.3%로 감소" (O)
-- 도구·시스템·공정명 명시: "관련 시스템" (X) → "SAP / MES / ERP / HPLC 분석" (O)
-
-흐름 규칙 (반드시 준수):
-- AFTER는 관찰 → 행동 → 발견 → 행동 → 결과 순서로 흘러야 합니다
-- 관찰 직후 추상적 해석·결론 삽입 금지: "가능성을 직감했습니다" "중요성을 깨달았습니다" "핵심임을 알았습니다" 류는 쓰지 마세요
-- 관찰은 바로 다음 행동(분석, 비교, 조사)으로 연결하세요: "~를 보고 경쟁사를 훑어봤습니다" "~를 확인하고 데이터를 비교했습니다"
-- 나열이 아닌 흐름: 각 문장이 다음 문장을 자연스럽게 끌어당겨야 합니다
-
-출력 형식 (이 구조를 정확히 지키세요):
-
-TITLE: ✍️ [직무명] 자소서 소크라틱 메소드
-(직무명은 role에서 괄호 제거한 핵심 이름만. 예: "품질관리 자소서 소크라틱 메소드")
-
-직무: ${role}
-문항: 지원 직무에 적합하다고 생각하는 이유
-
-━━━━━━━━━━━━━━━━━━━━━
-[ BEFORE ] 취업소크라테스와 대화 전
-━━━━━━━━━━━━━━━━━━━━━
-
-(BEFORE 본문)
-
-▷ 약 300자
-
-
-────────────────────
-취업소크라테스가 던진 질문들
-────────────────────
-
-▶ Q1. (약점 한 줄 요약)
-
-이 문장을 보고
-→ "(해당 문장 인용)"
-
-질문: (질문 내용)
-
-이 질문을 던진 이유:
-(2~3줄 설명)
-
-답변: "(수치 포함 구체적 답변)"
-
-
-▶ Q2. (약점 한 줄 요약)
-
-이 문장을 보고
-→ "(해당 문장 인용)"
-
-질문: (질문 내용)
-
-이 질문을 던진 이유:
-(2~3줄 설명)
-
-답변: "(수치 포함 구체적 답변)"
-
-
-▶ Q3. (약점 한 줄 요약)
-
-이 문장을 보고
-→ "(해당 문장 인용)"
-
-질문: (질문 내용)
-
-이 질문을 던진 이유:
-(2~3줄 설명)
-
-답변: "(수치 포함 구체적 답변)"
-
-
-────────────────────
-
-[ AFTER ] 취업소크라테스와 대화 후
-
-(AFTER 본문)
-
-▷ 약 300자
-
-
-━━━━━━━━━━━━━━━━━━━━━
-달라진 것 요약
-
-1. (변화 1)
-2. (변화 2)
-3. (변화 3)
-━━━━━━━━━━━━━━━━━━━━━`;
-
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "x-api-key": process.env.ANTHROPIC_API_KEY,
-      "anthropic-version": "2023-06-01",
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-6",
-      max_tokens: 3000,
-      messages: [{ role: "user", content: prompt }],
-    }),
-  });
-
-  if (!response.ok) {
-    const err = await response.text();
-    throw new Error(`Claude API 오류 (자소서 팁): ${err}`);
-  }
-  const data = await response.json();
-  const raw = data.content[0].text;
-
-  const titleMatch = raw.match(/^TITLE:\s*(.+)/m);
-  const generatedTitle = titleMatch ? titleMatch[1].trim() : `✍️ 자소서 비포·애프터 [${role}]`;
-  const content = raw.replace(/^TITLE:\s*.+\n*/m, "").trim();
-
-  return { generatedTitle, content };
-}
-
 // ── Supabase에 임시저장 ──
 async function saveToSupabase(title, content, category) {
   const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/posts`;
@@ -433,15 +248,6 @@ async function main() {
     console.log("💾 Supabase 임시저장 중...");
     await saveToSupabase(finalTitle, content, category);
     console.log(`   ✅ 완료! 제목: "${finalTitle}"`);
-  }
-
-  const roles = todayRoles();
-  for (const role of roles) {
-    console.log(`\n─── 자소서 팁 (${role}) ───`);
-    console.log("🤖 자소서 비포·애프터 생성 중...");
-    const { generatedTitle: tipTitle, content: tipContent } = await generateJasoserTip(role);
-    await saveToSupabase(tipTitle, tipContent, "자소서 팁");
-    console.log(`   ✅ 완료! 제목: "${tipTitle}"`);
   }
 
   console.log(`\n✅ 전체 완료! 관리자 페이지 > 게시판 탭에서 확인 후 발행하세요.\n`);
