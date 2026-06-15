@@ -144,6 +144,8 @@ export default function AdminPage() {
   const [editContent, setEditContent] = useState("");
   const [editCategory, setEditCategory] = useState("");
   const [editSaving, setEditSaving] = useState(false);
+  const [deletePostTarget, setDeletePostTarget] = useState<PostItem | null>(null);
+  const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
 
   // Notes
   const [goodNotes, setGoodNotes] = useState("");
@@ -1623,7 +1625,7 @@ export default function AdminPage() {
                           style={{ padding: "6px 14px", borderRadius: 7, fontSize: 13, fontWeight: 600, cursor: "pointer", border: post.is_published ? `1px solid ${GREEN}55` : "1px solid rgba(255,255,255,0.15)", background: post.is_published ? `${GREEN}18` : "rgba(255,255,255,0.07)", color: post.is_published ? GREEN : "rgba(255,255,255,0.5)", whiteSpace: "nowrap", fontFamily: "inherit" }}>
                           {post.is_published ? "비공개로" : "공개로"}
                         </button>
-                        <button onClick={() => deletePost(post.id)}
+                        <button onClick={() => setDeletePostTarget(post)}
                           style={{ padding: "6px 12px", borderRadius: 7, fontSize: 13, fontWeight: 600, cursor: "pointer", border: `1px solid ${RED}44`, background: "transparent", color: `${RED}cc`, whiteSpace: "nowrap", fontFamily: "inherit" }}>
                           삭제
                         </button>
@@ -1734,7 +1736,7 @@ export default function AdminPage() {
                     {viewPost.is_published ? "비공개로" : "공개로 발행"}
                   </button>
                   <button
-                    onClick={() => { deletePost(viewPost.id); setViewPost(null); }}
+                    onClick={() => setDeletePostTarget(viewPost)}
                     style={{ padding: "8px 14px", borderRadius: 9, fontSize: 13, fontWeight: 600, cursor: "pointer", border: `1px solid ${RED}44`, background: "transparent", color: `${RED}cc`, fontFamily: "inherit" }}
                   >
                     삭제
@@ -1747,6 +1749,42 @@ export default function AdminPage() {
         </>
         );
       })()}
+
+      {/* 게시글 삭제 확인 모달 */}
+      {deletePostTarget && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, background: "rgba(0,0,0,0.75)", backdropFilter: "blur(4px)" }}
+          onClick={() => !deletingPostId && setDeletePostTarget(null)}>
+          <div style={{ background: "#18182A", border: "1px solid rgba(248,113,113,0.3)", borderRadius: 20, padding: "28px 24px", maxWidth: 340, width: "100%", textAlign: "center" }}
+            onClick={e => e.stopPropagation()}>
+            <p style={{ fontSize: 20 }}>🗑️</p>
+            <p style={{ fontSize: 16, fontWeight: 700, color: "rgba(255,255,255,0.9)", marginTop: 12, marginBottom: 8 }}>게시글을 삭제할까요?</p>
+            <p style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.6)", marginBottom: 6, wordBreak: "keep-all" }}>{deletePostTarget.title || "(제목 없음)"}</p>
+            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.35)", marginBottom: 24 }}>삭제되며 복구할 수 없어요.</p>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                onClick={() => setDeletePostTarget(null)}
+                disabled={!!deletingPostId}
+                style={{ flex: 1, padding: "11px 0", borderRadius: 12, background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.7)", fontSize: 14, fontWeight: 600, cursor: "pointer" }}
+              >
+                취소
+              </button>
+              <button
+                onClick={async () => {
+                  setDeletingPostId(deletePostTarget.id);
+                  await deletePost(deletePostTarget.id);
+                  setViewPost(null);
+                  setDeletePostTarget(null);
+                  setDeletingPostId(null);
+                }}
+                disabled={!!deletingPostId}
+                style={{ flex: 1, padding: "11px 0", borderRadius: 12, background: "rgba(248,113,113,0.15)", border: "1px solid rgba(248,113,113,0.4)", color: "rgb(248,113,113)", fontSize: 14, fontWeight: 700, cursor: deletingPostId ? "default" : "pointer", opacity: deletingPostId ? 0.6 : 1 }}
+              >
+                {deletingPostId ? "삭제 중..." : "삭제 확인"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 유저 삭제 확인 모달 */}
       {deleteTarget && (
