@@ -207,14 +207,16 @@ export default function Home() {
               취업소크라테스
               <span className="hidden sm:inline text-sm font-normal" style={{ color: "rgba(255,255,255,0.28)" }}>JobSocrates</span>
             </button>
+
+            <Link
+              href="/board"
+              className="hidden sm:flex items-center gap-1.5 text-base font-semibold px-5 py-2 rounded-xl transition-all hover:opacity-100"
+              style={{ color: "rgba(255,255,255,0.82)", border: "1px solid rgba(255,255,255,0.15)", background: "rgba(255,255,255,0.05)" }}
+            >
+              커뮤니티
+            </Link>
+
             <div className="flex items-center gap-1.5 sm:gap-2">
-              <Link
-                href="/board"
-                className="text-xs sm:text-sm px-2.5 sm:px-3.5 py-2 rounded-xl transition-colors hover:text-white"
-                style={{ color: "rgba(255,255,255,0.55)" }}
-              >
-                게시판
-              </Link>
               {userEmail ? (
                 <>
                   {/* 뱃지 카운트 */}
@@ -445,7 +447,7 @@ export default function Home() {
             <img src="/ai-avatar.webp" alt="" className="w-8 h-8 rounded-full object-cover" />
             <span className="text-base font-medium" style={{ color: "rgba(255,255,255,0.38)" }}>취업소크라테스 <span style={{ color: "rgba(255,255,255,0.2)" }}>JobSocrates</span></span>
             <div className="flex items-center gap-4">
-              <Link href="/board" className="text-sm transition-colors hover:text-white" style={{ color: "rgba(255,255,255,0.3)" }}>게시판</Link>
+              <Link href="/board" className="text-sm transition-colors hover:text-white" style={{ color: "rgba(255,255,255,0.3)" }}>커뮤니티</Link>
               <a href="mailto:jobsocrates76@gmail.com" className="text-sm transition-colors hover:text-white" style={{ color: "rgba(255,255,255,0.3)" }}>co-work · jobsocrates76@gmail.com</a>
             </div>
           </div>
