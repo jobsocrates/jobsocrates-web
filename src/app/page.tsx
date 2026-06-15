@@ -208,6 +208,13 @@ export default function Home() {
               <span className="hidden sm:inline text-sm font-normal" style={{ color: "rgba(255,255,255,0.28)" }}>JobSocrates</span>
             </button>
             <div className="flex items-center gap-1.5 sm:gap-2">
+              <Link
+                href="/board"
+                className="text-xs sm:text-sm px-2.5 sm:px-3.5 py-2 rounded-xl transition-colors hover:text-white"
+                style={{ color: "rgba(255,255,255,0.55)" }}
+              >
+                게시판
+              </Link>
               {userEmail ? (
                 <>
                   {/* 뱃지 카운트 */}
@@ -437,7 +444,10 @@ export default function Home() {
           <div className="max-w-[1300px] mx-auto flex flex-col items-center gap-2.5">
             <img src="/ai-avatar.webp" alt="" className="w-8 h-8 rounded-full object-cover" />
             <span className="text-base font-medium" style={{ color: "rgba(255,255,255,0.38)" }}>취업소크라테스 <span style={{ color: "rgba(255,255,255,0.2)" }}>JobSocrates</span></span>
-            <a href="mailto:jobsocrates76@gmail.com" className="text-sm transition-colors hover:text-white" style={{ color: "rgba(255,255,255,0.3)" }}>co-work · jobsocrates76@gmail.com</a>
+            <div className="flex items-center gap-4">
+              <Link href="/board" className="text-sm transition-colors hover:text-white" style={{ color: "rgba(255,255,255,0.3)" }}>게시판</Link>
+              <a href="mailto:jobsocrates76@gmail.com" className="text-sm transition-colors hover:text-white" style={{ color: "rgba(255,255,255,0.3)" }}>co-work · jobsocrates76@gmail.com</a>
+            </div>
           </div>
         </footer>
       </div>
