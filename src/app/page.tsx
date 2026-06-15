@@ -210,8 +210,8 @@ export default function Home() {
 
             <Link
               href="/board"
-              className="hidden sm:flex items-center gap-1.5 text-base font-semibold px-5 py-2 rounded-xl transition-all hover:opacity-100"
-              style={{ color: "rgba(255,255,255,0.82)", border: "1px solid rgba(255,255,255,0.15)", background: "rgba(255,255,255,0.05)" }}
+              className="hidden sm:flex items-center gap-1.5 text-sm font-semibold px-5 py-2 rounded-xl transition-all hover:scale-[1.04]"
+              style={{ color: "#6B8EFF", border: "1px solid rgba(107,142,255,0.35)", background: "rgba(107,142,255,0.08)", boxShadow: "0 0 16px rgba(107,142,255,0.15)" }}
             >
               커뮤니티
             </Link>
