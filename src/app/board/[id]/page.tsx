@@ -10,7 +10,7 @@ const BLUE = "#6B8EFF";
 const BORDER = "rgba(255,255,255,0.07)";
 const ADMIN_EMAIL = "ijhan6403@gmail.com";
 const Q_CAT = "Q&A";
-const NEWS_CATS = ["경제", "기술", "사회", "글로벌", "뉴스"];
+const NEWS_CATS = ["반도체", "자동차", "디스플레이", "IT", "식품/화장품", "제약/바이오", "공기업/금융", "경제", "기술", "사회", "글로벌", "뉴스"];
 
 interface Post {
   id: string;
