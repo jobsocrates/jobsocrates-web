@@ -256,7 +256,7 @@ function ArticleCard({ block }: { block: string }) {
   return (
     <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 22, padding: "36px 40px", display: "flex", flexDirection: "column" }}>
       {elements}
-      <p style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", margin: "24px 0 0", lineHeight: 1.7, borderTop: "1px solid rgba(255,255,255,0.07)", paddingTop: 16 }}>
+      <p style={{ fontSize: 12, color: "rgba(255,255,255,0.52)", margin: "24px 0 0", lineHeight: 1.7, borderTop: "1px solid rgba(255,255,255,0.12)", paddingTop: 16 }}>
         📌 이 내용은 뉴스 크롤링을 기반으로 작성됐어요. 사실관계는 반드시 원문에서 확인해주세요.
       </p>
     </div>
