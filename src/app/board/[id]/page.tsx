@@ -174,29 +174,27 @@ export default function PostPage() {
     <div style={{ background: BG, minHeight: "100vh", fontFamily: `"Pretendard Variable", Pretendard, sans-serif` }}>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}} *{box-sizing:border-box} a{text-decoration:none}`}</style>
 
-      {/* 헤더 */}
-      <header style={{ height: 52, padding: "0 20px", display: "flex", alignItems: "center", gap: 8, borderBottom: `1px solid ${BORDER}`, position: "sticky", top: 0, background: "rgba(13,13,24,0.97)", backdropFilter: "blur(10px)", zIndex: 20 }}>
-        <button
-          onClick={() => router.push("/board")}
-          style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 13, color: "rgba(255,255,255,0.35)", background: "none", border: "none", cursor: "pointer", padding: 0, fontFamily: "inherit" }}
-        >
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" />
-          </svg>
-          게시판
-        </button>
-        <span style={{ color: "rgba(255,255,255,0.15)", fontSize: 13 }}>/</span>
-        <span style={{ fontSize: 13, color: "rgba(255,255,255,0.45)" }}>{post.category}</span>
-      </header>
-
       {/* 본문 */}
-      <div style={{ maxWidth: 820, margin: "0 auto", padding: "52px 24px 120px" }}>
-        {/* 메타 */}
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
-          <span style={{ fontSize: 12, fontWeight: 600, padding: "4px 12px", borderRadius: 20, background: "rgba(201,100,66,0.14)", border: "1px solid rgba(201,100,66,0.28)", color: ACCENT }}>
-            {post.category}
-          </span>
-          <span style={{ fontSize: 13, color: "rgba(255,255,255,0.3)" }}>{date}</span>
+      <div style={{ maxWidth: 820, margin: "0 auto", padding: "60px 24px 120px" }}>
+        {/* 뒤로가기 + 메타 */}
+        <div style={{ marginBottom: 28 }}>
+          <button
+            onClick={() => router.push("/board")}
+            style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.55)", background: "none", border: "none", cursor: "pointer", padding: 0, fontFamily: "inherit", marginBottom: 20, transition: "color 0.15s" }}
+            onMouseEnter={e => (e.currentTarget.style.color = "rgba(255,255,255,0.9)")}
+            onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.55)")}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" />
+            </svg>
+            커뮤니티
+          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <span style={{ fontSize: 12, fontWeight: 600, padding: "4px 12px", borderRadius: 20, background: "rgba(201,100,66,0.14)", border: "1px solid rgba(201,100,66,0.28)", color: ACCENT }}>
+              {post.category}
+            </span>
+            <span style={{ fontSize: 13, color: "rgba(255,255,255,0.3)" }}>{date}</span>
+          </div>
         </div>
 
         {/* 제목 */}
