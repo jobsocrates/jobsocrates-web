@@ -130,17 +130,15 @@ function BoardPage() {
     if (Object.keys(errs).length) { setWErrors(errs); return; }
     setWLoading(true);
     const hash = await hashPw(wPw.trim());
-    const { data, error } = await supabase.from("posts").insert({
-      title: wTitle.trim(),
-      content: wContent.trim(),
-      category: Q_CAT,
-      is_published: true,
-      nickname: wNick.trim(),
-      password_hash: hash,
-    }).select("id, title, category, created_at, is_pinned, nickname, admin_reply").single();
+    const res = await fetch("/api/board/write", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: wTitle.trim(), content: wContent.trim(), nickname: wNick.trim(), password_hash: hash }),
+    });
+    const json = await res.json();
     setWLoading(false);
-    if (error) { setWErrors({ content: "저장에 실패했어요. 다시 시도해주세요." }); return; }
-    setPosts(prev => [data as Post, ...prev]);
+    if (!res.ok) { setWErrors({ content: "저장에 실패했어요. 다시 시도해주세요." }); return; }
+    setPosts(prev => [json.post as Post, ...prev]);
     setWriteOpen(false);
     setWNick(""); setWPw(""); setWTitle(""); setWContent(""); setWErrors({});
   }
