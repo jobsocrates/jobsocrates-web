@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
 const BG = "#0D0D18";
@@ -130,6 +130,8 @@ function ArticleCard({ block }: { block: string }) {
 export default function PostPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const fromCat = searchParams.get("from") || "";
   const [post, setPost] = useState<Post | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -179,7 +181,7 @@ export default function PostPage() {
         {/* 뒤로가기 + 메타 */}
         <div style={{ marginBottom: 28 }}>
           <button
-            onClick={() => router.push("/board")}
+            onClick={() => router.push(fromCat ? `/board?cat=${encodeURIComponent(fromCat)}` : "/board")}
             style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.55)", background: "none", border: "none", cursor: "pointer", padding: 0, fontFamily: "inherit", marginBottom: 20, transition: "color 0.15s" }}
             onMouseEnter={e => (e.currentTarget.style.color = "rgba(255,255,255,0.9)")}
             onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.55)")}

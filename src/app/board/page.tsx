@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
 const BG = "#0D0D18";
@@ -54,8 +54,9 @@ async function hashPw(pw: string) {
 
 export default function BoardPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [posts, setPosts] = useState<Post[]>([]);
-  const [category, setCategory] = useState("전체");
+  const [category, setCategory] = useState(() => searchParams.get("cat") || "전체");
   const [loading, setLoading] = useState(true);
   const [visible, setVisible] = useState<boolean | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -179,7 +180,7 @@ export default function BoardPage() {
   }
 
   function handlePostClick(post: Post) {
-    if (post.category !== Q_CAT) { router.push(`/board/${post.id}`); return; }
+    if (post.category !== Q_CAT) { router.push(`/board/${post.id}?from=${encodeURIComponent(category)}`); return; }
     if (isAdmin) { openAdminView(post); return; }
     setPwPost(post); setPwInput(""); setPwError(""); setViewData(null);
   }
