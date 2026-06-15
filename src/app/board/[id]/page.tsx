@@ -245,7 +245,7 @@ function ArticleCard({ block }: { block: string }) {
     const isSectionLabel = trimmed.startsWith("무슨 일이냐면") || trimmed.startsWith("🔍") || trimmed.startsWith("💬");
     if (isSectionLabel) {
       flushBody(`body-${i}`);
-      elements.push(<p key={`label-${i}`} style={{ fontSize: 12, fontWeight: 700, color: ACCENT, letterSpacing: "0.07em", textTransform: "uppercase", margin: "28px 0 10px", opacity: 0.85 }}>{trimmed}</p>);
+      elements.push(<p key={`label-${i}`} style={{ fontSize: 14, fontWeight: 700, color: "rgba(255,255,255,0.6)", letterSpacing: "0.04em", margin: "28px 0 10px" }}>{trimmed}</p>);
       return;
     }
     if (!titleSet) return;
