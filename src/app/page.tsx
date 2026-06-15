@@ -204,7 +204,7 @@ export default function Home() {
               className="flex items-center gap-2 font-bold text-white text-base tracking-tight hover:opacity-80 transition-opacity"
             >
               <img src="/ai-avatar.webp" alt="" className="w-6 h-6 rounded-full object-cover flex-shrink-0" />
-              취업소크라테스
+              <span className="hidden sm:inline">취업소크라테스</span>
               <span className="hidden sm:inline text-sm font-normal" style={{ color: "rgba(255,255,255,0.28)" }}>JobSocrates</span>
             </button>
 
