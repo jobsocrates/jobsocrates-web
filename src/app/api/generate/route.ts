@@ -1,5 +1,4 @@
 import Anthropic from "@anthropic-ai/sdk";
-import OpenAI from "openai";
 import { readFileSync } from "fs";
 import { join } from "path";
 import type { DiggingContext } from "@/types";
@@ -134,10 +133,32 @@ export async function POST(req: Request) {
       return generate(sys, msgs);
     }
 
+    case "personality": {
+      const sys: Anthropic.Messages.TextBlockParam[] = [
+        { type: "text", text: prompt("common") + "\n\n" + prompt("personality"), cache_control: { type: "ephemeral" } },
+        { type: "text", text: `## 세션 정보\n직무: ${body.jobTitle || "미입력"}\n회사: ${body.companyInfo || "미입력"}\n글자 수 제한: ${body.charLimit ? `${body.charLimit}자 (수정본 작성 시 이 글자 수에 맞춰야 함)` : "미입력"}\n\n## 자소서 초안\n${body.draft}` },
+      ];
+      const msgs: MsgParam[] = body.messages?.length > 0
+        ? body.messages
+        : [{ role: "user", content: "초안을 분석하고 첫 질문을 시작해줘." }];
+      return stream(sys, msgs);
+    }
+
+    case "motivation": {
+      const sys: Anthropic.Messages.TextBlockParam[] = [
+        { type: "text", text: prompt("common") + "\n\n" + prompt("motivation"), cache_control: { type: "ephemeral" } },
+        { type: "text", text: `## 세션 정보\n직무: ${body.jobTitle}\n회사: ${body.companyInfo || "미입력"}\n글자 수 제한: ${body.charLimit ? `${body.charLimit}자 (완성본 작성 시 이 글자 수에 맞춰야 함)` : "미입력"}\n\n## 자소서 초안\n${body.draft}` },
+      ];
+      const msgs: MsgParam[] = body.messages?.length > 0
+        ? body.messages
+        : [{ role: "user", content: "초안을 분석하고 첫 질문을 시작해줘." }];
+      return stream(sys, msgs);
+    }
+
     case "analyze": {
       const sys: Anthropic.Messages.TextBlockParam[] = [
         { type: "text", text: prompt("analyze_v2"), cache_control: { type: "ephemeral" } },
-        { type: "text", text: `## 세션 정보\n직무: ${body.jobTitle}\n문항: ${body.question || "미입력"}\n글자 수 제한: ${body.charLimit ? `${body.charLimit}자 (수정본 작성 시 이 글자 수에 맞춰야 함)` : "미입력"}\n\n## 자소서 초안\n${body.draft}` },
+        { type: "text", text: `## 세션 정보\n직무: ${body.jobTitle}\n회사: ${body.companyInfo || "미입력"}\n문항: ${body.question || "미입력"}\n글자 수 제한: ${body.charLimit ? `${body.charLimit}자 (수정본 작성 시 이 글자 수에 맞춰야 함)` : "미입력"}\n\n## 자소서 초안\n${body.draft}` },
       ];
       const msgs: MsgParam[] = body.messages?.length > 0
         ? body.messages
@@ -213,38 +234,6 @@ export async function POST(req: Request) {
         .update({ status: "done", updated_at: new Date().toISOString() })
         .eq("id", body.cover_item_id);
       return Response.json({ id });
-    }
-
-    case "polish": {
-      const revision = body.revision as string;
-      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-      const enc = new TextEncoder();
-      const charLimit = body.charLimit ? Number(body.charLimit) : null;
-      const polishPrompt = prompt("polish")
-        + (charLimit ? `\n글자 수 기준 ${charLimit}자:\n- 미달이라면 자연스럽고 가독성이 가장 좋은 형태로 다듬어라.\n- 초과라면 ${charLimit}자 미만으로 가독성 좋게 자연스럽게 다듬어라.` : "")
-        + `\n\n${revision}`;
-      const openaiStream = openai.chat.completions.stream({
-        model: "gpt-4.1-mini",
-        messages: [{ role: "user", content: polishPrompt }],
-      });
-      return new Response(
-        new ReadableStream({
-          async start(ctrl) {
-            try {
-              for await (const chunk of openaiStream) {
-                const text = chunk.choices[0]?.delta?.content ?? "";
-                if (text) ctrl.enqueue(enc.encode(text));
-              }
-            } catch (e) {
-              const msg = e instanceof Error ? e.message : "GPT 오류";
-              try { ctrl.enqueue(enc.encode(`\n오류: ${msg}`)); } catch { /* 무시 */ }
-            } finally {
-              try { ctrl.close(); } catch { /* 무시 */ }
-            }
-          },
-        }),
-        { headers: { "Content-Type": "text/plain; charset=utf-8" } }
-      );
     }
 
     default:

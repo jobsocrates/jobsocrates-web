@@ -34,13 +34,17 @@ export function stripMd(t: string) {
     .replace(/\*(.*?)\*/g, "$1")
     .replace(/\[소제목\][\s\S]*?\[\/소제목\]/g, "")
     .replace(/\[수정본\][\s\S]*?\[\/수정본\]/g, "")
+    .replace(/\[수정본\][\s\S]*$/, "")
+    .replace(/\[지원동기\][\s\S]*?\[\/지원동기\]/g, "")
+    .replace(/\[지원동기\][\s\S]*$/, "")
     .replace(/\[변경사항\][\s\S]*?\[\/변경사항\]/g, "")
+    .replace(/\[완성준비\]/g, "")
     .trim();
 }
 
 export function parseRevisionMsg(text: string) {
   const subMatch = text.match(/\[소제목\]([\s\S]*?)\[\/소제목\]/);
-  const revMatch = text.match(/\[수정본\]([\s\S]*?)\[\/수정본\]/);
+  const revMatch = text.match(/\[수정본\]([\s\S]*?)\[\/수정본\]/) || text.match(/\[지원동기\]([\s\S]*?)\[\/지원동기\]/);
   const chgMatch = text.match(/\[변경사항\]([\s\S]*?)\[\/변경사항\]/);
   const subtitle = subMatch ? subMatch[1].trim() : "";
   const rawRevision = revMatch
@@ -51,7 +55,9 @@ export function parseRevisionMsg(text: string) {
   const rest = text
     .replace(/\[소제목\][\s\S]*?\[\/소제목\]/g, "")
     .replace(/\[수정본\][\s\S]*?\[\/수정본\]/g, "")
+    .replace(/\[지원동기\][\s\S]*?\[\/지원동기\]/g, "")
     .replace(/\[변경사항\][\s\S]*?\[\/변경사항\]/g, "")
+    .replace(/\[완성준비\]/g, "")
     .trim();
   return { subtitle, revision, changes, rest };
 }
@@ -200,7 +206,7 @@ ${revision ? `
     <div class="legend-item"><div class="legend-dot" style="background:#c2410c"></div> 나의 답변</div>
   </div>
   ${diagMsgs.map((m, i) => {
-    const isRevMsg = m.role === "bot" && m.text.includes("[수정본]");
+    const isRevMsg = m.role === "bot" && (m.text.includes("[수정본]") || m.text.includes("[지원동기]"));
     return msgRow(m, i === 0 && m.role === "bot", isRevMsg);
   }).join("")}
 </div>
@@ -235,7 +241,7 @@ export function CoverLetterSummary({ jobTitle, question, draft, msgs, interviewQ
     return () => { document.body.style.overflow = ""; };
   }, []);
 
-  const revMsgIdx = msgs.findIndex((m) => m.role === "bot" && m.text.includes("[수정본]"));
+  const revMsgIdx = msgs.findIndex((m) => m.role === "bot" && (m.text.includes("[수정본]") || m.text.includes("[지원동기]")));
   const diagMsgs = revMsgIdx >= 0 ? msgs.slice(0, revMsgIdx + 1) : msgs;
 
   const { subtitle, revision, changes } =
@@ -341,8 +347,8 @@ export function CoverLetterSummary({ jobTitle, question, draft, msgs, interviewQ
           <Section number="02" title="진단 & 첨삭 대화" numColor={`${BLUE}99`}>
             <div className="flex flex-col gap-3">
               {diagMsgs.map((msg, i) => {
-                if (!stripMd(msg.text).trim() && !msg.text.includes("[수정본]")) return null;
-                const isRevMsg = msg.role === "bot" && msg.text.includes("[수정본]");
+                if (!stripMd(msg.text).trim() && !msg.text.includes("[수정본]") && !msg.text.includes("[지원동기]")) return null;
+                const isRevMsg = msg.role === "bot" && (msg.text.includes("[수정본]") || msg.text.includes("[지원동기]"));
                 return (
                   <SummaryMsgRow
                     key={msg.id}

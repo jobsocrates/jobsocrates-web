@@ -14,6 +14,28 @@ const VIOLET = "#A78BFA";
 const DRAFT_MAX = 1200;
 const ADMIN_EMAIL = "ijhan6403@gmail.com";
 
+const LOADING_MSGS = [
+  "회사와 직무를 파악하고 있어요.",
+  "초안에서 경험 연결 포인트를 찾는 중이에요.",
+  "조금 시간이 걸리는 분석이에요. 잠시만요.",
+  "거의 다 됐어요.",
+  "금방 나올 거예요!",
+];
+
+function StreamingLoadingMsg() {
+  const [idx, setIdx] = useState(0);
+  useEffect(() => {
+    if (idx >= LOADING_MSGS.length - 1) return;
+    const t = setTimeout(() => setIdx((i) => i + 1), 3500);
+    return () => clearTimeout(t);
+  }, [idx]);
+  return (
+    <span className="text-sm" style={{ color: "rgba(255,255,255,0.45)" }}>
+      {LOADING_MSGS[idx]}
+    </span>
+  );
+}
+
 const DOTS = [
   { delay: 0, color: ACCENT },
   { delay: 150, color: BLUE },
@@ -73,21 +95,26 @@ function stripMd(t: string) {
     .replace(/\*(.*?)\*/g, "$1")
     .replace(/\[소제목\][\s\S]*?\[\/소제목\]/g, "")
     .replace(/\[수정본\][\s\S]*?\[\/수정본\]/g, "")
+    .replace(/\[수정본\][\s\S]*$/, "")
+    .replace(/\[지원동기\][\s\S]*?\[\/지원동기\]/g, "")
+    .replace(/\[지원동기\][\s\S]*$/, "")
     .replace(/\[변경사항\][\s\S]*?\[\/변경사항\]/g, "")
     .replace(/\[완성준비\]/g, "")
+    .replace(/---+/g, "")
     .trim();
 }
 
 /* 수정본 + 변경사항 마커 파싱 */
 function parseRevisionMsg(text: string) {
   const subMatch = text.match(/\[소제목\]([\s\S]*?)\[\/소제목\]/);
-  const revMatch = text.match(/\[수정본\]([\s\S]*?)\[\/수정본\]/);
+  const revMatch = text.match(/\[수정본\]([\s\S]*?)\[\/수정본\]/) || text.match(/\[지원동기\]([\s\S]*?)\[\/지원동기\]/);
+  const partialRevMatch = !revMatch ? (text.match(/\[수정본\]([\s\S]*)$/) || text.match(/\[지원동기\]([\s\S]*)$/)) : null;
   const chgMatch = text.match(/\[변경사항\]([\s\S]*?)\[\/변경사항\]/);
   const partialChgMatch = !chgMatch ? text.match(/\[변경사항\]([\s\S]*)$/) : null;
 
   const subtitle = subMatch ? subMatch[1].trim() : "";
-  const rawRevision = revMatch
-    ? revMatch[1]
+  const rawRevision = (revMatch ?? partialRevMatch)
+    ? (revMatch ?? partialRevMatch)![1]
         .replace(/\[소제목\][\s\S]*?\[\/소제목\]\s*/g, "")
         .replace(/\[소제목\]|\[\/소제목\]/g, "")
         .trim()
@@ -99,8 +126,13 @@ function parseRevisionMsg(text: string) {
   const rest = text
     .replace(/\[소제목\][\s\S]*?\[\/소제목\]/g, "")
     .replace(/\[수정본\][\s\S]*?\[\/수정본\]/g, "")
+    .replace(/\[수정본\][\s\S]*$/, "")
+    .replace(/\[지원동기\][\s\S]*?\[\/지원동기\]/g, "")
+    .replace(/\[지원동기\][\s\S]*$/, "")
     .replace(/\[변경사항\][\s\S]*?\[\/변경사항\]/g, "")
     .replace(/\[변경사항\][\s\S]*$/, "")
+    .replace(/\[완성준비\]/g, "")
+    .replace(/---+/g, "")
     .trim();
 
   return { subtitle, revision, changes, partialChanges, rest };
@@ -109,7 +141,14 @@ function parseRevisionMsg(text: string) {
 /* ── 진단 카드 (첫 번째 봇 메시지) ── */
 function DiagnosisCard({ text, streaming }: { text: string; streaming: boolean }) {
   const stripped = stripMd(text);
-  const splitIdx = stripped.search(/(이 중에서|가장 약한 부분인)/);
+  let splitIdx = stripped.search(/(이 중에서|가장 약한 부분인)/);
+  if (splitIdx === -1) {
+    const afterThird = stripped.lastIndexOf("③");
+    if (afterThird !== -1) {
+      const nnIdx = stripped.indexOf("\n\n", afterThird);
+      if (nnIdx !== -1) splitIdx = nnIdx;
+    }
+  }
   const mainText = splitIdx !== -1 ? stripped.slice(0, splitIdx).trim() : stripped;
   const followText = splitIdx !== -1 ? stripped.slice(splitIdx).trim() : null;
   const lines = mainText.split("\n").filter((l) => l.trim() !== "");
@@ -269,6 +308,17 @@ function RevisionMessage({ text }: { text: string }) {
 
   return (
     <div className="flex flex-col gap-3 w-full">
+      {rest && (
+        <div className="flex items-end gap-2.5 justify-start">
+          <BotBubbleAvatar />
+          <div
+            className="max-w-[80%] px-4 py-3.5 text-sm lg:text-[15px] leading-[1.85] whitespace-pre-wrap"
+            style={{ background: "rgba(255,255,255,0.09)", color: "rgba(255,255,255,0.92)", borderRadius: "4px 16px 16px 16px", wordBreak: "keep-all", borderLeft: `2px solid ${BLUE}50` }}
+          >
+            {rest}
+          </div>
+        </div>
+      )}
       {revision && (
         <div className="rounded-2xl overflow-hidden" style={{ background: `${BLUE}0D`, border: `1px solid ${BLUE}28` }}>
           <div className="flex items-center gap-2 px-4 py-2.5 border-b" style={{ borderColor: `${BLUE}20` }}>
@@ -466,6 +516,9 @@ const initItem: CoverItem = {
 
 export default function ChatPage() {
   const [jobTitle, setJobTitle] = useState("");
+  const [chatMode, setChatMode] = useState<"analyze" | "personality" | "motivation">("analyze");
+  const [modeDropdownOpen, setModeDropdownOpen] = useState(false);
+  const [companyInfo, setCompanyInfo] = useState("");
 
   const [items, setItems] = useState<CoverItem[]>([initItem]);
   const [selectedId, setSelectedId] = useState<number>(initItem.id);
@@ -665,7 +718,13 @@ export default function ChatPage() {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "analyze", jobTitle, question, draft, charLimit, messages: history }),
+        body: JSON.stringify(
+          chatMode === "motivation"
+            ? { type: "motivation", jobTitle, companyInfo, draft, charLimit, messages: history }
+            : chatMode === "personality"
+            ? { type: "personality", jobTitle, companyInfo, draft, charLimit, messages: history }
+            : { type: "analyze", jobTitle, companyInfo, question, draft, charLimit, messages: history }
+        ),
       });
       if (!res.body) throw new Error();
       const reader = res.body.getReader();
@@ -692,7 +751,9 @@ export default function ChatPage() {
       );
 
       // ── DB 저장: 유저 메시지 + AI 응답 ──
-      const revMatch = full.match(/\[수정본\]([\s\S]*?)\[\/수정본\]/);
+      const revMatch = chatMode === "motivation"
+        ? full.match(/\[지원동기\]([\s\S]*?)\[\/지원동기\]/)
+        : full.match(/\[수정본\]([\s\S]*?)\[\/수정본\]/);
       const chgMatch = full.match(/\[변경사항\]([\s\S]*?)\[\/변경사항\]/);
       let assistantMsgDbId: string | null = null;
       if (itemDbId) {
@@ -708,57 +769,6 @@ export default function ChatPage() {
         }
       }
 
-      // 완성본이 나왔으면 스트리밍 종료 — polish는 백그라운드로
-      setIsStreaming(false);
-
-      // ── GPT 다듬기: 완성본이 있을 때만 ──
-      if (revMatch) {
-        try {
-          const polishRes = await fetch("/api/generate", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ type: "polish", revision: revMatch[1].trim(), charLimit: charLimit ? Number(charLimit) : null }),
-          });
-          if (polishRes.body) {
-            const polishReader = polishRes.body.getReader();
-            const polishDec = new TextDecoder();
-            let polished = "";
-            while (true) {
-              const { done, value } = await polishReader.read();
-              if (done) break;
-              polished += polishDec.decode(value, { stream: true });
-              if (polished.trim()) {
-                const updatedText = full.replace(/\[수정본\][\s\S]*?\[\/수정본\]/, `[수정본]${polished}[/수정본]`);
-                setItems((prev) =>
-                  prev.map((it) =>
-                    it.id === itemId
-                      ? { ...it, msgs: it.msgs.map((m) => (m.id === msgId ? { ...m, text: updatedText } : m)) }
-                      : it
-                  )
-                );
-              }
-              bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-            }
-            if (polished.trim() && assistantMsgDbId) {
-              const polishedFull = full.replace(/\[수정본\][\s\S]*?\[\/수정본\]/, `[수정본]${polished.trim()}[/수정본]`);
-              const tryUpdate = () => fetch("/api/generate", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ type: "update-message", message_id: assistantMsgDbId, content: polishedFull }),
-              });
-              let updateRes = await tryUpdate();
-              if (!updateRes.ok) {
-                console.warn("[DB] update-message 1차 실패, 재시도...");
-                await new Promise(r => setTimeout(r, 1500));
-                updateRes = await tryUpdate();
-                if (!updateRes.ok) console.error("[DB] update-message 재시도 실패:", await updateRes.json());
-              }
-            }
-          }
-        } catch (e) {
-          console.error("[GPT Polish]", e);
-        }
-      }
     } catch {
       setItems((prev) =>
         prev.map((it) =>
@@ -1009,8 +1019,10 @@ export default function ChatPage() {
   async function handleStartClick() {
     if (!selected) return;
     if (!jobTitle.trim()) { showToast("지원 직무를 먼저 입력해주세요", "jobTitle"); return; }
-    if (!selected.question.trim()) { showToast("자소서 문항을 먼저 입력해주세요", "question"); return; }
-    if (!selected.charLimit.trim()) { showToast("글자수 제한을 먼저 입력해주세요", "charLimit"); return; }
+    if (chatMode === "analyze") {
+      if (!selected.question.trim()) { showToast("자소서 문항을 먼저 입력해주세요", "question"); return; }
+      if (!selected.charLimit.trim()) { showToast("글자수 제한을 먼저 입력해주세요", "charLimit"); return; }
+    }
     if (!selected.draft.trim()) { showToast("자소서 초안을 먼저 입력해주세요", "draft"); return; }
 
     const isAdmin = currentUser?.email === ADMIN_EMAIL;
@@ -1244,13 +1256,15 @@ export default function ChatPage() {
     }
   }
 
-  const canStart =
-    !!jobTitle.trim() && !!selected?.question.trim() && !!selected?.charLimit.trim() && !!selected?.draft.trim() && selected?.status === "idle";
+  const canStart = chatMode === "analyze"
+    ? !!jobTitle.trim() && !!selected?.question.trim() && !!selected?.charLimit.trim() && !!selected?.draft.trim() && selected?.status === "idle"
+    : !!jobTitle.trim() && !!selected?.draft.trim() && selected?.status === "idle";
 
   const hasAnyRevision = !isStreaming && (selected?.msgs.some(
-    (m) => m.role === "bot"
-      && m.text.includes("[수정본]") && m.text.includes("[/수정본]")
-      && m.text.includes("[변경사항]") && m.text.includes("[/변경사항]")
+    (m) => m.role === "bot" && (
+      (chatMode === "motivation" && m.text.includes("[지원동기]") && m.text.includes("[/지원동기]")) ||
+      (chatMode !== "motivation" && m.text.includes("[수정본]") && m.text.includes("[/수정본]") && m.text.includes("[변경사항]") && m.text.includes("[/변경사항]"))
+    )
   ) ?? false);
 
   const revisionReady = (selected?.msgs.some(
@@ -1371,19 +1385,102 @@ export default function ChatPage() {
                 </span>
               </div>
 
+              {/* 카테고리 드롭다운 */}
+              {(() => {
+                const MODES = [
+                  { key: "personality", label: "성격 장/단점", color: VIOLET },
+                  { key: "analyze",     label: "직무역량",     color: BLUE },
+                  { key: "motivation",  label: "지원동기",     color: GOLD },
+                ] as const;
+                const current = MODES.find(m => m.key === chatMode)!;
+                return (
+                  <div className="flex flex-col gap-1.5" style={{ position: "relative" }}>
+                    <label className="text-xs lg:text-[15px] font-medium" style={{ color: "rgba(255,255,255,0.45)" }}>카테고리</label>
+                    <button
+                      onClick={() => setModeDropdownOpen(v => !v)}
+                      className="flex items-center justify-between px-3 py-2.5 rounded-xl"
+                      style={{
+                        background: "rgba(255,255,255,0.05)",
+                        border: `1px solid ${modeDropdownOpen ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.1)"}`,
+                        transition: "border-color 0.2s",
+                      }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: current.color }} />
+                        <span className="text-sm lg:text-[15px] font-medium" style={{ color: current.color }}>{current.label}</span>
+                      </div>
+                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ transform: modeDropdownOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s", opacity: 0.4 }}>
+                        <path d="M2 4l4 4 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </button>
+                    {modeDropdownOpen && (
+                      <div
+                        className="flex flex-col gap-0.5 rounded-xl p-1"
+                        style={{
+                          position: "absolute",
+                          top: "calc(100% + 4px)",
+                          left: 0,
+                          right: 0,
+                          background: "#16162a",
+                          border: "1px solid rgba(255,255,255,0.12)",
+                          zIndex: 50,
+                          boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
+                        }}
+                      >
+                        {MODES.map(({ key, label, color }) => (
+                          <button
+                            key={key}
+                            onClick={() => { setChatMode(key); setModeDropdownOpen(false); }}
+                            className="flex items-center gap-2 px-3 py-2 rounded-lg text-left transition-all"
+                            style={{
+                              background: chatMode === key ? "rgba(255,255,255,0.06)" : "transparent",
+                            }}
+                          >
+                            <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: chatMode === key ? color : "rgba(255,255,255,0.15)" }} />
+                            <span className="text-sm font-medium" style={{ color: chatMode === key ? color : "rgba(255,255,255,0.5)" }}>{label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* 회사명/링크 */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs lg:text-[15px] font-medium" style={{ color: "rgba(255,255,255,0.45)" }}>
+                  회사명 또는 링크 <span className="text-xs" style={{ color: "rgba(255,255,255,0.2)" }}>선택</span>
+                </label>
+                <input
+                  value={companyInfo}
+                  onChange={(e) => setCompanyInfo(e.target.value)}
+                  placeholder="예: 카카오 / 링크"
+                  className="w-full px-3 py-2.5 rounded-xl text-sm lg:text-base placeholder:text-white/40"
+                  style={{
+                    background: "rgba(255,255,255,0.05)",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    color: "rgba(255,255,255,0.9)",
+                    outline: "none",
+                  }}
+                />
+              </div>
+
               {/* 직무 입력 */}
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs lg:text-[15px] font-medium" style={{ color: toastField === "jobTitle" ? `rgba(201,100,66,0.9)` : "rgba(255,255,255,0.45)" }}>지원 직무</label>
+                <label className="text-xs lg:text-[15px] font-medium" style={{ color: toastField === "jobTitle" ? `rgba(201,100,66,0.9)` : "rgba(255,255,255,0.45)" }}>
+                  지원 직무 또는 채용공고 링크
+                </label>
                 <input
                   value={jobTitle}
                   onChange={(e) => setJobTitle(e.target.value)}
-                  placeholder="예: 연구개발"
-                  className="glow-input w-full px-3 py-2.5 rounded-xl text-sm lg:text-base"
+                  placeholder="예: 데이터 엔지니어 / 링크"
+                  className="glow-input w-full px-3 py-2.5 rounded-xl text-sm lg:text-base placeholder:text-white/40"
                   style={{
                     background: "rgba(255,255,255,0.05)",
                     border: `1px solid ${toastField === "jobTitle" ? "rgba(201,100,66,0.5)" : "rgba(255,255,255,0.1)"}`,
                     boxShadow: toastField === "jobTitle" ? "0 0 0 2px rgba(201,100,66,0.15)" : "none",
                     color: "rgba(255,255,255,0.9)",
+                    transition: "border-color 0.3s, box-shadow 0.3s",
                   }}
                 />
               </div>
@@ -1455,10 +1552,88 @@ export default function ChatPage() {
                   <input
                     value={jobTitle}
                     onChange={(e) => setJobTitle(e.target.value)}
-                    placeholder="예: 연구개발"
-                    className="glow-input w-full px-3 py-2.5 rounded-xl text-sm"
-                    style={{ background: "rgba(255,255,255,0.05)", border: `1px solid ${toastField === "jobTitle" ? "rgba(201,100,66,0.5)" : "rgba(255,255,255,0.09)"}`, boxShadow: toastField === "jobTitle" ? "0 0 0 2px rgba(201,100,66,0.15)" : "none", color: "rgba(255,255,255,0.9)" }}
+                    placeholder="예: 데이터 엔지니어 / 링크"
+                    className="glow-input w-full px-3 py-2.5 rounded-xl text-sm placeholder:text-white/40"
+                    style={{
+                      background: "rgba(255,255,255,0.05)",
+                      border: `1px solid ${toastField === "jobTitle" ? "rgba(201,100,66,0.5)" : "rgba(255,255,255,0.09)"}`,
+                      boxShadow: toastField === "jobTitle" ? "0 0 0 2px rgba(201,100,66,0.15)" : "none",
+                      color: "rgba(255,255,255,0.9)",
+                      transition: "border-color 0.3s, box-shadow 0.3s",
+                    }}
                   />
+
+                  {/* 카테고리 드롭다운 (모바일) */}
+                  {(() => {
+                    const MODES = [
+                      { key: "personality", label: "성격 장/단점", color: VIOLET },
+                      { key: "analyze",     label: "직무역량",     color: BLUE },
+                      { key: "motivation",  label: "지원동기",     color: GOLD },
+                    ] as const;
+                    const current = MODES.find(m => m.key === chatMode)!;
+                    return (
+                      <div style={{ position: "relative" }}>
+                        <button
+                          onClick={() => setModeDropdownOpen(v => !v)}
+                          className="flex items-center justify-between w-full px-3 py-2 rounded-xl"
+                          style={{
+                            background: "rgba(255,255,255,0.05)",
+                            border: `1px solid ${modeDropdownOpen ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.1)"}`,
+                          }}
+                        >
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: current.color }} />
+                            <span className="text-xs font-medium" style={{ color: current.color }}>{current.label}</span>
+                          </div>
+                          <svg width="10" height="10" viewBox="0 0 12 12" fill="none" style={{ transform: modeDropdownOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s", opacity: 0.4 }}>
+                            <path d="M2 4l4 4 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </button>
+                        {modeDropdownOpen && (
+                          <div
+                            className="flex flex-col gap-0.5 rounded-xl p-1"
+                            style={{
+                              position: "absolute",
+                              top: "calc(100% + 4px)",
+                              left: 0,
+                              right: 0,
+                              background: "#16162a",
+                              border: "1px solid rgba(255,255,255,0.12)",
+                              zIndex: 50,
+                              boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
+                            }}
+                          >
+                            {MODES.map(({ key, label, color }) => (
+                              <button
+                                key={key}
+                                onClick={() => { setChatMode(key); setModeDropdownOpen(false); }}
+                                className="flex items-center gap-2 px-3 py-2 rounded-lg text-left"
+                                style={{ background: chatMode === key ? "rgba(255,255,255,0.06)" : "transparent" }}
+                              >
+                                <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: chatMode === key ? color : "rgba(255,255,255,0.15)" }} />
+                                <span className="text-xs font-medium" style={{ color: chatMode === key ? color : "rgba(255,255,255,0.5)" }}>{label}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+
+                  {/* 회사명/링크 */}
+                  <input
+                    value={companyInfo}
+                    onChange={(e) => setCompanyInfo(e.target.value)}
+                    placeholder="예: 카카오 / 링크"
+                    className="w-full px-3 py-2.5 rounded-xl text-sm placeholder:text-white/40"
+                    style={{
+                      background: "rgba(255,255,255,0.05)",
+                      border: "1px solid rgba(255,255,255,0.1)",
+                      color: "rgba(255,255,255,0.9)",
+                      outline: "none",
+                    }}
+                  />
+
                   {/* 항목 탭 */}
                   <div className="flex items-center gap-1.5 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
                     {items.map((item, idx) => {
@@ -1671,12 +1846,16 @@ export default function ChatPage() {
                     {selected.msgs.map((msg, msgIdx) => {
                       const isDiagnosis = msgIdx === 0 && msg.role === "bot";
                       const isRevisionComplete = msg.role === "bot"
-                        && msg.text.includes("[수정본]")
-                        && msg.text.includes("[/수정본]");
+                        && (
+                          (msg.text.includes("[수정본]") && msg.text.includes("[/수정본]")) ||
+                          (msg.text.includes("[지원동기]") && msg.text.includes("[/지원동기]"))
+                        );
                       const isRevisionStreaming = isStreaming
                         && msg.role === "bot"
-                        && msg.text.includes("[수정본]")
-                        && !msg.text.includes("[/수정본]");
+                        && (
+                          (msg.text.includes("[수정본]") && !msg.text.includes("[/수정본]")) ||
+                          (msg.text.includes("[지원동기]") && !msg.text.includes("[/지원동기]"))
+                        );
                       const isPrevRevisionRequest = msgIdx > 0
                         && selected.msgs[msgIdx - 1]?.role === "user"
                         && selected.msgs[msgIdx - 1]?.text === "완성본을 작성해줘.";
@@ -1688,11 +1867,11 @@ export default function ChatPage() {
                         return <DiagnosisCard key={msg.id} text={msg.text} streaming={isStreaming} />;
                       }
 
-                      if (isRevisionInProgress) {
+                      if (isRevisionInProgress && !isRevisionStreaming && !isRevisionComplete) {
                         return <RevisionLoadingCard key={msg.id} />;
                       }
 
-                      if (isRevisionComplete) {
+                      if (isRevisionStreaming || isRevisionComplete) {
                         return <RevisionMessage key={msg.id} text={msg.text} />;
                       }
 
@@ -1709,10 +1888,8 @@ export default function ChatPage() {
                           >
                             {msg.role === "bot" ? stripMd(msg.text) : msg.text}
                             {isStreaming && msg.text === "" && (
-                              <div className="flex gap-1.5 items-center h-4">
-                                {DOTS.map(({ delay, color }) => (
-                                  <span key={delay} className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: color, animationDelay: `${delay}ms` }} />
-                                ))}
+                              <div className="flex items-center h-6">
+                                <StreamingLoadingMsg />
                               </div>
                             )}
                           </div>
