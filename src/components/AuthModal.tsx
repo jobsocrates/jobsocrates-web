@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
-const ACCENT = "#C96442";
+const ACCENT = "#6366F1";
+const ACCENT_DARK = "#4338CA";
 
 interface Props {
   tab: "login" | "signup";
@@ -48,8 +49,8 @@ function Input({ type = "text", placeholder, value, onChange, disabled, onEnter 
         disabled={disabled}
         className="glow-input w-full px-4 py-3 rounded-xl text-sm focus:outline-none transition-colors disabled:opacity-50"
         style={{
-          background: "rgba(255,255,255,0.06)",
-          border: "1px solid rgba(255,255,255,0.1)",
+          background: "rgba(99,102,241,0.08)",
+          border: "1px solid rgba(167,139,250,0.18)",
           color: "rgba(255,255,255,0.9)",
           paddingRight: isPw ? "44px" : undefined,
         }}
@@ -82,9 +83,9 @@ function Input({ type = "text", placeholder, value, onChange, disabled, onEnter 
 function Divider() {
   return (
     <div className="flex items-center gap-3">
-      <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.08)" }} />
-      <span className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>또는</span>
-      <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.08)" }} />
+      <div className="flex-1 h-px" style={{ background: "rgba(167,139,250,0.12)" }} />
+      <span className="text-xs" style={{ color: "rgba(167,139,250,0.45)" }}>또는</span>
+      <div className="flex-1 h-px" style={{ background: "rgba(167,139,250,0.12)" }} />
     </div>
   );
 }
@@ -147,9 +148,9 @@ function TermRow({
             onClick={() => setOpen((v) => !v)}
             className="flex-shrink-0 flex items-center gap-0.5 px-2 py-0.5 rounded-lg text-xs transition-all hover:opacity-80"
             style={{
-              background: open ? "rgba(201,100,66,0.15)" : "rgba(255,255,255,0.06)",
+              background: open ? "rgba(99,102,241,0.15)" : "rgba(255,255,255,0.05)",
               color: open ? ACCENT : "rgba(255,255,255,0.35)",
-              border: `1px solid ${open ? "rgba(201,100,66,0.3)" : "rgba(255,255,255,0.08)"}`,
+              border: `1px solid ${open ? "rgba(99,102,241,0.35)" : "rgba(167,139,250,0.12)"}`,
               whiteSpace: "nowrap",
             }}
           >
@@ -169,7 +170,7 @@ function TermRow({
       {open && (
         <div
           className="ml-6 rounded-xl px-3 py-3"
-          style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}
+          style={{ background: "rgba(99,102,241,0.05)", border: "1px solid rgba(167,139,250,0.1)" }}
         >
           <p
             className="text-xs leading-[1.85] whitespace-pre-wrap"
@@ -326,10 +327,14 @@ export function AuthModal({ tab: initialTab, onClose }: Props) {
     >
       <div
         className="w-full max-w-sm rounded-3xl overflow-hidden relative"
-        style={{ background: "#12121F", border: "1px solid rgba(255,255,255,0.08)" }}
+        style={{
+          background: "#0D0D2A",
+          border: "1px solid rgba(167,139,250,0.18)",
+          boxShadow: "0 0 0 1px rgba(99,102,241,0.08), 0 32px 64px rgba(10,10,50,0.6), 0 0 80px rgba(99,102,241,0.12)",
+        }}
       >
         {/* 탭 */}
-        <div className="flex border-b" style={{ borderColor: "rgba(255,255,255,0.07)" }}>
+        <div className="flex border-b" style={{ borderColor: "rgba(167,139,250,0.12)" }}>
           {(["login", "signup"] as const).map((t) => (
             <button
               key={t}
@@ -355,7 +360,7 @@ export function AuthModal({ tab: initialTab, onClose }: Props) {
           {isInApp ? (
             <div
               className="rounded-2xl p-4 flex flex-col gap-3"
-              style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)" }}
+              style={{ background: "rgba(99,102,241,0.06)", border: "1px solid rgba(167,139,250,0.15)" }}
             >
               <div className="flex items-start gap-2.5">
                 <span className="text-base flex-shrink-0">⚠️</span>
@@ -374,7 +379,7 @@ export function AuthModal({ tab: initialTab, onClose }: Props) {
               <button
                 onClick={copyUrl}
                 className="w-full py-2 rounded-xl text-xs font-medium transition-all hover:opacity-80"
-                style={{ background: "rgba(255,255,255,0.06)", color: copied ? "#6BFF9E" : "rgba(255,255,255,0.55)", border: "1px solid rgba(255,255,255,0.08)" }}
+                style={{ background: "rgba(99,102,241,0.08)", color: copied ? "#6BFF9E" : "rgba(255,255,255,0.55)", border: "1px solid rgba(167,139,250,0.15)" }}
               >
                 {copied ? "✓ 주소 복사됨 — Safari·Chrome에 붙여넣기 해주세요" : "주소 복사하기"}
               </button>
@@ -407,7 +412,7 @@ export function AuthModal({ tab: initialTab, onClose }: Props) {
             onClick={handleSubmit}
             disabled={loading}
             className="w-full py-3.5 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
-            style={{ background: ACCENT }}
+            style={{ background: `linear-gradient(135deg, ${ACCENT_DARK} 0%, ${ACCENT} 100%)` }}
           >
             {loading ? "처리 중..." : tab === "login" ? "로그인" : "회원가입"}
           </button>
@@ -421,7 +426,7 @@ export function AuthModal({ tab: initialTab, onClose }: Props) {
                 <button
                   onClick={toggleAll}
                   className="w-full flex items-center gap-2.5 py-2.5 px-3 rounded-xl transition-colors"
-                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}
+                  style={{ background: "rgba(99,102,241,0.06)", border: "1px solid rgba(167,139,250,0.15)" }}
                 >
                   <div
                     className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0 transition-all"
@@ -446,7 +451,7 @@ export function AuthModal({ tab: initialTab, onClose }: Props) {
         {canScrollMore && (
           <div
             className="absolute bottom-0 left-0 right-0 flex flex-col items-center pb-3 pt-8 pointer-events-none"
-            style={{ background: "linear-gradient(to bottom, transparent, #12121F 60%)" }}
+            style={{ background: "linear-gradient(to bottom, transparent, #0D0D2A 60%)" }}
           >
             <span className="text-xs animate-bounce" style={{ color: "rgba(255,255,255,0.3)" }}>
               아래로 스크롤
