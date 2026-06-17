@@ -6,11 +6,27 @@ import { CoverLetterSummary } from "@/components/CoverLetterSummary";
 import { TutorialModal } from "@/components/TutorialModal";
 import { supabase } from "@/lib/supabase";
 
-const ACCENT = "#C96442";
+const ACCENT = "#4338CA";
 const BG = "#0D0D18";
-const BLUE = "#6B8EFF";
-const GOLD = "#FFD166";
-const VIOLET = "#A78BFA";
+const BLUE = "#6366F1";   // indigo — DS primary family
+const GOLD = "#F59E0B";   // DS warn/amber
+const VIOLET = "#A78BFA"; // DS ring/lavender
+
+// Design System tokens
+const DS_BG      = "#F9FAFB";
+const DS_FG      = "#111827";
+const DS_CARD    = "#FFFFFF";
+const DS_BORDER  = "#E5E7EB";
+const DS_PRIMARY = "#312E81";
+const DS_MUTED   = "#6B7280";
+const DS_INPUT   = "#F3F4F6";
+const DS_ACC_BG  = "#EDE9FE";
+const DS_ACC_FG  = "#4C3F99";
+const DS_LIFT    = "0 0 0 1px rgba(167,139,250,0.14), 0 0 28px -8px rgba(167,139,250,0.28), 0 2px 8px rgba(17,12,46,0.05)";
+const DS_SOFT    = "0 0 0 1px rgba(167,139,250,0.08), 0 1px 2px rgba(17,12,46,0.04)";
+const GLOW_PRIMARY = "0 0 0 1px rgba(99,102,241,0.22), 0 0 24px -6px rgba(99,102,241,0.32)";
+const GLOW_ACCENT  = "0 0 0 1px rgba(167,139,250,0.24), 0 0 24px -6px rgba(167,139,250,0.34)";
+
 const DRAFT_MAX = 1200;
 const ADMIN_EMAIL = "ijhan6403@gmail.com";
 
@@ -30,16 +46,16 @@ function StreamingLoadingMsg() {
     return () => clearTimeout(t);
   }, [idx]);
   return (
-    <span className="text-sm" style={{ color: "rgba(255,255,255,0.45)" }}>
+    <span className="text-sm" style={{ color: DS_MUTED }}>
       {LOADING_MSGS[idx]}
     </span>
   );
 }
 
 const DOTS = [
-  { delay: 0, color: ACCENT },
+  { delay: 0, color: "#312E81" },
   { delay: 150, color: BLUE },
-  { delay: 300, color: "#FFD166" },
+  { delay: 300, color: VIOLET },
 ];
 
 interface ChatMsg {
@@ -58,6 +74,8 @@ interface InterviewQItem {
   inputText: string;
 }
 
+interface SetupMsg { id: number; role: "bot" | "user"; text: string; }
+
 interface CoverItem {
   id: number;
   dbId: string | null;
@@ -69,6 +87,8 @@ interface CoverItem {
   apiHistory: { role: string; content: string }[];
   interviewQs: InterviewQItem[];
   isLoadingQs: boolean;
+  setupStep: "question" | "charLimit" | "draft" | "ready";
+  setupMsgs: SetupMsg[];
 }
 
 let _id = 0;
@@ -157,11 +177,11 @@ function DiagnosisCard({ text, streaming }: { text: string; streaming: boolean }
     <div className="flex flex-col gap-3 w-full">
       <div
         className="w-full rounded-2xl overflow-hidden"
-        style={{ background: `${BLUE}0A`, border: `1px solid ${BLUE}22` }}
+        style={{ background: "#EDE9FE", border: "1px solid #C4B5FD" }}
       >
-        <div className="flex items-center gap-2 px-4 py-2.5 border-b" style={{ borderColor: `${BLUE}1A` }}>
+        <div className="flex items-center gap-2 px-4 py-2.5 border-b" style={{ borderColor: "#C4B5FD" }}>
           <img src="/ai-avatar.webp" alt="" className="w-5 h-5 rounded-full object-cover flex-shrink-0" />
-          <span className="text-xs lg:text-[15px] font-semibold" style={{ color: BLUE }}>초안 진단</span>
+          <span className="text-sm font-semibold" style={{ color: "#4C3F99" }}>초안 진단</span>
         </div>
         <div className="px-5 py-4">
           {streaming && text === "" ? (
@@ -174,7 +194,7 @@ function DiagnosisCard({ text, streaming }: { text: string; streaming: boolean }
             <div className="flex flex-col gap-0">
               {lines.map((line, i) => {
                 if (line === "---" || line === "——" || line === "──────────") {
-                  return <div key={i} className="my-3" style={{ height: 1, background: `${BLUE}18` }} />;
+                  return <div key={i} className="my-3" style={{ height: 1, background: "#C4B5FD" }} />;
                 }
                 const isCircled = line.startsWith("①") || line.startsWith("②") || line.startsWith("③");
                 const isShortHeader = !isCircled && line.length <= 14 && !/[요다요다,。？！]$/.test(line) && !/\.\.\.$/.test(line);
@@ -182,9 +202,9 @@ function DiagnosisCard({ text, streaming }: { text: string; streaming: boolean }
                   return (
                     <p
                       key={i}
-                      className="text-sm lg:text-base font-semibold"
+                      className="text-sm font-semibold"
                       style={{
-                        color: "rgba(255,255,255,0.92)",
+                        color: "#111827",
                         marginTop: i !== 0 ? "18px" : 0,
                         marginBottom: "6px",
                         wordBreak: "keep-all",
@@ -198,8 +218,8 @@ function DiagnosisCard({ text, streaming }: { text: string; streaming: boolean }
                 return (
                   <p
                     key={i}
-                    className="text-sm lg:text-[15px] leading-[1.85]"
-                    style={{ color: "rgba(255,255,255,0.72)", wordBreak: "keep-all" }}
+                    className="text-sm leading-[1.85]"
+                    style={{ color: "#111827", wordBreak: "keep-all" }}
                   >
                     {line}
                   </p>
@@ -220,10 +240,10 @@ function DiagnosisCard({ text, streaming }: { text: string; streaming: boolean }
       {/* "이 중에서 ~" 질문 — 별도 봇 버블 */}
       {followText && (
         <div className="flex items-end gap-2.5">
-          <img src="/ai-avatar.webp" alt="" className="w-7 h-7 rounded-full object-cover flex-shrink-0 mb-0.5" />
+          <img src="/ai-avatar.webp" alt="" className="w-7 h-7 rounded-full object-cover flex-shrink-0 mb-0.5" style={{ background: "#fff", padding: "2px", boxShadow: "0 1px 4px rgba(0,0,0,0.10)" }} />
           <div
-            className="max-w-[82%] px-4 py-3.5 text-sm lg:text-base leading-[1.85] whitespace-pre-wrap"
-            style={{ background: "rgba(255,255,255,0.09)", color: "rgba(255,255,255,0.92)", borderRadius: "4px 16px 16px 16px", wordBreak: "keep-all", borderLeft: `2px solid ${BLUE}55` }}
+            className="max-w-[82%] px-4 py-3.5 text-sm leading-[1.85] whitespace-pre-wrap"
+            style={{ background: "#FFFFFF", color: "#111827", borderRadius: "4px 16px 16px 16px", wordBreak: "keep-all", boxShadow: "none", border: "1px solid #E5E7EB" }}
           >
             {followText}
             {streaming && (
@@ -247,16 +267,16 @@ function ChangesCard({ text }: { text: string }) {
     .map((l) => l.replace(/^[-·•]\s*/, "").trim())
     .filter(Boolean);
   return (
-    <div className="rounded-2xl overflow-hidden" style={{ background: `${GOLD}0A`, border: `1px solid ${GOLD}28` }}>
-      <div className="flex items-center gap-2 px-4 py-2.5 border-b" style={{ borderColor: `${GOLD}20` }}>
+    <div className="rounded-2xl overflow-hidden" style={{ background: "#FFFBEB", border: "1px solid #FDE68A" }}>
+      <div className="flex items-center gap-2 px-4 py-2.5 border-b" style={{ borderColor: "#FDE68A" }}>
         <span style={{ fontSize: "12px" }}>✏️</span>
-        <span className="text-xs lg:text-[15px] font-semibold" style={{ color: GOLD }}>바뀐 점</span>
+        <span className="text-sm font-semibold" style={{ color: "#92400E" }}>바뀐 점</span>
       </div>
       <div className="px-4 py-3.5 flex flex-col gap-2.5">
         {items.map((item, i) => (
           <div key={i} className="flex items-start gap-2.5">
-            <span className="text-xs flex-shrink-0 mt-[3px] font-bold" style={{ color: GOLD }}>·</span>
-            <p className="text-sm lg:text-base leading-relaxed" style={{ color: "rgba(255,255,255,0.82)", wordBreak: "keep-all" }}>
+            <span className="text-xs flex-shrink-0 mt-[3px] font-bold" style={{ color: "#B45309" }}>·</span>
+            <p className="text-sm leading-relaxed" style={{ color: "#111827", wordBreak: "keep-all" }}>
               {item}
             </p>
           </div>
@@ -284,10 +304,10 @@ function RevisionLoadingCard() {
     return () => clearInterval(t);
   }, []);
   return (
-    <div className="rounded-2xl overflow-hidden" style={{ background: `${BLUE}0D`, border: `1px solid ${BLUE}28` }}>
-      <div className="flex items-center gap-2 px-4 py-2.5 border-b" style={{ borderColor: `${BLUE}20` }}>
+    <div className="rounded-2xl overflow-hidden" style={{ background: "#EDE9FE", border: "1px solid #C4B5FD" }}>
+      <div className="flex items-center gap-2 px-4 py-2.5 border-b" style={{ borderColor: "#C4B5FD" }}>
         <img src="/ai-avatar.webp" alt="" className="w-5 h-5 rounded-full object-cover flex-shrink-0" />
-        <span className="text-xs lg:text-[15px] font-semibold" style={{ color: BLUE }}>완성본</span>
+        <span className="text-sm font-semibold" style={{ color: "#4C3F99" }}>완성본</span>
       </div>
       <div className="px-5 py-5 flex items-center gap-3">
         <div className="flex gap-1.5">
@@ -295,16 +315,29 @@ function RevisionLoadingCard() {
             <span key={delay} className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: color, animationDelay: `${delay}ms` }} />
           ))}
         </div>
-        <span className="text-sm" style={{ color: "rgba(255,255,255,0.45)" }}>{REVISION_LOADING_MSGS[idx]}</span>
+        <span className="text-sm" style={{ color: "#6B7280" }}>{REVISION_LOADING_MSGS[idx]}</span>
       </div>
     </div>
   );
 }
 
 /* ── 수정본 카드 (채팅 내 인라인) ── */
-function RevisionMessage({ text }: { text: string }) {
+function RevisionMessage({
+  text,
+  companyName,
+  jobTitle,
+  question,
+  charLimit,
+}: {
+  text: string;
+  companyName: string;
+  jobTitle: string;
+  question: string;
+  charLimit: string;
+}) {
   const { revision, changes, partialChanges, rest } = parseRevisionMsg(text);
   const displayChanges = changes || partialChanges;
+  const isComplete = !!revision && !!changes;
 
   return (
     <div className="flex flex-col gap-3 w-full">
@@ -312,21 +345,34 @@ function RevisionMessage({ text }: { text: string }) {
         <div className="flex items-end gap-2.5 justify-start">
           <BotBubbleAvatar />
           <div
-            className="max-w-[80%] px-4 py-3.5 text-sm lg:text-[15px] leading-[1.85] whitespace-pre-wrap"
-            style={{ background: "rgba(255,255,255,0.09)", color: "rgba(255,255,255,0.92)", borderRadius: "4px 16px 16px 16px", wordBreak: "keep-all", borderLeft: `2px solid ${BLUE}50` }}
+            className="max-w-[80%] px-4 py-3.5 text-sm leading-[1.85] whitespace-pre-wrap"
+            style={{ background: "#FFFFFF", color: "#111827", borderRadius: "4px 16px 16px 16px", wordBreak: "keep-all", boxShadow: "none", border: "1px solid #E5E7EB" }}
           >
             {rest}
           </div>
         </div>
       )}
       {revision && (
-        <div className="rounded-2xl overflow-hidden" style={{ background: `${BLUE}0D`, border: `1px solid ${BLUE}28` }}>
-          <div className="flex items-center gap-2 px-4 py-2.5 border-b" style={{ borderColor: `${BLUE}20` }}>
-            <img src="/ai-avatar.webp" alt="" className="w-5 h-5 rounded-full object-cover flex-shrink-0" />
-            <span className="text-xs lg:text-[15px] font-semibold" style={{ color: BLUE }}>완성본</span>
+        <div className="rounded-2xl overflow-hidden" style={{ background: "#EDE9FE", border: "1px solid #C4B5FD" }}>
+          <div className="flex items-center justify-between gap-2 px-4 py-2.5 border-b" style={{ borderColor: "#C4B5FD" }}>
+            <div className="flex items-center gap-2">
+              <img src="/ai-avatar.webp" alt="" className="w-5 h-5 rounded-full object-cover flex-shrink-0" />
+              <span className="text-sm font-semibold" style={{ color: "#4C3F99" }}>완성본</span>
+              <span className="text-xs" style={{ color: "#A78BFA" }}>{revision.replace(/\s/g, "").length}자</span>
+            </div>
+            {isComplete && (
+              <button
+                onClick={() => exportCoverLetterPDF(companyName, jobTitle, question, charLimit, revision, changes)}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all hover:opacity-70"
+                style={{ background: "#DDD6FE", color: "#4C3F99", border: "none" }}
+              >
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                PDF
+              </button>
+            )}
           </div>
           <div className="px-4 py-4">
-            <p className="text-sm lg:text-base leading-[1.9] whitespace-pre-wrap" style={{ color: "rgba(255,255,255,0.9)", wordBreak: "keep-all" }}>
+            <p className="text-sm leading-[1.9] whitespace-pre-wrap" style={{ color: "#111827", wordBreak: "keep-all" }}>
               {revision}
             </p>
           </div>
@@ -361,8 +407,8 @@ function InterviewQCard({
     <div
       className="rounded-2xl overflow-hidden"
       style={{
-        background: `${VIOLET}08`,
-        border: `1px solid ${VIOLET}${item.isExpanded ? "38" : "22"}`,
+        background: "#F5F3FF",
+        border: `1px solid ${item.isExpanded ? "#C4B5FD" : "#DDD6FE"}`,
         transition: "border-color 0.2s",
       }}
     >
@@ -377,7 +423,7 @@ function InterviewQCard({
         >
           {index + 1}
         </div>
-        <p className="flex-1 text-sm lg:text-base leading-relaxed" style={{ color: "rgba(255,255,255,0.88)", wordBreak: "keep-all" }}>
+        <p className="flex-1 text-sm leading-relaxed" style={{ color: "#111827", wordBreak: "keep-all" }}>
           {item.question}
         </p>
         <svg
@@ -405,11 +451,11 @@ function InterviewQCard({
                     <img src="/logo.jpg" alt="" className="w-6 h-6 rounded-md object-contain flex-shrink-0 mb-0.5" style={{ background: "#fff", padding: "1px" }} />
                   )}
                   <div
-                    className="max-w-[85%] px-4 py-3 text-sm lg:text-[15px] leading-[1.8] whitespace-pre-wrap"
+                    className="max-w-[85%] px-4 py-3 text-sm leading-[1.8] whitespace-pre-wrap"
                     style={
                       msg.role === "user"
                         ? { background: ACCENT, color: "#fff", borderRadius: "16px 4px 16px 16px", wordBreak: "keep-all" }
-                        : { background: "rgba(255,255,255,0.09)", color: "rgba(255,255,255,0.92)", borderRadius: "4px 16px 16px 16px", wordBreak: "keep-all", borderLeft: `2px solid ${VIOLET}55` }
+                        : { background: "#FFFFFF", color: "#111827", borderRadius: "4px 16px 16px 16px", wordBreak: "keep-all", boxShadow: "0 1px 4px rgba(0,0,0,0.07)", border: "1px solid #E5E7EB" }
                     }
                   >
                     {msg.role === "bot" && msg.text === "" ? (
@@ -443,15 +489,16 @@ function InterviewQCard({
                   rows={2}
                   className="flex-1 focus:outline-none disabled:opacity-30 resize-none placeholder:opacity-35"
                   style={{
-                    background: "rgba(255,255,255,0.05)",
-                    border: `1px solid ${VIOLET}28`,
+                    background: "#FFFFFF",
+                    border: `1.5px solid rgba(0,0,0,0.12)`,
                     borderRadius: "12px",
                     padding: "10px 14px",
                     fontSize: "14px",
                     lineHeight: "1.5",
-                    color: "rgba(255,255,255,0.9)",
+                    color: "#111827",
                     maxHeight: "200px",
                     overflowY: "auto",
+                    outline: "none",
                   }}
                 />
                 <button
@@ -464,7 +511,7 @@ function InterviewQCard({
                 </button>
               </div>
               <div className="flex justify-end">
-                <span className="text-xs tabular-nums" style={{ color: item.inputText.length >= 270 ? "rgba(248,113,113,0.8)" : "rgba(255,255,255,0.2)" }}>
+                <span className="text-xs tabular-nums" style={{ color: item.inputText.length >= 270 ? "rgba(239,68,68,0.8)" : "#6B7280" }}>
                   {item.inputText.length}/300
                 </span>
               </div>
@@ -485,20 +532,113 @@ function TipPanel({ hasRevision, revisionReady }: { hasRevision: boolean; revisi
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <div className="flex items-center gap-2 px-4 py-3 flex-shrink-0 border-b" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+      <div className="flex items-center gap-2 px-4 py-3 flex-shrink-0 border-b" style={{ borderColor: "#E5E7EB" }}>
         <div className="w-1 h-3 rounded-full" style={{ background: GOLD }} />
-        <span className="text-xs font-semibold tracking-wider uppercase" style={{ color: "rgba(255,255,255,0.35)", letterSpacing: "0.08em" }}>답변 팁</span>
+        <span className="text-xs font-semibold tracking-wider uppercase" style={{ color: "#6B7280", letterSpacing: "0.08em" }}>답변 팁</span>
       </div>
       <div className="flex-1 overflow-hidden px-3 py-4 flex flex-col gap-3">
         {tips.map((tip, i) => (
-          <div key={i} className="flex items-start gap-3 px-4 py-3.5 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+          <div key={i} className="flex items-start gap-3 px-4 py-3.5 rounded-xl" style={{ background: "#F3F4F6", border: "1px solid rgba(0,0,0,0.08)" }}>
             <span className="text-lg flex-shrink-0 leading-none mt-0.5">{tip.icon}</span>
-            <p className="text-sm leading-[1.7]" style={{ color: "rgba(255,255,255,0.82)", wordBreak: "keep-all", whiteSpace: "pre-line", overflowWrap: "break-word" }}>{tip.text}</p>
+            <p className="text-sm leading-[1.7]" style={{ color: "#111827", wordBreak: "keep-all", whiteSpace: "pre-line", overflowWrap: "break-word" }}>{tip.text}</p>
           </div>
         ))}
       </div>
     </div>
   );
+}
+
+function parseAnalysisForPDF(content: string): { heading: string; items: string[] }[] {
+  return content
+    .split(/(?=## \d)/)
+    .filter(Boolean)
+    .map((section) => {
+      const lines = section.trim().split("\n").filter(Boolean);
+      const heading = lines[0]?.replace(/^##\s*/, "") ?? "";
+      const items = lines
+        .slice(1)
+        .filter((l) => l.startsWith("- "))
+        .map((l) => l.replace(/^-\s*/, "").trim());
+      return { heading, items };
+    })
+    .filter((s) => s.heading && s.items.length > 0);
+}
+
+function exportToPDF(title: string, sections: { heading: string; items: string[] }[], meta?: string) {
+  const html = `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">
+<title>${title}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; font-size: 13px; line-height: 1.75; color: #111827; padding: 48px 52px; }
+  h1 { font-size: 20px; font-weight: 700; color: #111827; margin-bottom: 4px; letter-spacing: -0.02em; }
+  .meta { font-size: 12px; color: #6B7280; margin-bottom: 32px; padding-bottom: 16px; border-bottom: 1.5px solid #E5E7EB; }
+  .section { margin-bottom: 28px; }
+  .section-title { font-size: 13px; font-weight: 700; color: #312E81; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid #EDE9FE; }
+  .item { display: flex; gap: 10px; margin-bottom: 6px; padding: 8px 12px; background: #F9FAFB; border-radius: 8px; }
+  .dot { width: 3px; border-radius: 4px; background: #A78BFA; flex-shrink: 0; margin-top: 2px; }
+  .item-text { font-size: 12.5px; color: #374151; line-height: 1.7; word-break: keep-all; }
+  .item-label { font-weight: 600; color: #111827; }
+  .divider { height: 1px; background: #F3F4F6; margin: 4px 0 28px; }
+  .footer { margin-top: 40px; padding-top: 14px; border-top: 1px solid #E5E7EB; font-size: 11px; color: #9CA3AF; text-align: right; }
+  @page { margin: 0; size: A4; }
+  @media print { body { padding: 36px 44px; } }
+</style></head><body>
+<h1>${title}</h1>
+${meta ? `<div class="meta">${meta}</div>` : ""}
+${sections.map((s, i) => `
+  <div class="section">
+    <div class="section-title">${s.heading}</div>
+    ${s.items.map(item => {
+      const colonIdx = item.indexOf(": ");
+      if (colonIdx > 0 && colonIdx < 20) {
+        return `<div class="item"><div class="dot"></div><div class="item-text"><span class="item-label">${item.slice(0, colonIdx)}</span>${item.slice(colonIdx)}</div></div>`;
+      }
+      return `<div class="item"><div class="dot"></div><div class="item-text">${item}</div></div>`;
+    }).join("")}
+  </div>
+  ${i < sections.length - 1 ? '<div class="divider"></div>' : ''}
+`).join("")}
+<div class="footer">취업소크라테스 · ${new Date().toLocaleDateString("ko-KR")}</div>
+</body></html>`;
+  const w = window.open("", "_blank");
+  if (!w) return;
+  w.document.write(html);
+  w.document.close();
+  w.onload = () => { w.focus(); w.print(); };
+}
+
+function exportCoverLetterPDF(companyName: string, jobTitle: string, question: string, charLimit: string, revision: string, changes: string) {
+  const html = `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8">
+<title>자소서 완성본</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; font-size: 13px; line-height: 1.85; color: #111827; padding: 48px 52px; }
+  h1 { font-size: 20px; font-weight: 700; color: #111827; margin-bottom: 4px; letter-spacing: -0.02em; }
+  .meta { font-size: 12px; color: #6B7280; margin-bottom: 24px; padding-bottom: 14px; border-bottom: 1.5px solid #E5E7EB; }
+  .label { font-size: 11px; font-weight: 700; color: #6366F1; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 8px; }
+  .question-box { padding: 12px 16px; background: #F5F3FF; border-radius: 10px; font-size: 12.5px; color: #4C3F99; font-weight: 500; margin-bottom: 24px; line-height: 1.6; word-break: keep-all; }
+  .body-text { font-size: 13px; color: #111827; line-height: 2; word-break: keep-all; white-space: pre-wrap; }
+  .changes-section { margin-top: 28px; padding-top: 20px; border-top: 1px solid #E5E7EB; }
+  .change-item { display: flex; gap: 8px; margin-bottom: 6px; font-size: 12px; color: #374151; }
+  .change-dot { width: 3px; border-radius: 4px; background: #F59E0B; flex-shrink: 0; margin-top: 3px; }
+  .char-count { font-size: 11px; color: #9CA3AF; margin-top: 12px; text-align: right; }
+  .footer { margin-top: 36px; padding-top: 12px; border-top: 1px solid #E5E7EB; font-size: 11px; color: #9CA3AF; text-align: right; }
+  @page { margin: 0; size: A4; }
+</style></head><body>
+<h1>자소서 완성본</h1>
+<div class="meta">${[companyName, jobTitle].filter(Boolean).join(" · ")}${charLimit ? ` · ${charLimit}자` : ""}</div>
+${question ? `<div class="label">문항</div><div class="question-box">${question}</div>` : ""}
+<div class="label">완성본</div>
+<div class="body-text">${revision}</div>
+<div class="char-count">${revision.replace(/\s/g,"").length}자</div>
+${changes ? `<div class="changes-section"><div class="label">수정 포인트</div>${changes.split("\n").filter(Boolean).map(c => `<div class="change-item"><div class="change-dot"></div><span>${c.replace(/^[-·]\s*/,"")}</span></div>`).join("")}</div>` : ""}
+<div class="footer">취업소크라테스 · ${new Date().toLocaleDateString("ko-KR")}</div>
+</body></html>`;
+  const w = window.open("", "_blank");
+  if (!w) return;
+  w.document.write(html);
+  w.document.close();
+  w.onload = () => { w.focus(); w.print(); };
 }
 
 const initItem: CoverItem = {
@@ -512,9 +652,31 @@ const initItem: CoverItem = {
   apiHistory: [],
   interviewQs: [],
   isLoadingQs: false,
+  setupStep: "question",
+  setupMsgs: [],
 };
 
 export default function ChatPage() {
+  const [stage, setStage] = useState<"info" | "chat">("info");
+  const [stageLeaving, setStageLeaving] = useState(false);
+  const [stageEntering, setStageEntering] = useState(false);
+  const [companyName, setCompanyName] = useState("");
+  const [companyWebsite, setCompanyWebsite] = useState("");
+  const [jobLink, setJobLink] = useState("");
+  const [jobPostText, setJobPostText] = useState("");
+  const [jobPostImagePreview, setJobPostImagePreview] = useState("");
+  const [showJobPostModal, setShowJobPostModal] = useState(false);
+  const [jobPostTab, setJobPostTab] = useState<"link" | "text" | "image">("link");
+  const jobPostFileRef = useRef<HTMLInputElement>(null);
+  const [showAnalysisPanel, setShowAnalysisPanel] = useState(false);
+  const [analysisContent, setAnalysisContent] = useState("");
+  const [isLoadingAnalysis, setIsLoadingAnalysis] = useState(false);
+  const [editingField, setEditingField] = useState<"question" | "charLimit" | null>(null);
+  const [editFieldValue, setEditFieldValue] = useState("");
+  const [setupInput, setSetupInput] = useState("");
+  const setupBottomRef = useRef<HTMLDivElement>(null);
+  const setupInputRef = useRef<HTMLTextAreaElement>(null);
+
   const [jobTitle, setJobTitle] = useState("");
   const [chatMode, setChatMode] = useState<"analyze" | "personality" | "motivation">("analyze");
   const [modeDropdownOpen, setModeDropdownOpen] = useState(false);
@@ -612,7 +774,7 @@ export default function ChatPage() {
   }
 
   function addItem() {
-    const item: CoverItem = { id: uid(), dbId: null, question: "", draft: "", charLimit: "", status: "idle", msgs: [], apiHistory: [], interviewQs: [], isLoadingQs: false };
+    const item: CoverItem = { id: uid(), dbId: null, question: "", draft: "", charLimit: "", status: "idle", msgs: [], apiHistory: [], interviewQs: [], isLoadingQs: false, setupStep: "question", setupMsgs: [] };
     setItems((prev) => [...prev, item]);
     setSelectedId(item.id);
   }
@@ -621,7 +783,7 @@ export default function ChatPage() {
     setItems((prev) => {
       const next = prev.filter((it) => it.id !== id);
       if (next.length === 0) {
-        const fresh: CoverItem = { id: uid(), dbId: null, question: "", draft: "", charLimit: "", status: "idle", msgs: [], apiHistory: [], interviewQs: [], isLoadingQs: false };
+        const fresh: CoverItem = { id: uid(), dbId: null, question: "", draft: "", charLimit: "", status: "idle", msgs: [], apiHistory: [], interviewQs: [], isLoadingQs: false, setupStep: "question", setupMsgs: [] };
         setSelectedId(fresh.id);
         return [fresh];
       }
@@ -720,10 +882,10 @@ export default function ChatPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(
           chatMode === "motivation"
-            ? { type: "motivation", jobTitle, companyInfo, draft, charLimit, messages: history }
+            ? { type: "motivation", jobTitle, companyInfo, draft, charLimit, messages: history, analysisReport: analysisContent }
             : chatMode === "personality"
-            ? { type: "personality", jobTitle, companyInfo, draft, charLimit, messages: history }
-            : { type: "analyze", jobTitle, companyInfo, question, draft, charLimit, messages: history }
+            ? { type: "personality", jobTitle, companyInfo, draft, charLimit, messages: history, analysisReport: analysisContent }
+            : { type: "analyze", jobTitle, companyInfo, question, draft, charLimit, messages: history, analysisReport: analysisContent }
         ),
       });
       if (!res.body) throw new Error();
@@ -788,6 +950,14 @@ export default function ChatPage() {
     el.style.height = "46px";
     el.style.height = Math.min(el.scrollHeight, 160) + "px";
   }, [input]);
+
+  useEffect(() => {
+    setTimeout(() => setupBottomRef.current?.scrollIntoView({ behavior: "smooth" }), 60);
+  }, [selected?.setupMsgs.length]);
+
+  useEffect(() => {
+    setSetupInput("");
+  }, [selectedId]);
 
   async function checkResumeSession(userId: string) {
     if (resumeCheckedRef.current) return;
@@ -898,6 +1068,8 @@ export default function ChatPage() {
             apiHistory,
             interviewQs: [],
             isLoadingQs: false,
+            setupStep: "ready" as const,
+            setupMsgs: [] as SetupMsg[],
           };
         })
       );
@@ -905,6 +1077,7 @@ export default function ChatPage() {
       if (newItems.length > 0) {
         setItems(newItems);
         setSelectedId(newItems[0].id);
+        setStage("chat");
         setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 200);
       }
     } catch { /* 무시 */ }
@@ -958,6 +1131,8 @@ export default function ChatPage() {
             apiHistory,
             interviewQs: [],
             isLoadingQs: false,
+            setupStep: "ready" as const,
+            setupMsgs: [] as SetupMsg[],
           };
         })
       );
@@ -965,6 +1140,7 @@ export default function ChatPage() {
       if (newItems.length > 0) {
         setItems(newItems);
         setSelectedId(newItems[0].id);
+        setStage("chat");
         setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 200);
       }
     } catch { /* 무시 */ }
@@ -1007,6 +1183,119 @@ export default function ChatPage() {
     toastTimer.current = setTimeout(() => { setToast(""); setToastField(""); }, 2500);
   }
 
+  function handleGoToChat() {
+    if (!companyName.trim()) { showToast("회사명을 입력해주세요", ""); return; }
+    if (!jobTitle.trim()) { showToast("지원 직무를 입력해주세요", "jobTitle"); return; }
+    const siteNote = companyWebsite.trim() ? ` 사이트: ${companyWebsite.trim()}` : "";
+    const jobPostNote = jobLink.trim()
+      ? ` 채용공고 링크: ${jobLink.trim()}`
+      : jobPostText.trim()
+      ? ` 채용공고 내용: ${jobPostText.trim()}`
+      : jobPostImagePreview
+      ? " (채용공고 이미지 첨부)"
+      : "";
+    setCompanyInfo(companyName.trim() + siteNote + jobPostNote);
+    const firstText = chatMode === "analyze"
+      ? "📝 분석할 자소서 문항을 알려주세요.\n예: '팀 프로젝트에서 발휘한 리더십 경험을 서술하시오.'"
+      : chatMode === "motivation"
+      ? "📝 어떤 문항인가요?\n예: '지원 동기와 입사 후 포부를 서술하시오.'"
+      : "📝 어떤 문항인가요?\n예: '본인의 성격 장단점을 서술하시오.'";
+    updateItem(selectedId, { setupStep: "question", setupMsgs: [{ id: uid(), role: "bot", text: firstText }] });
+    setAnalysisContent("");
+    setShowAnalysisPanel(false);
+    setStageLeaving(true);
+    setTimeout(() => {
+      setStage("chat");
+      setStageLeaving(false);
+      setStageEntering(true);
+      setTimeout(() => setStageEntering(false), 380);
+      fetchAnalysisReport(false);
+    }, 260);
+  }
+
+  async function fetchAnalysisReport(showPanel = true) {
+    if (isLoadingAnalysis) return;
+    setAnalysisContent("");
+    setIsLoadingAnalysis(true);
+    if (showPanel) setShowAnalysisPanel(true);
+    try {
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "company-analysis",
+          companyName,
+          jobTitle,
+          companyWebsite,
+          jobLink,
+          jobPostText,
+          jobPostImage: jobPostImagePreview || "",
+        }),
+      });
+      if (!res.body) throw new Error();
+      const reader = res.body.getReader();
+      const dec = new TextDecoder();
+      let full = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        full += dec.decode(value, { stream: true });
+        setAnalysisContent(full);
+      }
+    } catch {
+      setAnalysisContent("분석 중 오류가 발생했어요. 다시 시도해주세요.");
+    } finally {
+      setIsLoadingAnalysis(false);
+    }
+  }
+
+  function handleSetupSubmit() {
+    if (!selected) return;
+    const t = setupInput.trim();
+    if (!t) return;
+    setSetupInput("");
+    const userMsg: SetupMsg = { id: uid(), role: "user", text: t };
+    const step = selected.setupStep;
+    const base = [...selected.setupMsgs, userMsg];
+    updateItem(selectedId, { setupMsgs: base });
+
+    if (step === "question") {
+      updateItem(selectedId, { question: t });
+      setTimeout(() => {
+        const bot: SetupMsg = { id: uid(), role: "bot", text: "✏️ 몇 글자로 작성할까요?\n숫자만 입력해주세요. 예: 700" };
+        updateItem(selectedId, { setupStep: "charLimit", setupMsgs: [...base, bot] });
+      }, 480);
+    } else if (step === "charLimit") {
+      const num = parseInt(t.replace(/[^0-9]/g, ""));
+      if (!num || num < 50 || num > 2000) {
+        setTimeout(() => {
+          const bot: SetupMsg = { id: uid(), role: "bot", text: "50~2000 사이 숫자로 입력해주세요. 예: 700" };
+          updateItem(selectedId, { setupMsgs: [...base, bot] });
+        }, 300);
+        return;
+      }
+      updateItem(selectedId, { charLimit: String(num) });
+      setTimeout(() => {
+        const bot: SetupMsg = { id: uid(), role: "bot", text: "📋 자소서 초안을 붙여넣어주세요." };
+        updateItem(selectedId, { setupStep: "draft", setupMsgs: [...base, bot] });
+      }, 480);
+    } else if (step === "draft") {
+      if (t.length > DRAFT_MAX) {
+        setTimeout(() => {
+          const bot: SetupMsg = { id: uid(), role: "bot", text: `초안이 너무 길어요. ${DRAFT_MAX}자 이하로 줄여주세요.` };
+          updateItem(selectedId, { setupMsgs: [...base, bot] });
+        }, 300);
+        return;
+      }
+      updateItem(selectedId, { draft: t });
+      setTimeout(() => {
+        const bot: SetupMsg = { id: uid(), role: "bot", text: "✅ 준비됐어요!\n논리 흐름 · 문맥 · 직무 이해도를 짚어드릴게요." };
+        updateItem(selectedId, { setupStep: "ready", setupMsgs: [...base, bot] });
+        setShowAnalysisPanel(true);
+      }, 480);
+    }
+  }
+
   function proceedWithAnalysis() {
     const isAdmin = currentUser?.email === ADMIN_EMAIL;
     if (isAdmin || userCredits === null) {
@@ -1019,10 +1308,8 @@ export default function ChatPage() {
   async function handleStartClick() {
     if (!selected) return;
     if (!jobTitle.trim()) { showToast("지원 직무를 먼저 입력해주세요", "jobTitle"); return; }
-    if (chatMode === "analyze") {
-      if (!selected.question.trim()) { showToast("자소서 문항을 먼저 입력해주세요", "question"); return; }
-      if (!selected.charLimit.trim()) { showToast("글자수 제한을 먼저 입력해주세요", "charLimit"); return; }
-    }
+    if (!selected.question.trim()) { showToast("자소서 문항을 먼저 입력해주세요", "question"); return; }
+    if (!selected.charLimit.trim()) { showToast("글자수 제한을 먼저 입력해주세요", "charLimit"); return; }
     if (!selected.draft.trim()) { showToast("자소서 초안을 먼저 입력해주세요", "draft"); return; }
 
     const isAdmin = currentUser?.email === ADMIN_EMAIL;
@@ -1280,29 +1567,130 @@ export default function ChatPage() {
 
   return (
     <>
-      <div className="h-dvh flex flex-col" style={{ background: BG, color: "rgba(255,255,255,0.88)" }}>
+      {/* ── STAGE 1: 정보 입력 ── */}
+      {stage === "info" && (
+        <div className="h-dvh flex flex-col" style={{ background: "#F9FAFB", opacity: stageLeaving ? 0 : 1, transform: stageLeaving ? "scale(0.97) translateY(-6px)" : "scale(1) translateY(0)", transition: "opacity 0.26s ease, transform 0.26s ease" }}>
+          <div className="flex items-center justify-between px-6 py-4 flex-shrink-0">
+            <Link href="/" className="flex items-center gap-1.5 text-sm font-semibold hover:opacity-70 transition-opacity" style={{ color: "#111827" }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></svg>
+              홈
+            </Link>
+            <div className="flex items-center gap-2">
+              <img src="/ai-avatar.webp" alt="" className="w-6 h-6 rounded-full object-cover" />
+              <span className="text-sm font-semibold" style={{ color: "#111827" }}>취업소크라테스</span>
+            </div>
+            <div style={{ width: "52px" }} />
+          </div>
+          <div className="flex-1 flex items-center justify-center px-5">
+            <div className="w-full max-w-[460px] flex flex-col gap-5">
+              <p className="text-sm pl-4" style={{ color: "#6B7280" }}>정보를 입력하면 채팅으로 바로 시작합니다</p>
+              {/* 회사 정보 */}
+              <div className="flex flex-col gap-2.5">
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-semibold pl-1 flex items-center gap-0.5" style={{ color: "#111827" }}>
+                      기업명 <span style={{ color: "#EF4444" }}>*</span>
+                    </label>
+                    <input value={companyName} onChange={(e) => setCompanyName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleGoToChat()} placeholder="삼성전자" className="ds-input w-full px-4 py-3.5 rounded-2xl text-sm placeholder:text-[#9CA3AF]" style={{ background: "#FFFFFF", border: "1.5px solid #E5E7EB", color: "#111827", outline: "none", boxShadow: "none" }} />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-semibold pl-1" style={{ color: "#6B7280" }}>회사 사이트</label>
+                    <input value={companyWebsite} onChange={(e) => setCompanyWebsite(e.target.value)} placeholder="https://..." className="ds-input w-full px-4 py-3.5 rounded-2xl text-sm placeholder:text-[#9CA3AF]" style={{ background: "#FFFFFF", border: "1.5px solid #E5E7EB", color: "#111827", outline: "none", boxShadow: "none" }} />
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-semibold pl-1 flex items-center gap-0.5" style={{ color: "#111827" }}>
+                    지원 직무 <span style={{ color: "#EF4444" }}>*</span>
+                  </label>
+                  <input value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleGoToChat()} placeholder="마케팅 기획" className="ds-input w-full px-4 py-3.5 rounded-2xl text-sm placeholder:text-[#9CA3AF]" style={{ background: "#FFFFFF", border: `1.5px solid ${toastField === "jobTitle" ? "#EF4444" : "#E5E7EB"}`, color: "#111827", outline: "none", boxShadow: "none" }} />
+                </div>
+                {/* 채용공고 입력 버튼 */}
+                {(() => {
+                  const hasContent = jobLink.trim() || jobPostText.trim() || jobPostImagePreview;
+                  return (
+                    <button
+                      type="button"
+                      onClick={() => setShowJobPostModal(true)}
+                      className="w-full px-4 py-3.5 rounded-2xl text-sm text-left flex items-center justify-between transition-all hover:opacity-80"
+                      style={{
+                        background: hasContent ? "#F5F3FF" : "#FFFFFF",
+                        border: `1.5px solid ${hasContent ? "#A78BFA" : "#E5E7EB"}`,
+                        color: hasContent ? "#4C3F99" : "#6B7280",
+                      }}
+                    >
+                      <span className="flex items-center gap-2">
+                        <span className="text-base leading-none">{hasContent ? "📎" : "📋"}</span>
+                        <span>
+                          {hasContent
+                            ? jobLink.trim()
+                              ? `링크: ${jobLink.trim().slice(0, 30)}${jobLink.trim().length > 30 ? "…" : ""}`
+                              : jobPostText.trim()
+                              ? `텍스트: ${jobPostText.trim().slice(0, 25)}${jobPostText.trim().length > 25 ? "…" : ""}`
+                              : "이미지 첨부됨"
+                            : "채용공고 입력하기 (선택)"}
+                        </span>
+                      </span>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.5, flexShrink: 0 }}>
+                        <polyline points="9 18 15 12 9 6" />
+                      </svg>
+                    </button>
+                  );
+                })()}
+              </div>
+              {/* 카테고리 */}
+              <div className="grid grid-cols-3 gap-2.5">
+                {([
+                  { key: "analyze",     label: "직무역량",    desc: "경험과 역량을 꺼냅니다",  color: BLUE,   emoji: "💼" },
+                  { key: "motivation",  label: "지원동기",    desc: "나만의 동기를 찾습니다",  color: GOLD,   emoji: "✨" },
+                  { key: "personality", label: "성격 장단점", desc: "나다운 문장으로 씁니다",  color: VIOLET, emoji: "🌱" },
+                ] as { key: typeof chatMode; label: string; desc: string; color: string; emoji: string }[]).map(({ key, label, desc, color, emoji }) => (
+                  <button key={key} onClick={() => setChatMode(key)} className="flex flex-col gap-2 px-4 py-4 rounded-2xl text-left transition-all" style={{ background: "#FFFFFF", border: `${chatMode === key ? "2px" : "1px"} solid ${chatMode === key ? color : "#E5E7EB"}`, boxShadow: chatMode === key ? `0 2px 8px rgba(0,0,0,0.08)` : "none", transition: "all 0.15s ease" }}>
+                    <span className="text-xl leading-none">{emoji}</span>
+                    <span className="text-sm font-semibold" style={{ color: "#111827" }}>{label}</span>
+                    <p className="text-xs leading-relaxed" style={{ color: "#6B7280", wordBreak: "keep-all" }}>{desc}</p>
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center">
+                <button
+                  onClick={handleGoToChat}
+                  className="flex items-center gap-2 pl-4 hover:opacity-60 transition-opacity active:scale-[0.97]"
+                >
+                  <span className="text-base font-bold" style={{ color: "#111827", letterSpacing: "-0.01em" }}>시작하기</span>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#111827" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── STAGE 2: 채팅 ── */}
+      {stage === "chat" && (
+      <div style={{ opacity: stageEntering ? 0 : 1, transform: stageEntering ? "translateY(14px)" : "translateY(0)", transition: "opacity 0.38s ease, transform 0.38s ease", height: "100dvh", display: "flex", flexDirection: "column" }}>
+      <div className="flex-1 flex flex-col overflow-hidden" style={{ background: "#F9FAFB" }}>
 
         {/* ── 헤더 ── */}
         <header
           className="flex items-center justify-between px-4 flex-shrink-0"
           style={{
             height: "52px",
-            background: "rgba(13,13,24,0.85)",
-            backdropFilter: "blur(12px)",
-            borderBottom: "1px solid rgba(255,255,255,0.06)",
-            boxShadow: "0 1px 0 rgba(107,142,255,0.06)",
+            background: "#FFFFFF",
+            borderBottom: "1px solid #E5E7EB",
           }}
         >
-          <Link
-            href="/"
-            className="flex items-center gap-1.5 text-xs lg:text-sm font-bold transition-opacity hover:opacity-80 flex-shrink-0"
-            style={{ color: "rgba(255,255,255,0.82)", background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.15)", padding: "5px 11px", borderRadius: 9 }}
+          <button
+            onClick={() => { setStage("info"); setShowAnalysisPanel(false); setAnalysisContent(""); }}
+            className="flex items-center gap-1.5 text-sm font-semibold transition-opacity hover:opacity-70 flex-shrink-0"
+            style={{ color: "#111827" }}
           >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" />
             </svg>
-            홈으로
-          </Link>
+            공고
+          </button>
           <button
             className="flex items-center gap-1.5 min-w-0 hover:opacity-75 transition-opacity"
             onClick={() => {
@@ -1311,21 +1699,21 @@ export default function ChatPage() {
             }}
           >
             <img src="/ai-avatar.webp" alt="" className="w-5 h-5 rounded-full object-cover flex-shrink-0" />
-            <span className="text-xs sm:text-sm lg:text-[15px] font-semibold truncate" style={{ color: "rgba(255,255,255,0.78)", letterSpacing: "-0.01em" }}>취업소크라테스</span>
+            <span className="text-xs sm:text-sm lg:text-[15px] font-semibold truncate" style={{ color: "#111827", letterSpacing: "-0.01em" }}>취업소크라테스</span>
           </button>
           <div className="flex items-center gap-2 flex-shrink-0">
             {currentUser && userCredits !== null && currentUser.email !== ADMIN_EMAIL && (
               <div
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs lg:text-[15px] font-semibold"
-                style={{ background: "rgba(255,209,102,0.12)", border: "1px solid rgba(255,209,102,0.25)", color: "rgba(255,209,102,0.9)" }}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-sm font-semibold"
+                style={{ background: "rgba(212,146,10,0.10)", border: "1px solid rgba(212,146,10,0.22)", color: "#8B6A0A" }}
               >
                 🏅 {userCredits}
               </div>
             )}
             <button
               onClick={() => setShowLogoutConfirm(true)}
-              className="text-xs lg:text-sm px-2.5 py-1.5 rounded-lg transition-all hover:opacity-80"
-              style={{ background: `rgba(255,255,255,0.06)`, border: `1px solid rgba(255,255,255,0.12)`, color: `rgba(255,255,255,0.5)` }}
+              className="text-xs lg:text-sm px-2.5 py-1.5 rounded-lg transition-all hover:opacity-70"
+              style={{ background: "#F3F4F6", border: "1px solid #E5E7EB", color: "#6B7280" }}
             >
               로그아웃
             </button>
@@ -1338,8 +1726,8 @@ export default function ChatPage() {
             className="fixed top-16 left-1/2 lg:left-[calc(136px+50vw)] z-50 px-5 py-2.5 rounded-2xl text-sm font-medium shadow-lg"
             style={{
               transform: "translateX(-50%)",
-              background: "rgba(255,107,53,0.15)",
-              border: "1px solid rgba(255,107,53,0.35)",
+              background: "rgba(67,56,202,0.15)",
+              border: "1px solid rgba(67,56,202,0.35)",
               color: "rgba(255,255,255,0.9)",
               backdropFilter: "blur(12px)",
             }}
@@ -1368,427 +1756,220 @@ export default function ChatPage() {
         {/* ── 메인 ── */}
         <div className="flex-1 flex overflow-hidden">
 
-          {/* ────────── 왼쪽 패널 (lg 이상에서만) ────────── */}
-          <div className="hidden lg:flex flex-shrink-0 flex-col border-r relative overflow-hidden" style={{ width: "272px", borderColor: "rgba(255,255,255,0.06)", background: "rgba(9,9,22,0.6)" }}>
-            {/* 앰비언트 글로우 */}
-            <div style={{ position: "absolute", top: -30, left: "50%", transform: "translateX(-50%)", width: 220, height: 140, background: `radial-gradient(circle, ${BLUE}16 0%, transparent 70%)`, pointerEvents: "none", zIndex: 0 }} />
+          {/* ────────── 왼쪽 패널 (lg 이상) ────────── */}
+          <div className="hidden lg:flex flex-shrink-0 flex-col border-r overflow-hidden" style={{ width: "260px", borderColor: "#E5E7EB", background: "#FFFFFF" }}>
 
             {/* 지원 정보 */}
-            <div
-              className="flex flex-col gap-3 border-b flex-shrink-0 relative"
-              style={{ borderColor: "rgba(255,255,255,0.06)", padding: "16px 14px 18px", zIndex: 1 }}
-            >
-              <div className="flex items-center gap-1.5">
-                <div className="w-1 h-3.5 rounded-full flex-shrink-0" style={{ background: `linear-gradient(to bottom, ${ACCENT}, ${BLUE})` }} />
-                <span className="text-xs lg:text-[15px] font-semibold tracking-wider uppercase" style={{ color: "rgba(255,255,255,0.45)", letterSpacing: "0.1em" }}>
-                  지원 정보
-                </span>
-              </div>
-
-              {/* 카테고리 드롭다운 */}
+            <div className="flex flex-col gap-3 border-b flex-shrink-0" style={{ borderColor: "#E5E7EB", padding: "18px 16px" }}>
+              {/* 선택된 카테고리 — 텍스트만 */}
               {(() => {
-                const MODES = [
-                  { key: "personality", label: "성격 장/단점", color: VIOLET },
-                  { key: "analyze",     label: "직무역량",     color: BLUE },
-                  { key: "motivation",  label: "지원동기",     color: GOLD },
-                ] as const;
-                const current = MODES.find(m => m.key === chatMode)!;
+                const modeMap = {
+                  analyze:     { label: "직무역량",    color: BLUE,   emoji: "💼" },
+                  motivation:  { label: "지원동기",    color: GOLD,   emoji: "✨" },
+                  personality: { label: "성격 장단점", color: VIOLET, emoji: "🌱" },
+                } as const;
+                const { label, color, emoji } = modeMap[chatMode];
                 return (
-                  <div className="flex flex-col gap-1.5" style={{ position: "relative" }}>
-                    <label className="text-xs lg:text-[15px] font-medium" style={{ color: "rgba(255,255,255,0.45)" }}>카테고리</label>
-                    <button
-                      onClick={() => setModeDropdownOpen(v => !v)}
-                      className="flex items-center justify-between px-3 py-2.5 rounded-xl"
-                      style={{
-                        background: "rgba(255,255,255,0.05)",
-                        border: `1px solid ${modeDropdownOpen ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.1)"}`,
-                        transition: "border-color 0.2s",
-                      }}
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: current.color }} />
-                        <span className="text-sm lg:text-[15px] font-medium" style={{ color: current.color }}>{current.label}</span>
-                      </div>
-                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ transform: modeDropdownOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s", opacity: 0.4 }}>
-                        <path d="M2 4l4 4 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    </button>
-                    {modeDropdownOpen && (
-                      <div
-                        className="flex flex-col gap-0.5 rounded-xl p-1"
-                        style={{
-                          position: "absolute",
-                          top: "calc(100% + 4px)",
-                          left: 0,
-                          right: 0,
-                          background: "#16162a",
-                          border: "1px solid rgba(255,255,255,0.12)",
-                          zIndex: 50,
-                          boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
-                        }}
-                      >
-                        {MODES.map(({ key, label, color }) => (
-                          <button
-                            key={key}
-                            onClick={() => { setChatMode(key); setModeDropdownOpen(false); }}
-                            className="flex items-center gap-2 px-3 py-2 rounded-lg text-left transition-all"
-                            style={{
-                              background: chatMode === key ? "rgba(255,255,255,0.06)" : "transparent",
-                            }}
-                          >
-                            <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: chatMode === key ? color : "rgba(255,255,255,0.15)" }} />
-                            <span className="text-sm font-medium" style={{ color: chatMode === key ? color : "rgba(255,255,255,0.5)" }}>{label}</span>
-                          </button>
-                        ))}
-                      </div>
-                    )}
+                  <div className="flex items-center gap-2">
+                    <span className="text-base leading-none">{emoji}</span>
+                    <span className="text-sm font-semibold" style={{ color: "#111827" }}>{label}</span>
+                    <div className="w-1.5 h-1.5 rounded-full flex-shrink-0 ml-0.5" style={{ background: color }} />
                   </div>
                 );
               })()}
 
-              {/* 회사명/링크 */}
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs lg:text-[15px] font-medium" style={{ color: "rgba(255,255,255,0.45)" }}>
-                  회사명 또는 링크 <span className="text-xs" style={{ color: "rgba(255,255,255,0.2)" }}>선택</span>
-                </label>
-                <input
-                  value={companyInfo}
-                  onChange={(e) => setCompanyInfo(e.target.value)}
-                  placeholder="예: 카카오 / 링크"
-                  className="w-full px-3 py-2.5 rounded-xl text-sm lg:text-base placeholder:text-white/40"
-                  style={{
-                    background: "rgba(255,255,255,0.05)",
-                    border: "1px solid rgba(255,255,255,0.1)",
-                    color: "rgba(255,255,255,0.9)",
-                    outline: "none",
-                  }}
-                />
-              </div>
+              {/* 회사 + 직무 정보 표시 */}
+              {companyName && (
+                <div className="px-3 py-2.5 rounded-xl" style={{ background: "#F3F4F6", border: "1px solid #E5E7EB" }}>
+                  <p className="text-sm font-semibold" style={{ color: "#111827" }}>{companyName}</p>
+                  {jobTitle && <p className="text-xs mt-0.5" style={{ color: "#6B7280" }}>{jobTitle}</p>}
+                </div>
+              )}
+              {!companyName && jobTitle && (
+                <div className="px-3 py-2.5 rounded-xl" style={{ background: "#F3F4F6", border: "1px solid #E5E7EB" }}>
+                  <p className="text-sm font-semibold" style={{ color: "#111827" }}>{jobTitle}</p>
+                </div>
+              )}
 
-              {/* 직무 입력 */}
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs lg:text-[15px] font-medium" style={{ color: toastField === "jobTitle" ? `rgba(201,100,66,0.9)` : "rgba(255,255,255,0.45)" }}>
-                  지원 직무 또는 채용공고 링크
-                </label>
-                <input
-                  value={jobTitle}
-                  onChange={(e) => setJobTitle(e.target.value)}
-                  placeholder="예: 데이터 엔지니어 / 링크"
-                  className="glow-input w-full px-3 py-2.5 rounded-xl text-sm lg:text-base placeholder:text-white/40"
-                  style={{
-                    background: "rgba(255,255,255,0.05)",
-                    border: `1px solid ${toastField === "jobTitle" ? "rgba(201,100,66,0.5)" : "rgba(255,255,255,0.1)"}`,
-                    boxShadow: toastField === "jobTitle" ? "0 0 0 2px rgba(201,100,66,0.15)" : "none",
-                    color: "rgba(255,255,255,0.9)",
-                    transition: "border-color 0.3s, box-shadow 0.3s",
-                  }}
-                />
-              </div>
-
+              {/* 분석 보고서 버튼 */}
+              <button
+                onClick={() => {
+                  if (showAnalysisPanel) { setShowAnalysisPanel(false); }
+                  else if (analysisContent || isLoadingAnalysis) { setShowAnalysisPanel(true); }
+                  else { fetchAnalysisReport(); }
+                }}
+                className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all hover:opacity-80"
+                style={{
+                  background: showAnalysisPanel ? "#312E81" : "#EDE9FE",
+                  color: showAnalysisPanel ? "#fff" : "#4338CA",
+                  border: `1px solid ${showAnalysisPanel ? "#312E81" : "#C4B5FD"}`,
+                }}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                {showAnalysisPanel ? "보고서 닫기" : "분석 보고서"}
+              </button>
             </div>
 
             {/* 항목 목록 */}
-            <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-1.5 relative" style={{ zIndex: 1 }}>
-              <p className="text-xs lg:text-[15px] px-1 pt-0.5 pb-1.5 font-semibold tracking-wider uppercase" style={{ color: "rgba(255,255,255,0.3)", letterSpacing: "0.1em" }}>자소서 항목</p>
+            <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-1.5">
+              <p className="text-xs px-1 pt-0.5 pb-1.5 font-semibold tracking-wider uppercase" style={{ color: "#6B7280", letterSpacing: "0.10em" }}>자소서 항목</p>
 
               {items.map((item, idx) => {
                 const isSel = item.id === selectedId;
                 return (
                   <div
                     key={item.id}
-                    role="button"
-                    tabIndex={0}
+                    role="button" tabIndex={0}
                     onClick={() => setSelectedId(item.id)}
                     onKeyDown={(e) => e.key === "Enter" && setSelectedId(item.id)}
                     className="w-full text-left rounded-xl px-3 py-2.5 flex flex-col gap-0.5 transition-all group relative cursor-pointer"
                     style={{
-                      background: isSel ? `${BLUE}0E` : "rgba(255,255,255,0.03)",
-                      border: `1px solid ${isSel ? `${BLUE}35` : "rgba(255,255,255,0.06)"}`,
-                      boxShadow: isSel ? `0 0 14px ${BLUE}14, inset 0 0 0 1px ${BLUE}18` : "none",
+                      background: isSel ? "#F5F3FF" : "transparent",
+                      border: `${isSel ? "2px" : "1px"} solid ${isSel ? "#A78BFA" : "#E5E7EB"}`,
+                      boxShadow: "none",
                     }}
                   >
                     <div className="flex items-center gap-2 pr-6">
-                      <span className="text-xs font-bold flex-shrink-0" style={{ color: isSel ? BLUE : "rgba(255,255,255,0.2)" }}>
+                      <span className="text-xs font-bold flex-shrink-0" style={{ color: isSel ? "#4C3F99" : "#6B7280" }}>
                         {String(idx + 1).padStart(2, "0")}
                       </span>
-                      <span className="text-[13px] font-medium truncate" style={{ color: "rgba(255,255,255,0.78)" }}>
-                        {item.question || <span style={{ color: "rgba(255,255,255,0.22)" }}>문항 미입력</span>}
+                      <span className="text-[13px] font-medium truncate" style={{ color: "#111827" }}>
+                        {item.question || <span style={{ color: "#6B7280" }}>문항 미입력</span>}
                       </span>
                     </div>
                     {item.draft && (
-                      <p className="text-xs truncate pl-6" style={{ color: "rgba(255,255,255,0.24)" }}>{item.draft}</p>
+                      <p className="text-xs truncate pl-6" style={{ color: "#6B7280" }}>{item.draft}</p>
                     )}
                     <div className="absolute right-2 top-2.5 flex items-center gap-1">
                       {item.status === "chatting" && (
-                        <span className="rounded-full font-medium px-1.5 py-0.5" style={{ background: `${BLUE}1C`, color: BLUE, fontSize: "10px", lineHeight: "1.4" }}>진행</span>
+                        <span className="rounded-full font-medium px-1.5 py-0.5" style={{ background: `${BLUE}10`, color: BLUE, fontSize: "10px", lineHeight: "1.4" }}>진행</span>
                       )}
-                      <button
-                        onClick={(e) => { e.stopPropagation(); removeItem(item.id); }}
+                      <button onClick={(e) => { e.stopPropagation(); removeItem(item.id); }}
                         className="opacity-0 group-hover:opacity-100 transition-opacity w-4 h-4 flex items-center justify-center rounded text-xs"
-                        style={{ color: "rgba(255,255,255,0.3)" }}
-                      >×</button>
+                        style={{ color: "#6B7280" }}>×</button>
                     </div>
                   </div>
                 );
               })}
-
             </div>
           </div>
 
           {/* ────────── 오른쪽 패널 ────────── */}
-          <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex-1 flex flex-col overflow-hidden" style={{ background: "#F9FAFB" }}>
             {!selected ? (
               <div className="flex-1 flex items-center justify-center">
-                <p className="text-sm" style={{ color: "rgba(255,255,255,0.18)" }}>항목을 선택해주세요</p>
+                <p className="text-sm" style={{ color: "#6B7280" }}>항목을 선택해주세요</p>
               </div>
             ) : selected.status === "idle" ? (
 
-              /* ── 편집 패널 ── */
-              <div className="flex-1 overflow-y-auto">
-
-                {/* ── 모바일 전용: 지원정보 + 항목 탭 ── */}
-                <div className="lg:hidden flex flex-col gap-3 px-4 py-4 border-b flex-shrink-0" style={{ borderColor: "rgba(255,255,255,0.06)", background: "rgba(9,9,22,0.55)" }}>
-                  {/* 직무 */}
-                  <input
-                    value={jobTitle}
-                    onChange={(e) => setJobTitle(e.target.value)}
-                    placeholder="예: 데이터 엔지니어 / 링크"
-                    className="glow-input w-full px-3 py-2.5 rounded-xl text-sm placeholder:text-white/40"
-                    style={{
-                      background: "rgba(255,255,255,0.05)",
-                      border: `1px solid ${toastField === "jobTitle" ? "rgba(201,100,66,0.5)" : "rgba(255,255,255,0.09)"}`,
-                      boxShadow: toastField === "jobTitle" ? "0 0 0 2px rgba(201,100,66,0.15)" : "none",
-                      color: "rgba(255,255,255,0.9)",
-                      transition: "border-color 0.3s, box-shadow 0.3s",
-                    }}
-                  />
-
-                  {/* 카테고리 드롭다운 (모바일) */}
-                  {(() => {
-                    const MODES = [
-                      { key: "personality", label: "성격 장/단점", color: VIOLET },
-                      { key: "analyze",     label: "직무역량",     color: BLUE },
-                      { key: "motivation",  label: "지원동기",     color: GOLD },
-                    ] as const;
-                    const current = MODES.find(m => m.key === chatMode)!;
-                    return (
-                      <div style={{ position: "relative" }}>
-                        <button
-                          onClick={() => setModeDropdownOpen(v => !v)}
-                          className="flex items-center justify-between w-full px-3 py-2 rounded-xl"
-                          style={{
-                            background: "rgba(255,255,255,0.05)",
-                            border: `1px solid ${modeDropdownOpen ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.1)"}`,
-                          }}
-                        >
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: current.color }} />
-                            <span className="text-xs font-medium" style={{ color: current.color }}>{current.label}</span>
-                          </div>
-                          <svg width="10" height="10" viewBox="0 0 12 12" fill="none" style={{ transform: modeDropdownOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s", opacity: 0.4 }}>
-                            <path d="M2 4l4 4 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                        </button>
-                        {modeDropdownOpen && (
-                          <div
-                            className="flex flex-col gap-0.5 rounded-xl p-1"
-                            style={{
-                              position: "absolute",
-                              top: "calc(100% + 4px)",
-                              left: 0,
-                              right: 0,
-                              background: "#16162a",
-                              border: "1px solid rgba(255,255,255,0.12)",
-                              zIndex: 50,
-                              boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
-                            }}
-                          >
-                            {MODES.map(({ key, label, color }) => (
-                              <button
-                                key={key}
-                                onClick={() => { setChatMode(key); setModeDropdownOpen(false); }}
-                                className="flex items-center gap-2 px-3 py-2 rounded-lg text-left"
-                                style={{ background: chatMode === key ? "rgba(255,255,255,0.06)" : "transparent" }}
-                              >
-                                <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: chatMode === key ? color : "rgba(255,255,255,0.15)" }} />
-                                <span className="text-xs font-medium" style={{ color: chatMode === key ? color : "rgba(255,255,255,0.5)" }}>{label}</span>
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
-
-                  {/* 회사명/링크 */}
-                  <input
-                    value={companyInfo}
-                    onChange={(e) => setCompanyInfo(e.target.value)}
-                    placeholder="예: 카카오 / 링크"
-                    className="w-full px-3 py-2.5 rounded-xl text-sm placeholder:text-white/40"
-                    style={{
-                      background: "rgba(255,255,255,0.05)",
-                      border: "1px solid rgba(255,255,255,0.1)",
-                      color: "rgba(255,255,255,0.9)",
-                      outline: "none",
-                    }}
-                  />
-
-                  {/* 항목 탭 */}
-                  <div className="flex items-center gap-1.5 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
+              /* ── Setup Chat (라이트 테마) ── */
+              <div className="flex-1 flex flex-col overflow-hidden">
+                {/* 모바일 항목 탭 */}
+                {items.length > 1 && (
+                  <div className="lg:hidden flex items-center gap-1.5 px-4 py-2.5 border-b flex-shrink-0" style={{ borderColor: "#E5E7EB", background: "#FFFFFF" }}>
                     {items.map((item, idx) => {
                       const isSel = item.id === selectedId;
                       return (
-                        <button
-                          key={item.id}
-                          onClick={() => setSelectedId(item.id)}
-                          className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
-                          style={{
-                            background: isSel ? `${BLUE}18` : "rgba(255,255,255,0.05)",
-                            border: `1px solid ${isSel ? `${BLUE}40` : "rgba(255,255,255,0.08)"}`,
-                            color: isSel ? BLUE : "rgba(255,255,255,0.42)",
-                            boxShadow: isSel ? `0 0 10px ${BLUE}18` : "none",
-                          }}
-                        >
-                          <span>{String(idx + 1).padStart(2, "0")}</span>
-                          {item.question && (
-                            <span className="max-w-[72px] truncate">{item.question}</span>
-                          )}
-                        </button>
+                        <button key={item.id} onClick={() => setSelectedId(item.id)}
+                          className="flex-shrink-0 px-2.5 py-1 rounded-lg text-xs font-semibold"
+                          style={{ background: isSel ? `${BLUE}12` : "#F0F1F3", border: `1px solid ${isSel ? `${BLUE}30` : "transparent"}`, color: isSel ? BLUE : "#6B7280" }}
+                        >{String(idx + 1).padStart(2, "0")}</button>
                       );
                     })}
                   </div>
+                )}
+
+                {/* 메시지 영역 */}
+                <div className="flex-1 overflow-y-auto hide-scrollbar px-5 py-10">
+                  <div className="max-w-[660px] mx-auto flex flex-col gap-4">
+                    {selected.setupMsgs.map((msg) => (
+                      <div key={msg.id} className={`flex items-end gap-2.5 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                        {msg.role === "bot" && (
+                          <img src="/ai-avatar.webp" alt="" className="w-7 h-7 rounded-full object-cover flex-shrink-0 mb-0.5" style={{ background: "#fff", padding: "2px", boxShadow: "0 1px 4px rgba(0,0,0,0.10)" }} />
+                        )}
+                        <div
+                          className="max-w-[78%] px-4 py-3.5 text-sm leading-[1.85] whitespace-pre-wrap"
+                          style={msg.role === "bot"
+                            ? { background: "#FFFFFF", color: "#111827", borderRadius: "4px 16px 16px 16px", wordBreak: "keep-all", boxShadow: "none", border: "1px solid #E5E7EB" }
+                            : { background: ACCENT, color: "#fff", borderRadius: "16px 4px 16px 16px", wordBreak: "keep-all" }
+                          }
+                        >{msg.text}</div>
+                      </div>
+                    ))}
+                    <div ref={setupBottomRef} />
+                  </div>
                 </div>
 
-                <div className="px-5 sm:px-8 py-6 sm:py-10">
-                <div className="max-w-2xl mx-auto lg:max-w-none lg:flex lg:items-start lg:gap-8">
-                <div className="lg:flex-1 flex flex-col gap-6 min-w-0">
-
-                  {/* 문항 */}
-                  <div className="flex flex-col gap-2">
-                    <label className="text-xs lg:text-[15px] font-semibold tracking-wider uppercase" style={{ color: toastField === "question" ? "rgba(201,100,66,0.9)" : "rgba(255,255,255,0.4)", letterSpacing: "0.08em" }}>자소서 문항</label>
-                    <input
-                      value={selected.question}
-                      onChange={(e) => updateItem(selectedId, { question: e.target.value })}
-                      placeholder="예: 성장 과정 및 지원 동기를 작성해주세요."
-                      className="glow-input w-full px-4 py-3 rounded-xl text-sm lg:text-base"
-                      style={{ background: "rgba(255,255,255,0.04)", border: `1px solid ${toastField === "question" ? "rgba(201,100,66,0.5)" : "rgba(255,255,255,0.08)"}`, boxShadow: toastField === "question" ? "0 0 0 2px rgba(201,100,66,0.15)" : "none", color: "rgba(255,255,255,0.9)" }}
-                    />
-                  </div>
-
-                  {/* 글자 수 제한 */}
-                  <div
-                    className="flex items-center gap-3 px-4 py-3.5 rounded-xl"
-                    style={{
-                      background: selected.charLimit ? `${ACCENT}0E` : "rgba(255,255,255,0.025)",
-                      border: `1px solid ${selected.charLimit ? `${ACCENT}45` : toast ? "rgba(201,100,66,0.5)" : "rgba(255,255,255,0.07)"}`,
-                      transition: "all 0.2s ease",
-                      boxShadow: toast && !selected.charLimit ? `0 0 0 2px rgba(201,100,66,0.15)` : "none",
-                    }}
-                  >
-                    <div className="w-1 h-5 rounded-full flex-shrink-0" style={{ background: selected.charLimit ? ACCENT : toast ? `rgba(201,100,66,0.6)` : "rgba(255,255,255,0.15)", transition: "background 0.2s" }} />
-                    <div className="flex-1">
-                      <p className="text-xs lg:text-[15px] font-semibold" style={{ color: selected.charLimit ? "rgba(255,255,255,0.82)" : toast ? `rgba(201,100,66,0.9)` : "rgba(255,255,255,0.52)" }}>글자 수 제한 <span style={{ color: "rgba(201,100,66,0.6)", fontSize: "10px" }}>필수</span></p>
-                      <p className="text-xs lg:text-sm mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>첨삭 시 이 글자 수에 맞춰드려요</p>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <input
-                        type="number"
-                        min={0}
-                        max={1000}
-                        value={selected.charLimit}
-                        onChange={(e) => {
-                          const v = e.target.value === "" ? "" : String(Math.min(1000, Math.max(0, Number(e.target.value))));
-                          updateItem(selectedId, { charLimit: v });
-                        }}
-                        placeholder="예: 700"
-                        className="glow-input-accent w-24 px-2.5 py-1.5 rounded-lg text-sm text-right"
-                        style={{
-                          background: "rgba(255,255,255,0.06)",
-                          border: `1px solid ${selected.charLimit ? `${ACCENT}50` : "rgba(255,255,255,0.1)"}`,
-                          color: selected.charLimit ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.3)",
-                          MozAppearance: "textfield",
-                          appearance: "none" as React.CSSProperties["appearance"],
-                        }}
-                      />
-                      <span className="text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>자</span>
-                    </div>
-                  </div>
-
-                  {/* 초안 */}
-                  <div className="flex flex-col gap-2">
-                    <div className="flex items-center justify-between">
-                      <label className="text-xs lg:text-[15px] font-semibold tracking-wider uppercase" style={{ color: "rgba(255,255,255,0.4)", letterSpacing: "0.08em" }}>내 초안</label>
-                      {selected.draft.length > DRAFT_MAX ? (
-                        <span className="text-xs tabular-nums font-semibold" style={{ color: "#FF6B6B" }}>
-                          {selected.draft.length.toLocaleString()}자 · 최대 {DRAFT_MAX}자
-                        </span>
-                      ) : selected.charLimit && selected.draft.length > 0 ? (
-                        <span className="text-xs tabular-nums" style={{ color: selected.draft.length > Number(selected.charLimit) ? "#FF6B6B" : "rgba(255,255,255,0.2)" }}>
-                          {selected.draft.length.toLocaleString()}자 / {Number(selected.charLimit).toLocaleString()}자
-                        </span>
-                      ) : null}
-                    </div>
-                    <textarea
-                      value={selected.draft}
-                      onChange={(e) => updateItem(selectedId, { draft: e.target.value })}
-                      placeholder="작성한 자소서 초안을 붙여넣어요."
-                      rows={13}
-                      className="glow-input w-full px-4 py-3.5 rounded-xl text-sm lg:text-base resize-none"
-                      style={{
-                        background: "rgba(255,255,255,0.04)",
-                        border: `1px solid ${selected.draft.length > DRAFT_MAX ? "rgba(255,107,107,0.5)" : toastField === "draft" ? "rgba(201,100,66,0.5)" : "rgba(255,255,255,0.08)"}`,
-                        boxShadow: selected.draft.length > DRAFT_MAX ? "0 0 0 2px rgba(255,107,107,0.15)" : toastField === "draft" ? "0 0 0 2px rgba(201,100,66,0.15)" : "none",
-                        color: "rgba(255,255,255,0.88)",
-                        lineHeight: "1.85",
-                      }}
-                    />
-                    {selected.draft.length > DRAFT_MAX && (
-                      <p className="text-xs" style={{ color: "#FF6B6B" }}>
-                        글자수가 너무 많아요. {DRAFT_MAX}자까지만 입력 가능해요. ({selected.draft.length - DRAFT_MAX}자 초과)
-                      </p>
-                    )}
-                  </div>
-
-                  {/* 시작 버튼 */}
-                  <div className="flex flex-col gap-2.5 pb-4 sm:pb-0">
+                {/* 입력 영역 — floating pill */}
+                <div className="px-5 pb-6 pt-2 flex-shrink-0" style={{ background: "#F9FAFB" }}>
+                  <div className="max-w-[660px] mx-auto">
+                    {selected.setupStep === "ready" ? (
                       <button
                         onClick={handleStartClick}
-                        disabled={!canStart}
-                        className="w-full py-4 rounded-2xl text-sm lg:text-base font-semibold text-white transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-20 disabled:cursor-not-allowed"
+                        className="w-full py-4 rounded-2xl text-base font-semibold text-white transition-all hover:scale-[1.01] active:scale-[0.99]"
+                        style={{ background: `linear-gradient(135deg, ${ACCENT} 0%, ${BLUE}CC 100%)`, boxShadow: `0 4px 24px ${ACCENT}28` }}
+                      >
+                        분석하기 →
+                      </button>
+                    ) : (
+                      <div
+                        className="pill-input flex items-end gap-2"
                         style={{
-                          background: canStart ? ACCENT : "rgba(255,255,255,0.08)",
-                          boxShadow: canStart ? `0 4px 20px ${ACCENT}28` : "none",
-                          transition: "all 0.2s ease",
+                          background: "#FFFFFF",
+                          border: `1.5px solid ${setupInput.trim() ? "#A78BFA" : "#E5E7EB"}`,
+                          borderRadius: selected.setupStep === "draft" ? "20px" : "100px",
+                          boxShadow: setupInput.trim() ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
+                          padding: selected.setupStep === "draft" ? "14px 14px 14px 18px" : "8px 8px 8px 20px",
+                          transition: "border-color 0.2s ease, box-shadow 0.2s ease, border-radius 0.2s ease",
                         }}
                       >
-                        분석 시작하기 →
-                      </button>
-
-                    <p className="text-xs text-center" style={{ color: "rgba(255,255,255,0.18)" }}>
-                      {canStart
-                        ? "논리 흐름 · 문맥 연결 · 직무 이해도를 진단하고 질문으로 이어가요"
-                        : "직무, 문항, 글자수 제한, 초안을 모두 입력하면 시작할 수 있어요"}
-                    </p>
+                        <textarea
+                          ref={setupInputRef}
+                          value={setupInput}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            setSetupInput(selected.setupStep === "charLimit" ? v.replace(/[^0-9]/g, "").slice(0, 4) : v);
+                          }}
+                          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && selected.setupStep !== "draft") { e.preventDefault(); handleSetupSubmit(); } }}
+                          placeholder={
+                            selected.setupStep === "question" ? "자소서 문항을 입력하세요"
+                            : selected.setupStep === "charLimit" ? "글자 수 (예: 700)"
+                            : "초안을 붙여넣어주세요"
+                          }
+                          rows={selected.setupStep === "draft" ? 5 : 1}
+                          className="flex-1 resize-none placeholder:text-[#6B7280]"
+                          style={{
+                            background: "transparent",
+                            border: "none",
+                            padding: selected.setupStep === "draft" ? "0 4px 0 0" : "6px 0",
+                            fontSize: "15px",
+                            lineHeight: "1.6",
+                            color: "#111827",
+                            outline: "none",
+                            overflowY: "auto",
+                          }}
+                        />
+                        <button
+                          onClick={handleSetupSubmit}
+                          disabled={!setupInput.trim()}
+                          className="flex-shrink-0 flex items-center justify-center rounded-full transition-all active:scale-95"
+                          style={{
+                            background: setupInput.trim() ? DS_PRIMARY : "#F3F4F6",
+                            color: setupInput.trim() ? "#fff" : "#6B7280",
+                            width: selected.setupStep === "draft" ? "38px" : "36px",
+                            height: selected.setupStep === "draft" ? "38px" : "36px",
+                            alignSelf: selected.setupStep === "draft" ? "flex-end" : "center",
+                            boxShadow: setupInput.trim() ? GLOW_PRIMARY : "none",
+                            transition: "background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease",
+                          }}
+                        >
+                          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                            <path d="M8 13V3M8 3L3.5 7.5M8 3L12.5 7.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        </button>
+                      </div>
+                    )}
                   </div>
-
-                </div>
-
-                {/* 초안 작성 가이드 — 데스크탑 우측 컬럼 */}
-                <div className="hidden lg:flex flex-col gap-3 flex-shrink-0 lg:sticky lg:top-6" style={{ width: "240px" }}>
-                  <p className="text-xs font-semibold px-1" style={{ color: "rgba(255,255,255,0.38)", letterSpacing: "0.06em" }}>초안 작성 가이드</p>
-                  {[
-                    { icon: "📋", text: "지원 직무, 자소서 문항, 글자수 제한은 반드시 입력해주세요.", color: GOLD },
-                    { icon: "✏️", text: "초안이 글자수 제한을 초과해도 괜찮아요. 완성본은 입력한 글자수에 맞춰 작성돼요.", color: BLUE },
-                  ].map((item, i) => (
-                    <div key={i} className="flex items-start gap-3 px-4 py-3.5 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: `1px solid ${item.color}22` }}>
-                      <span className="text-lg flex-shrink-0 leading-none mt-0.5">{item.icon}</span>
-                      <p className="text-sm leading-[1.7]" style={{ color: "rgba(255,255,255,0.82)", wordBreak: "keep-all", overflowWrap: "break-word" }}>{item.text}</p>
-                    </div>
-                  ))}
-                </div>
-
-                </div>
                 </div>
               </div>
 
@@ -1798,10 +1979,10 @@ export default function ChatPage() {
               <div className="flex-1 flex overflow-hidden">
               <div className="flex-1 flex flex-col overflow-hidden min-w-0">
                 {/* 항목 헤더 바 */}
-                <div className="flex-shrink-0 flex flex-col border-b" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+                <div className="flex-shrink-0 flex flex-col border-b" style={{ borderColor: "#E5E7EB", background: "#FFFFFF" }}>
                   {/* 모바일 항목 탭 */}
                   {items.length > 1 && (
-                    <div className="lg:hidden flex items-center gap-1.5 px-4 py-2 overflow-x-auto border-b" style={{ borderColor: "rgba(255,255,255,0.04)", scrollbarWidth: "none" }}>
+                    <div className="lg:hidden flex items-center gap-1.5 px-4 py-2 overflow-x-auto border-b" style={{ borderColor: "rgba(0,0,0,0.05)", scrollbarWidth: "none" }}>
                       {items.map((item, idx) => {
                         const isSel = item.id === selectedId;
                         return (
@@ -1810,9 +1991,9 @@ export default function ChatPage() {
                             onClick={() => setSelectedId(item.id)}
                             className="flex-shrink-0 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all"
                             style={{
-                              background: isSel ? `${BLUE}18` : "rgba(255,255,255,0.04)",
-                              border: `1px solid ${isSel ? `${BLUE}35` : "rgba(255,255,255,0.07)"}`,
-                              color: isSel ? BLUE : "rgba(255,255,255,0.35)",
+                              background: isSel ? `${BLUE}12` : "#F0F1F3",
+                              border: `1px solid ${isSel ? `${BLUE}30` : "transparent"}`,
+                              color: isSel ? BLUE : "#6B7280",
                             }}
                           >
                             {String(idx + 1).padStart(2, "0")}
@@ -1821,27 +2002,87 @@ export default function ChatPage() {
                       })}
                     </div>
                   )}
+                  {/* 메인 헤더 행 */}
                   <div className="px-4 py-2.5 flex items-center gap-3">
-                  <div className="w-6 h-6 rounded-lg flex items-center justify-center font-bold flex-shrink-0" style={{ background: `${BLUE}18`, color: BLUE, fontSize: "11px" }}>
-                    {String(items.findIndex((it) => it.id === selectedId) + 1).padStart(2, "0")}
+                    <div className="w-6 h-6 rounded-lg flex items-center justify-center font-bold flex-shrink-0" style={{ background: `${BLUE}10`, color: BLUE, fontSize: "11px" }}>
+                      {String(items.findIndex((it) => it.id === selectedId) + 1).padStart(2, "0")}
+                    </div>
+                    <button
+                      onClick={() => { setEditingField("question"); setEditFieldValue(selected.question); }}
+                      className="text-sm flex-1 text-left truncate hover:opacity-60 transition-opacity"
+                      style={{ color: "#111827" }}
+                      title="클릭해서 문항 수정"
+                    >
+                      {selected.question}
+                    </button>
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      {selected.charLimit && editingField !== "charLimit" && (
+                        <button
+                          onClick={() => { setEditingField("charLimit"); setEditFieldValue(selected.charLimit); }}
+                          className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full hover:opacity-70 transition-opacity"
+                          style={{ background: "#EDE9FE", color: "#4338CA" }}
+                        >
+                          {selected.charLimit}자
+                        </button>
+                      )}
+                      {editingField === "charLimit" && (
+                        <div className="flex items-center gap-1">
+                          <input
+                            value={editFieldValue}
+                            onChange={(e) => setEditFieldValue(e.target.value.replace(/[^0-9]/g, ""))}
+                            onKeyDown={(e) => { if (e.key === "Enter") { updateItem(selectedId, { charLimit: editFieldValue }); setEditingField(null); } if (e.key === "Escape") setEditingField(null); }}
+                            className="w-14 text-xs rounded-lg px-2 py-1 text-center"
+                            style={{ background: "#F9FAFB", border: "1.5px solid #A78BFA", color: "#111827", outline: "none" }}
+                            autoFocus
+                          />
+                          <button
+                            onClick={() => { updateItem(selectedId, { charLimit: editFieldValue }); setEditingField(null); }}
+                            className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md text-white"
+                            style={{ background: "#312E81" }}
+                          >저장</button>
+                          <button onClick={() => setEditingField(null)} className="text-[10px]" style={{ color: "#9CA3AF" }}>✕</button>
+                        </div>
+                      )}
+                      {["진단", "질문", "보강"].map((step, i) => {
+                        const userCount = selected.msgs.filter((m) => m.role === "user").length;
+                        const active = i === 0 ? userCount === 0 : i === 1 ? userCount < 3 : userCount >= 3;
+                        return (
+                          <span key={step} className="hidden sm:block text-xs px-2 py-0.5 rounded-full" style={{ background: active ? `${BLUE}18` : "rgba(0,0,0,0.05)", color: active ? BLUE : "#6B7280", fontSize: "10px" }}>
+                            {step}
+                          </span>
+                        );
+                      })}
+                    </div>
                   </div>
-                  <p className="text-sm truncate flex-1" style={{ color: "rgba(255,255,255,0.6)" }}>{selected.question}</p>
-                  <div className="flex items-center gap-1.5 flex-shrink-0">
-                    {["진단", "질문", "보강"].map((step, i) => {
-                      const userCount = selected.msgs.filter((m) => m.role === "user").length;
-                      const active = i === 0 ? userCount === 0 : i === 1 ? userCount < 3 : userCount >= 3;
-                      return (
-                        <span key={step} className="hidden sm:block text-xs px-2 py-0.5 rounded-full" style={{ background: active ? `${BLUE}22` : "rgba(255,255,255,0.05)", color: active ? BLUE : "rgba(255,255,255,0.2)", fontSize: "10px" }}>
-                          {step}
-                        </span>
-                      );
-                    })}
-                  </div>
-                  </div>
+                  {/* 문항 편집 패널 */}
+                  {editingField === "question" && (
+                    <div className="px-4 pb-3 flex flex-col gap-2 border-t" style={{ borderColor: "#F3F4F6" }}>
+                      <textarea
+                        value={editFieldValue}
+                        onChange={(e) => setEditFieldValue(e.target.value)}
+                        rows={3}
+                        className="w-full text-sm rounded-xl px-3 py-2 resize-none"
+                        style={{ background: "#F9FAFB", border: "1.5px solid #A78BFA", color: "#111827", outline: "none", marginTop: "8px" }}
+                        autoFocus
+                      />
+                      <div className="flex gap-1.5">
+                        <button
+                          onClick={() => { updateItem(selectedId, { question: editFieldValue.trim() }); setEditingField(null); }}
+                          className="flex-1 py-1.5 rounded-lg text-xs font-semibold text-white"
+                          style={{ background: "#312E81" }}
+                        >저장</button>
+                        <button
+                          onClick={() => setEditingField(null)}
+                          className="flex-1 py-1.5 rounded-lg text-xs font-semibold"
+                          style={{ background: "#F3F4F6", color: "#6B7280" }}
+                        >취소</button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* 메시지 영역 */}
-                <div className="flex-1 overflow-y-auto hide-scrollbar px-5 py-5">
+                <div className="flex-1 overflow-y-auto hide-scrollbar px-5 py-5" style={{ background: "#F3F4F6" }}>
                   <div className="max-w-2xl lg:max-w-3xl mx-auto flex flex-col gap-4">
                     {selected.msgs.map((msg, msgIdx) => {
                       const isDiagnosis = msgIdx === 0 && msg.role === "bot";
@@ -1872,17 +2113,26 @@ export default function ChatPage() {
                       }
 
                       if (isRevisionStreaming || isRevisionComplete) {
-                        return <RevisionMessage key={msg.id} text={msg.text} />;
+                        return (
+                          <RevisionMessage
+                            key={msg.id}
+                            text={msg.text}
+                            companyName={companyName}
+                            jobTitle={jobTitle}
+                            question={selected.question}
+                            charLimit={selected.charLimit}
+                          />
+                        );
                       }
 
                       return (
                         <div key={msg.id} className={`flex items-end gap-2.5 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                           {msg.role === "bot" && <BotBubbleAvatar />}
                           <div
-                            className="max-w-[80%] px-4 py-3.5 text-sm lg:text-[15px] leading-[1.85] whitespace-pre-wrap"
+                            className="max-w-[80%] px-4 py-3.5 text-sm leading-[1.85] whitespace-pre-wrap"
                             style={
                               msg.role === "bot"
-                                ? { background: "rgba(255,255,255,0.09)", color: "rgba(255,255,255,0.92)", borderRadius: "4px 16px 16px 16px", wordBreak: "keep-all", borderLeft: `2px solid ${BLUE}50` }
+                                ? { background: "#FFFFFF", color: "#111827", borderRadius: "4px 16px 16px 16px", wordBreak: "keep-all", boxShadow: "0 1px 4px rgba(0,0,0,0.07)", border: "1px solid #E5E7EB" }
                                 : { background: ACCENT, color: "#fff", borderRadius: "16px 4px 16px 16px", wordBreak: "keep-all" }
                             }
                           >
@@ -1900,11 +2150,11 @@ export default function ChatPage() {
                     {interviewQs.length > 0 && (
                       <div className="flex flex-col gap-3 pt-2">
                         <div className="flex items-center gap-3">
-                          <div className="flex-1 h-px" style={{ background: `${VIOLET}20` }} />
+                          <div className="flex-1 h-px" style={{ background: "rgba(0,0,0,0.09)" }} />
                           <span className="text-xs font-semibold tracking-wide px-1" style={{ color: VIOLET }}>
                             면접 예상 질문 {interviewQs.length}개
                           </span>
-                          <div className="flex-1 h-px" style={{ background: `${VIOLET}20` }} />
+                          <div className="flex-1 h-px" style={{ background: "rgba(0,0,0,0.09)" }} />
                         </div>
                         {interviewQs.map((q, i) => (
                           <InterviewQCard
@@ -1924,7 +2174,7 @@ export default function ChatPage() {
                 </div>
 
                 {/* 입력창 + 정리하기 버튼 */}
-                <div className="px-5 py-4 flex-shrink-0 border-t" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+                <div className="px-5 py-4 flex-shrink-0 border-t" style={{ borderColor: "#E5E7EB", background: "#FFFFFF" }}>
                   <div className="max-w-2xl lg:max-w-3xl mx-auto flex flex-col gap-2.5">
 
                     {revisionReady ? (
@@ -1932,7 +2182,7 @@ export default function ChatPage() {
                       <button
                         onClick={handleRevisionRequest}
                         disabled={isStreaming}
-                        className="w-full py-4 rounded-2xl text-sm lg:text-base font-semibold transition-all hover:scale-[1.015] active:scale-[0.985] disabled:opacity-30 flex items-center justify-center gap-2"
+                        className="w-full py-4 rounded-2xl text-sm font-semibold transition-all hover:scale-[1.015] active:scale-[0.985] disabled:opacity-30 flex items-center justify-center gap-2"
                         style={{ background: ACCENT, color: "#fff", boxShadow: `0 4px 16px ${ACCENT}28` }}
                       >
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -1944,8 +2194,8 @@ export default function ChatPage() {
                       /* 면접 예상질문 확인 버튼 */
                       <button
                         onClick={fetchInterviewQuestions}
-                        className="w-full py-4 rounded-2xl text-sm lg:text-base font-semibold transition-all hover:scale-[1.015] active:scale-[0.985] flex items-center justify-center gap-2"
-                        style={{ background: `linear-gradient(135deg, ${VIOLET}30 0%, ${BLUE}20 100%)`, border: `1px solid ${VIOLET}40`, color: "rgba(255,255,255,0.85)", boxShadow: `0 0 24px ${VIOLET}20` }}
+                        className="w-full py-4 rounded-2xl text-sm font-semibold transition-all hover:scale-[1.015] active:scale-[0.985] flex items-center justify-center gap-2"
+                        style={{ background: VIOLET, color: "#fff", boxShadow: `0 4px 16px ${VIOLET}35` }}
                       >
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={VIOLET} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                           <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
@@ -1960,7 +2210,7 @@ export default function ChatPage() {
                             <span key={delay} className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: color, animationDelay: `${delay}ms` }} />
                           ))}
                         </div>
-                        <span className="text-sm" style={{ color: "rgba(255,255,255,0.4)" }}>예상 질문 생성 중...</span>
+                        <span className="text-sm" style={{ color: "#6B7280" }}>예상 질문 생성 중...</span>
                       </div>
                     ) : !showSummaryButton ? (
                       /* 일반 입력창 */
@@ -1974,20 +2224,20 @@ export default function ChatPage() {
                             disabled={isStreaming}
                             placeholder="답변을 입력하세요"
                             rows={1}
-                            className="glow-input flex-1 disabled:opacity-30 resize-none placeholder:opacity-40"
-                            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.09)", borderRadius: "16px", padding: "11px 18px", fontSize: "15px", lineHeight: "1.5", color: "rgba(255,255,255,0.9)", height: "46px", maxHeight: "160px", overflowY: "auto" }}
+                            className="ds-input flex-1 disabled:opacity-30 resize-none placeholder:text-[#6B7280]"
+                            style={{ background: "#FFFFFF", border: "1.5px solid #E5E7EB", borderRadius: "16px", padding: "11px 18px", fontSize: "15px", lineHeight: "1.6", color: "#111827", height: "46px", maxHeight: "160px", overflowY: "auto", outline: "none", boxShadow: "none" }}
                           />
                           <button
                             onClick={handleSend}
                             disabled={isStreaming || !input.trim()}
-                            className="flex-shrink-0 flex items-center justify-center rounded-xl text-sm font-semibold transition-all hover:opacity-80 active:scale-95 disabled:opacity-25"
-                            style={{ background: ACCENT, color: "#fff", padding: "0 18px", height: "46px", boxShadow: input.trim() ? `0 4px 14px ${ACCENT}30` : "none", whiteSpace: "nowrap" }}
+                            className="flex-shrink-0 flex items-center justify-center rounded-xl text-sm font-semibold transition-all active:scale-95 disabled:opacity-30"
+                            style={{ background: input.trim() ? DS_PRIMARY : "#F3F4F6", color: input.trim() ? "#fff" : "#6B7280", padding: "0 18px", height: "46px", boxShadow: input.trim() ? GLOW_PRIMARY : "none", whiteSpace: "nowrap", transition: "background 0.15s, color 0.15s, box-shadow 0.15s" }}
                           >
                             전송
                           </button>
                         </div>
                         <div className="flex justify-end pr-1">
-                          <span className="text-xs tabular-nums" style={{ color: input.length >= 230 ? "rgba(248,113,113,0.8)" : "rgba(255,255,255,0.18)" }}>
+                          <span className="text-xs tabular-nums" style={{ color: input.length >= 230 ? "rgba(239,68,68,0.8)" : "#6B7280" }}>
                             {input.length}/250
                           </span>
                         </div>
@@ -2014,11 +2264,11 @@ export default function ChatPage() {
                             const allAnswered = interviewQs.every(q => q.msgs.length > 0);
                             if (!allAnswered) { setShowInterviewWarning(true); } else { setShowSummary(true); }
                           }}
-                          className="w-full py-3 rounded-xl text-sm lg:text-base font-semibold transition-all hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-2"
+                          className="w-full py-3 rounded-xl text-sm font-semibold transition-all hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-2"
                           style={{
-                            background: `linear-gradient(135deg, ${BLUE}22 0%, ${ACCENT}18 100%)`,
-                            border: `1px solid ${BLUE}35`,
-                            color: "rgba(255,255,255,0.75)",
+                            background: `linear-gradient(135deg, ${BLUE}14 0%, ${ACCENT}10 100%)`,
+                            border: `1px solid ${BLUE}30`,
+                            color: "#111827",
                           }}
                         >
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -2046,19 +2296,110 @@ export default function ChatPage() {
                 </div>
               </div>
 
-              {/* ── 오른쪽 팁 패널 — 데스크탑 ── */}
+              {/* ── 오른쪽 분석 보고서 패널 — 데스크탑 ── */}
+              {showAnalysisPanel && (
               <div
-                className="hidden lg:flex flex-shrink-0 flex-col border-l"
-                style={{ width: "264px", borderColor: "rgba(255,255,255,0.06)", background: "rgba(9,9,22,0.55)" }}
+                className="hidden lg:flex flex-shrink-0 flex-col border-l overflow-hidden"
+                style={{ width: "380px", borderColor: "#E5E7EB", background: "#FFFFFF" }}
               >
-                <TipPanel hasRevision={hasAnyRevision} revisionReady={revisionReady} />
+                {/* 패널 헤더 */}
+                <div className="flex items-center justify-between px-4 py-3 border-b flex-shrink-0" style={{ borderColor: "#E5E7EB" }}>
+                  <span className="text-xs font-bold" style={{ color: "#111827" }}>분석 보고서</span>
+                  <div className="flex items-center gap-1.5">
+                    {!isLoadingAnalysis && analysisContent && (
+                      <>
+                        <button
+                          onClick={() => { const s = parseAnalysisForPDF(analysisContent); exportToPDF("분석 보고서", s, [companyName, jobTitle].filter(Boolean).join(" · ")); }}
+                          className="text-[10px] font-semibold px-2 py-1 rounded-lg hover:opacity-70"
+                          style={{ background: "#EDE9FE", color: "#4C3F99" }}
+                        >PDF</button>
+                        <button onClick={() => fetchAnalysisReport()} className="text-[10px] font-semibold px-2 py-1 rounded-lg hover:opacity-70" style={{ background: "#F3F4F6", color: "#6B7280" }}>재조사</button>
+                      </>
+                    )}
+                    <button
+                      onClick={() => setShowAnalysisPanel(false)}
+                      className="w-6 h-6 flex items-center justify-center rounded-full hover:opacity-60 transition-opacity"
+                      style={{ background: "#F3F4F6", color: "#6B7280" }}
+                    >
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                  </div>
+                </div>
+
+                {/* 콘텐츠 */}
+                <div className="flex-1 overflow-y-auto hide-scrollbar">
+                  {!analysisContent && !isLoadingAnalysis && (
+                    <div className="flex flex-col items-center justify-center gap-3 px-5 pt-12 pb-6 text-center">
+                      <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background: "#EDE9FE" }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6366F1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold" style={{ color: "#111827" }}>기업·직무 분석 보고서</p>
+                        <p className="text-xs mt-1 leading-relaxed" style={{ color: "#6B7280", wordBreak: "keep-all" }}>회사와 직무를 분석해서 자소서 작성 방향을 잡아드려요</p>
+                      </div>
+                      <button
+                        onClick={() => fetchAnalysisReport()}
+                        className="mt-1 w-full py-2.5 rounded-xl text-xs font-semibold text-white transition-all hover:opacity-80"
+                        style={{ background: "#312E81" }}
+                      >보고서 생성하기</button>
+                    </div>
+                  )}
+
+                  {isLoadingAnalysis && !analysisContent && (
+                    <div className="flex flex-col items-center justify-center gap-3 pt-12">
+                      <div className="flex gap-1.5">
+                        {[0, 150, 300].map((d) => (
+                          <span key={d} className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: "#6366F1", animationDelay: `${d}ms` }} />
+                        ))}
+                      </div>
+                      <p className="text-xs" style={{ color: "#6B7280" }}>조사 중...</p>
+                    </div>
+                  )}
+
+                  {analysisContent && (
+                    <div className="px-4 py-4 flex flex-col gap-4">
+                      {analysisContent.split(/(?=## \d)/).filter(Boolean).map((section, i) => {
+                        const lines = section.trim().split("\n").filter(Boolean);
+                        const title = lines[0]?.replace(/^##\s*/, "") ?? "";
+                        const bullets = lines.slice(1).filter((l) => l.startsWith("- ")).map((l) => l.replace(/^-\s*/, ""));
+                        return (
+                          <div key={i} className="flex flex-col gap-1.5">
+                            <p className="text-sm font-bold" style={{ color: "#312E81" }}>{title}</p>
+                            {bullets.map((b, j) => {
+                              const colonIdx = b.indexOf(": ");
+                              const label = colonIdx > 0 && colonIdx < 18 ? b.slice(0, colonIdx) : null;
+                              const body = label ? b.slice(colonIdx + 2) : b;
+                              return (
+                                <p key={j} className="text-xs leading-[1.65]" style={{ color: "#374151", wordBreak: "keep-all" }}>
+                                  {label && <span className="font-semibold" style={{ color: "#111827" }}>{label}: </span>}{body}
+                                </p>
+                              );
+                            })}
+                            {i < 4 && <div className="mt-1" style={{ height: 1, background: "#F3F4F6" }} />}
+                          </div>
+                        );
+                      })}
+                      {isLoadingAnalysis && (
+                        <div className="flex gap-1.5 pb-2">
+                          {[0, 150, 300].map((d) => (
+                            <span key={d} className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: "#6366F1", animationDelay: `${d}ms` }} />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
+              )}
 
               </div>
             )}
           </div>
         </div>
       </div>
+
+      </div>
+      )}  {/* /stage2 */}
 
       {/* 세션 복원 모달 */}
       {resumeSession && (
@@ -2451,6 +2792,137 @@ export default function ChatPage() {
                 style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.45)", border: "1px solid rgba(255,255,255,0.08)" }}
               >
                 새로 분석하기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+
+      {/* 채용공고 입력 모달 */}
+      {showJobPostModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+          style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(4px)" }}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowJobPostModal(false); }}
+        >
+          <div
+            className="w-full sm:max-w-[480px] rounded-t-3xl sm:rounded-3xl flex flex-col"
+            style={{ background: "#FFFFFF", boxShadow: "0 -4px 40px rgba(0,0,0,0.18)", maxHeight: "85dvh" }}
+          >
+            {/* 모달 헤더 */}
+            <div className="flex items-center justify-between px-5 pt-5 pb-3 flex-shrink-0">
+              <span className="text-base font-bold" style={{ color: "#111827" }}>채용공고 입력</span>
+              <button
+                onClick={() => setShowJobPostModal(false)}
+                className="w-8 h-8 flex items-center justify-center rounded-full transition-opacity hover:opacity-60"
+                style={{ background: "#F3F4F6", color: "#6B7280" }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+
+            {/* 탭 */}
+            <div className="flex gap-1 px-5 pb-3 flex-shrink-0">
+              {(["link", "text", "image"] as const).map((tab) => {
+                const labels = { link: "🔗 링크", text: "📝 텍스트", image: "🖼️ 이미지" };
+                const isActive = jobPostTab === tab;
+                return (
+                  <button
+                    key={tab}
+                    onClick={() => setJobPostTab(tab)}
+                    className="flex-1 py-2 rounded-xl text-sm font-semibold transition-all"
+                    style={{
+                      background: isActive ? "#312E81" : "#F3F4F6",
+                      color: isActive ? "#FFFFFF" : "#6B7280",
+                      border: "none",
+                    }}
+                  >
+                    {labels[tab]}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* 탭 콘텐츠 */}
+            <div className="flex-1 overflow-y-auto px-5 pb-5">
+              {/* 링크 탭 */}
+              {jobPostTab === "link" && (
+                <div className="flex flex-col gap-2">
+                  <p className="text-xs" style={{ color: "#6B7280" }}>
+                    여러 지원 직무가 있을 경우를 대비해 채용공고와 동일한 직무명으로 입력해주세요.
+                  </p>
+                  <input
+                    value={jobLink}
+                    onChange={(e) => setJobLink(e.target.value)}
+                    placeholder="https://..."
+                    className="ds-input w-full px-4 py-3.5 rounded-2xl text-sm placeholder:text-[#6B7280]"
+                    style={{ background: "#F9FAFB", border: "1.5px solid #E5E7EB", color: "#111827", outline: "none" }}
+                  />
+                </div>
+              )}
+
+              {/* 텍스트 탭 */}
+              {jobPostTab === "text" && (
+                <textarea
+                  value={jobPostText}
+                  onChange={(e) => setJobPostText(e.target.value)}
+                  placeholder="채용공고 내용을 붙여넣어주세요"
+                  className="ds-input w-full px-4 py-3.5 rounded-2xl text-sm placeholder:text-[#6B7280] resize-none"
+                  rows={8}
+                  style={{ background: "#F9FAFB", border: "1.5px solid #E5E7EB", color: "#111827", outline: "none" }}
+                />
+              )}
+
+              {/* 이미지 탭 */}
+              {jobPostTab === "image" && (
+                <div className="flex flex-col gap-3">
+                  <input
+                    ref={jobPostFileRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = (ev) => setJobPostImagePreview(ev.target?.result as string);
+                      reader.readAsDataURL(file);
+                    }}
+                  />
+                  {jobPostImagePreview ? (
+                    <div className="relative">
+                      <img src={jobPostImagePreview} alt="채용공고" className="w-full rounded-2xl object-contain max-h-[280px]" style={{ border: "1.5px solid #E5E7EB" }} />
+                      <button
+                        onClick={() => { setJobPostImagePreview(""); if (jobPostFileRef.current) jobPostFileRef.current.value = ""; }}
+                        className="absolute top-2 right-2 w-7 h-7 flex items-center justify-center rounded-full"
+                        style={{ background: "rgba(0,0,0,0.55)", color: "#fff" }}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => jobPostFileRef.current?.click()}
+                      className="w-full py-10 rounded-2xl flex flex-col items-center gap-3 transition-all hover:opacity-80"
+                      style={{ background: "#F9FAFB", border: "2px dashed #E5E7EB", color: "#6B7280" }}
+                    >
+                      <span className="text-3xl">🖼️</span>
+                      <span className="text-sm font-medium">이미지 선택하기</span>
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* 확인 버튼 */}
+            <div className="px-5 pb-6 pt-2 flex-shrink-0">
+              <button
+                onClick={() => setShowJobPostModal(false)}
+                className="w-full py-3.5 rounded-2xl text-sm font-semibold text-white transition-all hover:scale-[1.01] active:scale-[0.99]"
+                style={{ background: "#312E81" }}
+              >
+                확인
               </button>
             </div>
           </div>

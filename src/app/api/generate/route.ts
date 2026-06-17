@@ -23,14 +23,14 @@ function buildCtx(ctx: DiggingContext): string {
 type MsgParam = Anthropic.MessageParam;
 type SystemParam = string | Anthropic.Messages.TextBlockParam[];
 
-async function stream(system: SystemParam, messages: MsgParam[]) {
+async function stream(system: SystemParam, messages: MsgParam[], maxTokens = 2048) {
   const enc = new TextEncoder();
   const client = getClient();
   let s: ReturnType<typeof client.messages.stream>;
   try {
     s = await client.messages.stream({
       model: "claude-sonnet-4-6",
-      max_tokens: 2048,
+      max_tokens: maxTokens,
       system,
       messages,
     });
@@ -78,6 +78,31 @@ async function generate(system: string, messages: MsgParam[]) {
     return Response.json(match ? JSON.parse(match[0]) : { raw: text });
   } catch {
     return Response.json({ raw: text });
+  }
+}
+
+async function fetchUrlText(url: string): Promise<string> {
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 8000);
+    const res = await fetch(url, {
+      signal: controller.signal,
+      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" },
+    });
+    clearTimeout(timer);
+    if (!res.ok) return "";
+    const html = await res.text();
+    return html
+      .replace(/<script[\s\S]*?<\/script>/gi, "")
+      .replace(/<style[\s\S]*?<\/style>/gi, "")
+      .replace(/<!--[\s\S]*?-->/g, "")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"')
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 3000);
+  } catch {
+    return "";
   }
 }
 
@@ -134,9 +159,10 @@ export async function POST(req: Request) {
     }
 
     case "personality": {
+      const reportCtx = body.analysisReport ? `\n\n## 기업·직무 분석 보고서\n${body.analysisReport}` : "";
       const sys: Anthropic.Messages.TextBlockParam[] = [
         { type: "text", text: prompt("common") + "\n\n" + prompt("personality"), cache_control: { type: "ephemeral" } },
-        { type: "text", text: `## 세션 정보\n직무: ${body.jobTitle || "미입력"}\n회사: ${body.companyInfo || "미입력"}\n글자 수 제한: ${body.charLimit ? `${body.charLimit}자 (수정본 작성 시 이 글자 수에 맞춰야 함)` : "미입력"}\n\n## 자소서 초안\n${body.draft}` },
+        { type: "text", text: `## 세션 정보\n직무: ${body.jobTitle || "미입력"}\n회사: ${body.companyInfo || "미입력"}\n글자 수 제한: ${body.charLimit ? `${body.charLimit}자 (수정본 작성 시 이 글자 수에 맞춰야 함)` : "미입력"}${reportCtx}\n\n## 자소서 초안\n${body.draft}` },
       ];
       const msgs: MsgParam[] = body.messages?.length > 0
         ? body.messages
@@ -145,9 +171,10 @@ export async function POST(req: Request) {
     }
 
     case "motivation": {
+      const reportCtx = body.analysisReport ? `\n\n## 기업·직무 분석 보고서\n${body.analysisReport}` : "";
       const sys: Anthropic.Messages.TextBlockParam[] = [
         { type: "text", text: prompt("common") + "\n\n" + prompt("motivation"), cache_control: { type: "ephemeral" } },
-        { type: "text", text: `## 세션 정보\n직무: ${body.jobTitle}\n회사: ${body.companyInfo || "미입력"}\n글자 수 제한: ${body.charLimit ? `${body.charLimit}자 (완성본 작성 시 이 글자 수에 맞춰야 함)` : "미입력"}\n\n## 자소서 초안\n${body.draft}` },
+        { type: "text", text: `## 세션 정보\n직무: ${body.jobTitle}\n회사: ${body.companyInfo || "미입력"}\n글자 수 제한: ${body.charLimit ? `${body.charLimit}자 (완성본 작성 시 이 글자 수에 맞춰야 함)` : "미입력"}${reportCtx}\n\n## 자소서 초안\n${body.draft}` },
       ];
       const msgs: MsgParam[] = body.messages?.length > 0
         ? body.messages
@@ -156,9 +183,10 @@ export async function POST(req: Request) {
     }
 
     case "analyze": {
+      const reportCtx = body.analysisReport ? `\n\n## 기업·직무 분석 보고서 (직무 이해 1순위 근거)\n${body.analysisReport}` : "";
       const sys: Anthropic.Messages.TextBlockParam[] = [
         { type: "text", text: prompt("analyze_v2"), cache_control: { type: "ephemeral" } },
-        { type: "text", text: `## 세션 정보\n직무: ${body.jobTitle}\n회사: ${body.companyInfo || "미입력"}\n문항: ${body.question || "미입력"}\n글자 수 제한: ${body.charLimit ? `${body.charLimit}자 (수정본 작성 시 이 글자 수에 맞춰야 함)` : "미입력"}\n\n## 자소서 초안\n${body.draft}` },
+        { type: "text", text: `## 세션 정보\n직무: ${body.jobTitle}\n회사: ${body.companyInfo || "미입력"}\n문항: ${body.question || "미입력"}\n글자 수 제한: ${body.charLimit ? `${body.charLimit}자 (수정본 작성 시 이 글자 수에 맞춰야 함)` : "미입력"}${reportCtx}\n\n## 자소서 초안\n${body.draft}` },
       ];
       const msgs: MsgParam[] = body.messages?.length > 0
         ? body.messages
@@ -234,6 +262,90 @@ export async function POST(req: Request) {
         .update({ status: "done", updated_at: new Date().toISOString() })
         .eq("id", body.cover_item_id);
       return Response.json({ id });
+    }
+
+    case "company-analysis": {
+      const sys = `당신은 취업 전략 컨설턴트입니다. 지원자가 자소서와 면접을 준비할 수 있도록, 기업과 직무를 심층 분석한 보고서를 작성합니다.
+
+작성 원칙:
+- "기업을 이해하고 → 직무를 이해하고 → 무엇을 준비해야 하는가"로 자연스럽게 연결되는 스토리텔링
+- 각 섹션은 번호와 제목으로 시작. 내용은 핵심만 간결하게, 각 항목은 한두 문장
+- 확인된 사실은 단정적으로. "추측됩니다" "판단됩니다" "보입니다" 같은 불확실 표현 사용 금지. 불확실한 내용은 아예 쓰지 마라.
+- 마크다운 볼드(**) 사용 금지. 섹션 제목에만 ## 사용
+
+분석 우선순위:
+- 회사 정보: 회사 사이트 링크(1순위) → 회사명 기반 공개 정보(2순위)
+- 직무 정보: 채용공고 링크·이미지·텍스트(1순위) → 직무명 기반 추정(2순위)
+
+반드시 아래 5개 섹션을 순서대로 작성하세요.
+
+## 1. 회사 개요
+- 산업 및 시장
+- 기업의 비전 및 방향성
+- 현재 시장 내 위치
+
+## 2. 주력 사업 및 성장 방향
+- 주요 제품·서비스
+- 핵심 고객층
+- 최근 사업 전략 및 성장 방향
+
+## 3. 직무 분석
+- 직무의 한 줄 정의
+- 다른 직무와의 연관성
+
+## 4. 핵심 역할
+- 주요 업무: 이 직무가 실제로 하는 핵심 업무를 2~3문장으로 서술
+- 존재 이유: 조직이 이 직무를 필요로 하는 이유와 사업 성과 연결
+
+## 5. 요구 역량
+- 직무 수행에 필요한 지식
+- 협업 및 커뮤니케이션 역량`;
+
+      // URL 병렬 fetch
+      const [companyPageText, jobPageText] = await Promise.all([
+        body.companyWebsite ? fetchUrlText(body.companyWebsite) : Promise.resolve(""),
+        body.jobLink ? fetchUrlText(body.jobLink) : Promise.resolve(""),
+      ]);
+
+      // 회사: 사이트 내용 1순위 → 회사명 fallback
+      const companyLines: string[] = [];
+      if (companyPageText) {
+        companyLines.push(`회사 사이트 내용(1순위):\n${companyPageText}`);
+        if (body.companyName) companyLines.push(`회사명(참고): ${body.companyName}`);
+      } else {
+        companyLines.push(`회사명: ${body.companyName || "미입력"}`);
+      }
+
+      // 직무: 채용공고 내용 1순위 → 직무명 fallback
+      const hasJobSource = !!(jobPageText || body.jobPostText || body.jobPostImage);
+      const jobLines: string[] = [];
+      if (jobPageText) jobLines.push(`채용공고 페이지 내용(1순위):\n${jobPageText}`);
+      if (body.jobPostText) jobLines.push(`채용공고 텍스트(1순위):\n${body.jobPostText}`);
+      jobLines.push(hasJobSource
+        ? `지원 직무(참고): ${body.jobTitle || "미입력"}`
+        : `지원 직무: ${body.jobTitle || "미입력"}`
+      );
+
+      const textContent = [...companyLines, ...jobLines].join("\n") + "\n\n위 정보를 바탕으로 분석 보고서를 작성해줘.";
+
+      // 이미지가 있으면 멀티모달 메시지
+      let msgContent: string | Anthropic.Messages.ContentBlockParam[];
+      if (body.jobPostImage) {
+        const match = (body.jobPostImage as string).match(/^data:([^;]+);base64,(.+)$/);
+        if (match) {
+          const mediaType = match[1] as "image/jpeg" | "image/png" | "image/gif" | "image/webp";
+          msgContent = [
+            { type: "image", source: { type: "base64", media_type: mediaType, data: match[2] } },
+            { type: "text", text: `위 이미지는 채용공고입니다(1순위 분석 대상).\n${textContent}` },
+          ];
+        } else {
+          msgContent = textContent;
+        }
+      } else {
+        msgContent = textContent;
+      }
+
+      return stream(sys, [{ role: "user", content: msgContent }], 4096);
     }
 
     default:
