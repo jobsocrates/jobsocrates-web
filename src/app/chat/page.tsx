@@ -2360,9 +2360,6 @@ export default function ChatPage() {
                     <span className="text-[10px] font-black tracking-widest uppercase" style={{ color: "#6366F1", letterSpacing: "0.1em" }}>분석 보고서</span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    {!isLoadingAnalysis && analysisContent && (
-                      <button onClick={() => fetchAnalysisReport()} className="text-[10px] font-semibold px-2.5 py-1 rounded-lg hover:opacity-70" style={{ background: "#F3F4F6", color: "#6B7280" }}>재조사</button>
-                    )}
                     <button
                       onClick={() => setShowAnalysisPanel(false)}
                       className="w-6 h-6 flex items-center justify-center rounded-full hover:opacity-60 transition-opacity"
