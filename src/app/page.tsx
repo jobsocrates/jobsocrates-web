@@ -69,74 +69,91 @@ const WHY_CARDS = [
 ];
 
 function ChatPreviewCard() {
+  const IND = "#4338CA";
+  const BLU = "#6366F1";
+  const VIO = "#A78BFA";
   return (
     <div
       className="rounded-3xl overflow-hidden w-full"
       style={{
-        background: "#0A0A18",
-        border: `1px solid rgba(107,142,255,0.20)`,
-        boxShadow: `0 0 0 1px rgba(107,142,255,0.06), 0 40px 80px rgba(10,20,60,0.40), 0 0 120px rgba(107,142,255,0.12)`,
+        background: "#FFFFFF",
+        border: `1px solid rgba(255,255,255,0.14)`,
+        boxShadow: `0 0 0 1px rgba(167,139,250,0.18), 0 40px 80px rgba(10,20,60,0.55), 0 0 120px rgba(99,102,241,0.18)`,
         maxWidth: "480px",
       }}
     >
-      <div className="flex items-center px-5 py-3.5 border-b" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+      {/* 윈도우 크롬 */}
+      <div className="flex items-center px-5 py-3" style={{ background: "#F9FAFB", borderBottom: "1px solid #E5E7EB" }}>
         <div className="flex gap-1.5 flex-shrink-0">
           {["#FF5F57", "#FEBC2E", "#28C840"].map((c) => (
-            <div key={c} className="w-3 h-3 rounded-full" style={{ background: c }} />
+            <div key={c} className="w-2.5 h-2.5 rounded-full" style={{ background: c }} />
           ))}
         </div>
-        <span className="flex-1 text-center text-sm font-medium" style={{ color: "rgba(255,255,255,0.35)" }}>취업소크라테스</span>
-        <div style={{ width: "42px" }} />
+        <span className="flex-1 text-center text-xs font-medium" style={{ color: "#9CA3AF" }}>취업소크라테스</span>
+        <div style={{ width: "38px" }} />
       </div>
-      <div className="flex items-center px-4 py-3 border-b overflow-x-auto" style={{ borderColor: "rgba(255,255,255,0.05)", gap: "4px" }}>
-        {([["초안 분석", BLUE], ["이야기 발굴", "#FFD166"], ["문장 완성", "#E05A3A"], ["실전 대비", "#A78BFA"]] as [string, string][]).map(([label, color], i) => (
-          <div key={label} className="flex items-center flex-shrink-0">
-            {i > 0 && (
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="2.5" style={{ margin: "0 4px" }}>
-                <polyline points="9 18 15 12 9 6" />
-              </svg>
-            )}
-            <div className="flex items-center gap-1.5">
-              <div style={{ width: "17px", height: "17px", borderRadius: "50%", background: i === 0 ? color : "rgba(255,255,255,0.05)", color: i === 0 ? "#fff" : "rgba(255,255,255,0.18)", fontSize: "8px", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{i + 1}</div>
-              <span style={{ fontSize: "11px", color: i === 0 ? color : "rgba(255,255,255,0.2)", fontWeight: i === 0 ? 600 : 400, whiteSpace: "nowrap" }}>{label}</span>
-            </div>
+
+      {/* 2단 레이아웃 */}
+      <div className="flex" style={{ minHeight: "340px" }}>
+        {/* 왼쪽 사이드바 */}
+        <div className="flex-shrink-0 flex flex-col gap-3 p-3" style={{ width: "128px", background: "#FAFAFA", borderRight: "1px solid #E5E7EB" }}>
+          <div className="flex flex-col gap-0.5">
+            <p className="text-[8px] font-bold tracking-widest uppercase" style={{ color: "#9CA3AF" }}>기업</p>
+            <p className="text-[11px] font-semibold" style={{ color: "#111827" }}>삼성전자</p>
           </div>
-        ))}
-      </div>
-      <div className="p-5 flex flex-col gap-4">
-        <div className="rounded-xl overflow-hidden" style={{ background: `${BLUE}09`, border: `1px solid ${BLUE}22` }}>
-          <div className="flex items-center gap-2 px-4 py-2.5 border-b" style={{ borderColor: `${BLUE}14` }}>
-            <img src="/ai-avatar.webp" alt="" className="w-5 h-5 rounded-full object-cover flex-shrink-0" />
-            <span className="text-sm font-semibold" style={{ color: BLUE }}>초안 진단</span>
+          <div className="flex flex-col gap-0.5">
+            <p className="text-[8px] font-bold tracking-widest uppercase" style={{ color: "#9CA3AF" }}>직무</p>
+            <p className="text-[11px] font-semibold" style={{ color: "#111827" }}>마케팅 기획</p>
           </div>
-          <div className="px-4 py-3 flex flex-col gap-2">
-            {[["①", "논리 흐름은 잡혀있어요", "rgba(255,255,255,0.85)"], ["②", "핵심 경험이 너무 추상적이에요", "rgba(255,255,255,0.5)"], ["③", "직무 연결고리가 약해요", "rgba(255,255,255,0.5)"]].map(([num, text, clr]) => (
-              <div key={num} className="flex items-start gap-2">
-                <span className="text-sm flex-shrink-0 font-bold" style={{ color: BLUE }}>{num}</span>
-                <p className="text-sm leading-relaxed" style={{ color: clr }}>{text}</p>
-              </div>
+          <div className="rounded-lg px-2 py-1.5" style={{ background: "#EDE9FE", border: "1px solid #C4B5FD" }}>
+            <p className="text-[9px] font-semibold" style={{ color: IND }}>📊 분석 보고서</p>
+          </div>
+          <div className="flex flex-col gap-1 mt-1">
+            {[["1. 회사 개요", true], ["2. 주력 사업", false], ["3. 직무 분석", false]].map(([t, a]) => (
+              <p key={String(t)} className="text-[9px] leading-relaxed" style={{ color: a ? "#312E81" : "#9CA3AF", fontWeight: a ? 600 : 400 }}>{String(t)}</p>
             ))}
           </div>
         </div>
-        <div className="flex items-end gap-2.5">
-          <img src="/ai-avatar.webp" alt="" className="w-6 h-6 rounded-full object-cover flex-shrink-0" />
-          <div className="px-4 py-2.5 text-sm leading-relaxed" style={{ background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.85)", borderRadius: "4px 14px 14px 14px", maxWidth: "82%" }}>
-            「팀 성과」라고 하셨는데 — 당신이 직접 한 게 뭔가요?
+
+        {/* 채팅 영역 */}
+        <div className="flex-1 flex flex-col gap-2.5 p-3" style={{ background: "#F3F4F6" }}>
+          {/* 진단 카드 */}
+          <div className="rounded-xl overflow-hidden" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB" }}>
+            <div className="flex items-center gap-1.5 px-3 py-2" style={{ borderBottom: "1px solid #F3F4F6" }}>
+              <img src="/ai-avatar.webp" alt="" className="w-4 h-4 rounded-full object-cover flex-shrink-0" />
+              <span className="text-[10px] font-semibold" style={{ color: BLU }}>초안 진단</span>
+            </div>
+            <div className="px-3 py-2 flex flex-col gap-1.5">
+              {[["①", "논리 흐름은 잡혀있어요", true], ["②", "핵심 경험이 추상적이에요", false], ["③", "직무 연결고리가 약해요", false]].map(([n, t, a]) => (
+                <div key={String(n)} className="flex items-start gap-1.5">
+                  <span className="text-[9px] font-bold flex-shrink-0 mt-px" style={{ color: BLU }}>{String(n)}</span>
+                  <p className="text-[10px] leading-relaxed" style={{ color: a ? "#111827" : "#6B7280" }}>{String(t)}</p>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-        <div className="flex justify-end">
-          <div className="px-4 py-2.5 text-sm leading-relaxed" style={{ background: NAVY, color: "#fff", borderRadius: "14px 4px 14px 14px", maxWidth: "75%" }}>
-            API 설계랑 QA를 혼자 담당했어요
-          </div>
-        </div>
-        <div className="rounded-xl overflow-hidden" style={{ background: `${BLUE}09`, border: `1px solid ${BLUE}22` }}>
-          <div className="flex items-center gap-2 px-4 py-2.5 border-b" style={{ borderColor: `${BLUE}14` }}>
+
+          {/* AI 질문 */}
+          <div className="flex items-end gap-1.5">
             <img src="/ai-avatar.webp" alt="" className="w-5 h-5 rounded-full object-cover flex-shrink-0" />
-            <span className="text-sm font-semibold" style={{ color: BLUE }}>자소서 완성중</span>
+            <div className="px-3 py-2 text-[10px] leading-relaxed" style={{ background: "#FFFFFF", color: "#111827", borderRadius: "4px 12px 12px 12px", border: "1px solid #E5E7EB", maxWidth: "82%" }}>
+              「팀 성과」라고 하셨는데 — 직접 한 게 뭔가요?
+            </div>
           </div>
-          <div className="px-4 py-3">
-            <div className="flex gap-1.5 items-center h-4">
-              {DOTS.map(({ c, d }) => (<span key={d} className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: c, animationDelay: `${d}ms` }} />))}
+
+          {/* 사용자 답변 */}
+          <div className="flex justify-end">
+            <div className="px-3 py-2 text-[10px] leading-relaxed" style={{ background: IND, color: "#fff", borderRadius: "12px 4px 12px 12px", maxWidth: "75%" }}>
+              API 설계랑 QA를 혼자 담당했어요
+            </div>
+          </div>
+
+          {/* 로딩 */}
+          <div className="rounded-xl px-3 py-2.5" style={{ background: "#FFFFFF", border: "1px solid #E5E7EB" }}>
+            <div className="flex gap-1 items-center">
+              {[[0, IND], [150, BLU], [300, VIO]].map(([d, c]) => (
+                <span key={String(d)} className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: String(c), animationDelay: `${d}ms` }} />
+              ))}
             </div>
           </div>
         </div>
