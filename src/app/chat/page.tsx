@@ -2353,20 +2353,22 @@ export default function ChatPage() {
               {showAnalysisPanel && (
               <div
                 className="hidden lg:flex flex-shrink-0 flex-col border-l overflow-hidden"
-                style={{ width: "380px", borderColor: "#E5E7EB", background: "#FFFFFF" }}
+                style={{ width: "clamp(420px, 42vw, 560px)", borderColor: "#E5E7EB", background: "#FAFAFA" }}
               >
                 {/* 패널 헤더 */}
-                <div className="flex items-center justify-between px-4 py-3 border-b flex-shrink-0" style={{ borderColor: "#E5E7EB" }}>
-                  <span className="text-xs font-bold" style={{ color: "#111827" }}>분석 보고서</span>
+                <div className="flex items-center justify-between px-5 py-3 border-b flex-shrink-0" style={{ borderColor: "#E5E7EB", background: "#FFFFFF" }}>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-black tracking-widest uppercase" style={{ color: "#6366F1", letterSpacing: "0.1em" }}>분석 보고서</span>
+                  </div>
                   <div className="flex items-center gap-1.5">
                     {!isLoadingAnalysis && analysisContent && (
                       <>
                         <button
                           onClick={() => { const s = parseAnalysisForPDF(analysisContent); exportToPDF("분석 보고서", s, [companyName, jobTitle].filter(Boolean).join(" · ")); }}
-                          className="text-[10px] font-semibold px-2 py-1 rounded-lg hover:opacity-70"
+                          className="text-[10px] font-semibold px-2.5 py-1 rounded-lg hover:opacity-70"
                           style={{ background: "#EDE9FE", color: "#4C3F99" }}
                         >PDF</button>
-                        <button onClick={() => fetchAnalysisReport()} className="text-[10px] font-semibold px-2 py-1 rounded-lg hover:opacity-70" style={{ background: "#F3F4F6", color: "#6B7280" }}>재조사</button>
+                        <button onClick={() => fetchAnalysisReport()} className="text-[10px] font-semibold px-2.5 py-1 rounded-lg hover:opacity-70" style={{ background: "#F3F4F6", color: "#6B7280" }}>재조사</button>
                       </>
                     )}
                     <button
@@ -2382,24 +2384,24 @@ export default function ChatPage() {
                 {/* 콘텐츠 */}
                 <div className="flex-1 overflow-y-auto hide-scrollbar">
                   {!analysisContent && !isLoadingAnalysis && (
-                    <div className="flex flex-col items-center justify-center gap-3 px-5 pt-12 pb-6 text-center">
-                      <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background: "#EDE9FE" }}>
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6366F1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                    <div className="flex flex-col items-center justify-center gap-3 px-6 pt-16 pb-6 text-center">
+                      <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: "#EDE9FE" }}>
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6366F1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
                       </div>
                       <div>
-                        <p className="text-xs font-semibold" style={{ color: "#111827" }}>기업·직무 분석 보고서</p>
+                        <p className="text-sm font-bold" style={{ color: "#111827" }}>기업·직무 분석 보고서</p>
                         <p className="text-xs mt-1 leading-relaxed" style={{ color: "#6B7280", wordBreak: "keep-all" }}>회사와 직무를 분석해서 자소서 작성 방향을 잡아드려요</p>
                       </div>
                       <button
                         onClick={() => fetchAnalysisReport()}
-                        className="mt-1 w-full py-2.5 rounded-xl text-xs font-semibold text-white transition-all hover:opacity-80"
+                        className="mt-1 w-full py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-80"
                         style={{ background: "#312E81" }}
                       >보고서 생성하기</button>
                     </div>
                   )}
 
                   {isLoadingAnalysis && !analysisContent && (
-                    <div className="flex flex-col items-center justify-center gap-3 pt-12">
+                    <div className="flex flex-col items-center justify-center gap-3 pt-16">
                       <div className="flex gap-1.5">
                         {[0, 150, 300].map((d) => (
                           <span key={d} className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: "#6366F1", animationDelay: `${d}ms` }} />
@@ -2410,35 +2412,72 @@ export default function ChatPage() {
                   )}
 
                   {analysisContent && (
-                    <div className="px-4 py-4 flex flex-col gap-4">
-                      {analysisContent.split(/(?=## \d)/).filter(Boolean).map((section, i) => {
-                        const lines = section.trim().split("\n").filter(Boolean);
-                        const title = lines[0]?.replace(/^##\s*/, "") ?? "";
-                        const bullets = lines.slice(1).filter((l) => l.startsWith("- ")).map((l) => l.replace(/^-\s*/, ""));
-                        return (
-                          <div key={i} className="flex flex-col gap-1.5">
-                            <p className="text-sm font-bold" style={{ color: "#312E81" }}>{title}</p>
-                            {bullets.map((b, j) => {
-                              const colonIdx = b.indexOf(": ");
-                              const label = colonIdx > 0 && colonIdx < 18 ? b.slice(0, colonIdx) : null;
-                              const body = label ? b.slice(colonIdx + 2) : b;
-                              return (
-                                <p key={j} className="text-xs leading-[1.65]" style={{ color: "#374151", wordBreak: "keep-all" }}>
-                                  {label && <span className="font-semibold" style={{ color: "#111827" }}>{label}: </span>}{body}
-                                </p>
-                              );
-                            })}
-                            {i < 4 && <div className="mt-1" style={{ height: 1, background: "#F3F4F6" }} />}
+                    <div className="flex flex-col">
+                      {/* 문서 헤더 */}
+                      <div className="px-7 pt-7 pb-6" style={{ background: "#FFFFFF", borderBottom: "1px solid #E5E7EB" }}>
+                        <p className="text-[10px] font-black tracking-widest uppercase mb-2" style={{ color: "#A78BFA", letterSpacing: "0.12em" }}>COMPANY · JOB ANALYSIS</p>
+                        <h1 className="text-xl font-black leading-tight" style={{ color: "#111827", letterSpacing: "-0.03em" }}>
+                          {companyName || "기업"}
+                          <span style={{ color: "#6366F1" }}> · </span>
+                          {jobTitle || "직무"}
+                        </h1>
+                        <p className="text-xs mt-1.5" style={{ color: "#9CA3AF" }}>
+                          {new Date().toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric" })} 기준
+                        </p>
+                      </div>
+
+                      {/* 섹션들 */}
+                      <div className="px-7 py-6 flex flex-col gap-8">
+                        {analysisContent.split(/(?=##\s)/).filter(s => s.trim()).map((section, i) => {
+                          const lines = section.trim().split("\n").filter(Boolean);
+                          const rawTitle = lines[0]?.replace(/^##\s*/, "") ?? "";
+                          const bullets = lines.slice(1).filter((l) => l.startsWith("- ")).map((l) => l.replace(/^-\s*/, ""));
+                          const numMatch = rawTitle.match(/^(\S+)\s+(\d+)\.\s*(.+)$/);
+                          const emoji = numMatch ? numMatch[1] : "";
+                          const num = numMatch ? numMatch[2] : String(i + 1);
+                          const sectionTitle = numMatch ? numMatch[3] : rawTitle;
+                          return (
+                            <div key={i} className="flex flex-col gap-4">
+                              {/* 섹션 제목 */}
+                              <div className="flex items-center gap-3">
+                                <div className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black" style={{ background: "#EDE9FE", color: "#4338CA" }}>
+                                  {num}
+                                </div>
+                                <div className="flex items-center gap-1.5 flex-1">
+                                  {emoji && <span className="text-base leading-none">{emoji}</span>}
+                                  <h2 className="text-base font-black" style={{ color: "#111827", letterSpacing: "-0.02em" }}>{sectionTitle}</h2>
+                                </div>
+                              </div>
+
+                              {/* 불릿 항목 */}
+                              <div className="flex flex-col gap-3 pl-10">
+                                {bullets.map((b, j) => {
+                                  const colonIdx = b.indexOf(": ");
+                                  const label = colonIdx > 0 && colonIdx < 22 ? b.slice(0, colonIdx) : null;
+                                  const body = label ? b.slice(colonIdx + 2) : b;
+                                  return (
+                                    <div key={j} className="flex flex-col gap-1 pl-3" style={{ borderLeft: "2px solid #EDE9FE" }}>
+                                      {label && (
+                                        <p className="text-[10px] font-black uppercase tracking-wider" style={{ color: "#6366F1", letterSpacing: "0.08em" }}>{label}</p>
+                                      )}
+                                      <p className="text-sm leading-relaxed" style={{ color: "#374151", wordBreak: "keep-all" }}>{body}</p>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+
+                              {i < 4 && <div style={{ height: "1px", background: "#F3F4F6" }} />}
+                            </div>
+                          );
+                        })}
+                        {isLoadingAnalysis && (
+                          <div className="flex gap-1.5 pb-2">
+                            {[0, 150, 300].map((d) => (
+                              <span key={d} className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: "#6366F1", animationDelay: `${d}ms` }} />
+                            ))}
                           </div>
-                        );
-                      })}
-                      {isLoadingAnalysis && (
-                        <div className="flex gap-1.5 pb-2">
-                          {[0, 150, 300].map((d) => (
-                            <span key={d} className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: "#6366F1", animationDelay: `${d}ms` }} />
-                          ))}
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
