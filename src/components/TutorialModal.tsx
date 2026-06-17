@@ -6,7 +6,13 @@ import { supabase } from "@/lib/supabase";
 const ACCENT = "#4338CA";
 const ACCENT_MID = "#6366F1";
 
-const STEP_ACCENT = [ACCENT, "#2563EB", "#059669", "#7C3AED", "#D97706"];
+const STEP_STYLES = [
+  { bg: "#F5F3FF", border: "#C4B5FD", num: "#4338CA" },
+  { bg: "#EFF6FF", border: "#BFDBFE", num: "#2563EB" },
+  { bg: "#F0FDF4", border: "#BBF7D0", num: "#16A34A" },
+  { bg: "#F5F3FF", border: "#DDD6FE", num: "#7C3AED" },
+  { bg: "#FFFBEB", border: "#FDE68A", num: "#D97706" },
+];
 
 export const TUTORIAL_CONTENT = {
   header: "이용 전 꼭 확인해주세요",
@@ -122,15 +128,9 @@ export function TutorialModal({ userId, onClose }: Props) {
           className="flex items-center justify-between px-6 sm:px-8 py-4 flex-shrink-0"
           style={{ borderBottom: "1px solid #F3F4F6" }}
         >
-          <div className="flex items-center gap-3">
-            <span
-              className="text-xs font-bold tracking-widest uppercase"
-              style={{ color: ACCENT, letterSpacing: "0.08em" }}
-            >
-              {TUTORIAL_CONTENT.header}
-            </span>
-          </div>
-          {/* 진행 점 */}
+          <span className="text-xs font-bold tracking-widest uppercase" style={{ color: ACCENT, letterSpacing: "0.08em" }}>
+            {TUTORIAL_CONTENT.header}
+          </span>
           <div className="flex items-center gap-1.5">
             {pages.map((_, i) => (
               <div
@@ -147,15 +147,12 @@ export function TutorialModal({ userId, onClose }: Props) {
           </div>
         </div>
 
-        {/* 챕터 번호 + 제목 */}
+        {/* 챕터 + 제목 */}
         <div className="px-6 sm:px-8 pt-6 pb-0 flex-shrink-0">
-          <p className="text-xs font-bold tracking-widest mb-2" style={{ color: "#C4B5FD", letterSpacing: "0.12em" }}>
+          <p className="text-[10px] font-bold tracking-widest mb-2 uppercase" style={{ color: "#A78BFA", letterSpacing: "0.14em" }}>
             CHAPTER {current.chapter}
           </p>
-          <h2
-            className="text-2xl sm:text-4xl font-black leading-tight"
-            style={{ color: "#111827", letterSpacing: "-0.04em" }}
-          >
+          <h2 className="text-2xl sm:text-4xl font-black leading-tight" style={{ color: "#111827", letterSpacing: "-0.04em" }}>
             {current.title}
           </h2>
         </div>
@@ -163,28 +160,31 @@ export function TutorialModal({ userId, onClose }: Props) {
         {/* 본문 */}
         <div
           key={animKey}
-          className="hide-scrollbar px-6 sm:px-8 pt-6 pb-2 flex flex-col gap-4 overflow-y-auto"
+          className="hide-scrollbar px-6 sm:px-8 pt-5 pb-2 flex flex-col gap-3 overflow-y-auto"
           style={{ animation: "pageIn 0.25s ease forwards" }}
         >
+
           {/* 1장 — 뱃지 */}
           {current.id === "badge" && (
             <>
-              <div className="flex flex-col gap-5">
-                {current.items.map((item, i) => (
-                  <div key={i} className="flex items-start gap-4">
-                    <span className="text-2xl flex-shrink-0 leading-none">{item.icon}</span>
-                    <p className="text-base leading-relaxed pt-0.5" style={{ color: "#374151", wordBreak: "keep-all" }}>
-                      {item.text}
-                    </p>
-                  </div>
-                ))}
-              </div>
+              {current.items.map((item, i) => (
+                <div
+                  key={i}
+                  className="flex items-start gap-4 px-4 py-3.5 rounded-2xl"
+                  style={{ background: "#F5F3FF", border: "1px solid #EDE9FE" }}
+                >
+                  <span className="text-xl flex-shrink-0 leading-none">{item.icon}</span>
+                  <p className="text-sm leading-relaxed" style={{ color: "#374151", wordBreak: "keep-all" }}>
+                    {item.text}
+                  </p>
+                </div>
+              ))}
               <div
                 className="flex items-start gap-3 px-4 py-3.5 rounded-2xl"
-                style={{ background: "#FFFBEB", borderLeft: "3px solid #F59E0B" }}
+                style={{ background: "#FFFBEB", border: "1px solid #FDE68A" }}
               >
-                <span className="text-base leading-none flex-shrink-0 mt-0.5">⚠️</span>
-                <p className="text-sm leading-relaxed font-medium" style={{ color: "#78350F", wordBreak: "keep-all" }}>
+                <span className="text-lg leading-none flex-shrink-0">⚠️</span>
+                <p className="text-sm leading-relaxed font-semibold" style={{ color: "#78350F", wordBreak: "keep-all" }}>
                   {current.warning}
                 </p>
               </div>
@@ -193,25 +193,26 @@ export function TutorialModal({ userId, onClose }: Props) {
 
           {/* 2장 — 진행 흐름 */}
           {current.id === "flow" && (
-            <div className="flex flex-col gap-0">
-              {current.steps.map((step, i) => (
-                <div
-                  key={i}
-                  className="flex items-start gap-5 py-4"
-                  style={{ borderBottom: i < current.steps.length - 1 ? "1px solid #F3F4F6" : "none" }}
-                >
-                  <span
-                    className="flex-shrink-0 text-sm font-black tabular-nums"
-                    style={{ color: STEP_ACCENT[i], letterSpacing: "-0.02em", minWidth: "28px", paddingTop: "2px" }}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {current.steps.map((step, i) => {
+                const s = STEP_STYLES[i];
+                const isLastStep = i === current.steps.length - 1;
+                return (
+                  <div
+                    key={i}
+                    className={`flex items-start gap-4 px-4 py-3.5 rounded-2xl${isLastStep ? " sm:col-span-2" : ""}`}
+                    style={{ background: s.bg, border: `1px solid ${s.border}` }}
                   >
-                    {step.num}
-                  </span>
-                  <div className="flex-1">
-                    <p className="text-base font-bold mb-0.5" style={{ color: "#111827" }}>{step.label}</p>
-                    <p className="text-sm leading-relaxed" style={{ color: "#6B7280", wordBreak: "keep-all" }}>{step.desc}</p>
+                    <span className="text-base font-black flex-shrink-0 leading-none pt-0.5 tabular-nums" style={{ color: s.num, letterSpacing: "-0.03em" }}>
+                      {step.num}
+                    </span>
+                    <div>
+                      <p className="text-sm font-bold mb-0.5" style={{ color: "#111827" }}>{step.label}</p>
+                      <p className="text-xs leading-relaxed" style={{ color: "#6B7280", wordBreak: "keep-all" }}>{step.desc}</p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 
@@ -219,58 +220,53 @@ export function TutorialModal({ userId, onClose }: Props) {
           {current.id === "answer" && (
             <>
               <div
-                className="px-4 py-3.5 rounded-2xl"
-                style={{ background: "#F0F9FF", borderLeft: "3px solid #38BDF8" }}
+                className="flex items-start gap-3 px-4 py-3.5 rounded-2xl"
+                style={{ background: "#EFF6FF", border: "1px solid #BFDBFE" }}
               >
-                <p className="text-sm leading-relaxed font-medium" style={{ color: "#0369A1", wordBreak: "keep-all" }}>
-                  🎙️ {current.tip}
+                <span className="text-lg leading-none flex-shrink-0">🎙️</span>
+                <p className="text-sm leading-relaxed font-medium" style={{ color: "#1D4ED8", wordBreak: "keep-all" }}>
+                  {current.tip}
                 </p>
               </div>
 
-              <div className="flex flex-col gap-3">
-                <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid #E5E7EB" }}>
-                  <div
-                    className="flex items-center gap-2 px-4 py-3"
-                    style={{ borderBottom: "1px solid #F3F4F6", background: "#F9FAFB" }}
-                  >
-                    <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "#DCFCE7" }}>
-                      <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                        <path d="M1 4L3.5 6.5L9 1" stroke="#16A34A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    </div>
-                    <span className="text-sm font-semibold" style={{ color: "#111827" }}>{current.good.label}</span>
+              {/* 좋은 예 */}
+              <div className="rounded-2xl overflow-hidden" style={{ background: "#F0FDF4", border: "1px solid #BBF7D0" }}>
+                <div className="flex items-center gap-2 px-4 py-3" style={{ borderBottom: "1px solid #BBF7D0" }}>
+                  <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "#DCFCE7" }}>
+                    <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                      <path d="M1 4L3.5 6.5L9 1" stroke="#16A34A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
                   </div>
-                  <div className="px-4 py-4">
-                    <p className="text-sm leading-relaxed" style={{ color: "#374151", wordBreak: "keep-all" }}>
-                      &ldquo;{current.good.text}&rdquo;
-                    </p>
-                    <div className="flex items-center gap-1.5 mt-3">
-                      <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: "#16A34A" }} />
-                      <p className="text-xs font-semibold" style={{ color: "#16A34A" }}>{current.good.reason}</p>
-                    </div>
+                  <span className="text-sm font-bold" style={{ color: "#15803D" }}>{current.good.label}</span>
+                </div>
+                <div className="px-4 py-4">
+                  <p className="text-sm leading-relaxed" style={{ color: "#374151", wordBreak: "keep-all" }}>
+                    &ldquo;{current.good.text}&rdquo;
+                  </p>
+                  <div className="flex items-center gap-1.5 mt-3">
+                    <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: "#16A34A" }} />
+                    <p className="text-xs font-semibold" style={{ color: "#16A34A" }}>{current.good.reason}</p>
                   </div>
                 </div>
+              </div>
 
-                <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid #E5E7EB" }}>
-                  <div
-                    className="flex items-center gap-2 px-4 py-3"
-                    style={{ borderBottom: "1px solid #F3F4F6", background: "#F9FAFB" }}
-                  >
-                    <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "#FEE2E2" }}>
-                      <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
-                        <path d="M1 1L7 7M7 1L1 7" stroke="#DC2626" strokeWidth="1.5" strokeLinecap="round"/>
-                      </svg>
-                    </div>
-                    <span className="text-sm font-semibold" style={{ color: "#111827" }}>{current.bad.label}</span>
+              {/* 나쁜 예 */}
+              <div className="rounded-2xl overflow-hidden" style={{ background: "#FEF2F2", border: "1px solid #FECACA" }}>
+                <div className="flex items-center gap-2 px-4 py-3" style={{ borderBottom: "1px solid #FECACA" }}>
+                  <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "#FEE2E2" }}>
+                    <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                      <path d="M1 1L7 7M7 1L1 7" stroke="#DC2626" strokeWidth="1.5" strokeLinecap="round"/>
+                    </svg>
                   </div>
-                  <div className="px-4 py-4">
-                    <p className="text-sm leading-relaxed" style={{ color: "#6B7280", wordBreak: "keep-all" }}>
-                      &ldquo;{current.bad.text}&rdquo;
-                    </p>
-                    <div className="flex items-center gap-1.5 mt-3">
-                      <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: "#DC2626" }} />
-                      <p className="text-xs font-semibold" style={{ color: "#DC2626" }}>{current.bad.reason}</p>
-                    </div>
+                  <span className="text-sm font-bold" style={{ color: "#B91C1C" }}>{current.bad.label}</span>
+                </div>
+                <div className="px-4 py-4">
+                  <p className="text-sm leading-relaxed" style={{ color: "#6B7280", wordBreak: "keep-all" }}>
+                    &ldquo;{current.bad.text}&rdquo;
+                  </p>
+                  <div className="flex items-center gap-1.5 mt-3">
+                    <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: "#DC2626" }} />
+                    <p className="text-xs font-semibold" style={{ color: "#DC2626" }}>{current.bad.reason}</p>
                   </div>
                 </div>
               </div>
