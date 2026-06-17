@@ -2596,7 +2596,7 @@ export default function ChatPage() {
 
               {userCredits !== null && (
                 <div
-                  className="flex items-center justify-between px-5 py-4 rounded-2xl"
+                  className="flex items-center justify-center gap-8 px-5 py-4 rounded-2xl"
                   style={{ background: "rgba(255,209,102,0.07)", border: "1px solid rgba(255,209,102,0.22)" }}
                 >
                   <div className="flex flex-col gap-0.5">
