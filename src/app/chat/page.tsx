@@ -2466,7 +2466,7 @@ export default function ChatPage() {
                                 })}
                               </div>
 
-                              {i < 4 && <div style={{ height: "1px", background: "#F3F4F6" }} />}
+                              {i < 5 && <div style={{ height: "1px", background: "#F3F4F6" }} />}
                             </div>
                           );
                         })}
