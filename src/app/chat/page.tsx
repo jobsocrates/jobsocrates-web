@@ -670,6 +670,7 @@ export default function ChatPage() {
   const jobPostFileRef = useRef<HTMLInputElement>(null);
   const [showAnalysisPanel, setShowAnalysisPanel] = useState(false);
   const [analysisContent, setAnalysisContent] = useState("");
+  const analysisContentRef = useRef("");
   const [isLoadingAnalysis, setIsLoadingAnalysis] = useState(false);
   const [editingField, setEditingField] = useState<"question" | "charLimit" | null>(null);
   const [editFieldValue, setEditFieldValue] = useState("");
@@ -1030,6 +1031,8 @@ export default function ChatPage() {
     try {
       dbSessionIdRef.current = sessionId;
       setJobTitle(sessionJobTitle);
+      const { data: sessionData } = await supabase.from("sessions").select("analysis_report").eq("id", sessionId).single();
+      if (sessionData?.analysis_report) { setAnalysisContent(sessionData.analysis_report); analysisContentRef.current = sessionData.analysis_report; }
 
       const { data: allItems } = await supabase
         .from("cover_items")
@@ -1122,6 +1125,8 @@ export default function ChatPage() {
     try {
       setJobTitle(resumeSession.session.job_title || "");
       dbSessionIdRef.current = resumeSession.session.id;
+      const { data: sessionData } = await supabase.from("sessions").select("analysis_report").eq("id", resumeSession.session.id).single();
+      if (sessionData?.analysis_report) { setAnalysisContent(sessionData.analysis_report); analysisContentRef.current = sessionData.analysis_report; }
 
       const newItems: CoverItem[] = await Promise.all(
         resumeSession.items.map(async (ci) => {
@@ -1284,6 +1289,10 @@ export default function ChatPage() {
         full += dec.decode(value, { stream: true });
         setAnalysisContent(full);
       }
+      analysisContentRef.current = full;
+      if (dbSessionIdRef.current && full) {
+        supabase.from("sessions").update({ analysis_report: full }).eq("id", dbSessionIdRef.current).then(() => {});
+      }
     } catch {
       setAnalysisContent("분석 중 오류가 발생했어요. 다시 시도해주세요.");
     } finally {
@@ -1371,6 +1380,9 @@ export default function ChatPage() {
     try {
       const sessionId = await ensureDbSession();
       console.log("[DB] currentUser:", currentUser, "sessionId:", sessionId);
+      if (sessionId && analysisContentRef.current) {
+        supabase.from("sessions").update({ analysis_report: analysisContentRef.current }).eq("id", sessionId).then(() => {});
+      }
       if (sessionId) {
         const orderIndex = items.findIndex(it => it.id === selectedId);
         const { data, error } = await supabase.from("cover_items").insert({

@@ -29,6 +29,7 @@ alter table sessions add column if not exists job_title text not null default ''
 alter table sessions add column if not exists jd_keywords jsonb not null default '[]';
 alter table sessions add column if not exists created_at timestamptz not null default now();
 alter table sessions add column if not exists updated_at timestamptz not null default now();
+alter table sessions add column if not exists analysis_report text;
 create index if not exists sessions_user_id_idx on sessions(user_id);
 
 create table if not exists cover_items (
