@@ -2361,14 +2361,7 @@ export default function ChatPage() {
                   </div>
                   <div className="flex items-center gap-1.5">
                     {!isLoadingAnalysis && analysisContent && (
-                      <>
-                        <button
-                          onClick={() => { const s = parseAnalysisForPDF(analysisContent); exportToPDF("분석 보고서", s, [companyName, jobTitle].filter(Boolean).join(" · ")); }}
-                          className="text-[10px] font-semibold px-2.5 py-1 rounded-lg hover:opacity-70"
-                          style={{ background: "#EDE9FE", color: "#4C3F99" }}
-                        >PDF</button>
-                        <button onClick={() => fetchAnalysisReport()} className="text-[10px] font-semibold px-2.5 py-1 rounded-lg hover:opacity-70" style={{ background: "#F3F4F6", color: "#6B7280" }}>재조사</button>
-                      </>
+                      <button onClick={() => fetchAnalysisReport()} className="text-[10px] font-semibold px-2.5 py-1 rounded-lg hover:opacity-70" style={{ background: "#F3F4F6", color: "#6B7280" }}>재조사</button>
                     )}
                     <button
                       onClick={() => setShowAnalysisPanel(false)}
@@ -2810,6 +2803,7 @@ export default function ChatPage() {
           draft={selected.draft}
           msgs={selected.msgs}
           interviewQs={selected.interviewQs.map(q => ({ question: q.question, msgs: q.msgs }))}
+          analysisContent={analysisContent}
           onClose={() => setShowSummary(false)}
           onNextItem={() => { setShowSummary(false); addItem(); }}
         />

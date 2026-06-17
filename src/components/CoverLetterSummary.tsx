@@ -23,6 +23,7 @@ interface Props {
   draft: string;
   msgs: SummaryMsg[];
   interviewQs?: SummaryInterviewQ[];
+  analysisContent?: string;
   onClose: () => void;
   onNextItem?: () => void;
 }
@@ -235,7 +236,7 @@ ${interviewQs.length > 0 ? `
 }
 
 /* ── 메인 컴포넌트 ── */
-export function CoverLetterSummary({ jobTitle, question, draft, msgs, interviewQs = [], onClose, onNextItem }: Props) {
+export function CoverLetterSummary({ jobTitle, question, draft, msgs, interviewQs = [], analysisContent, onClose, onNextItem }: Props) {
   useEffect(() => {
     document.body.style.overflow = "hidden";
     return () => { document.body.style.overflow = ""; };
@@ -304,6 +305,45 @@ export function CoverLetterSummary({ jobTitle, question, draft, msgs, interviewQ
       {/* 본문 */}
       <div className="flex-1 overflow-y-auto px-6 py-7">
         <div className="max-w-4xl mx-auto flex flex-col gap-12">
+
+          {/* 00 · 기업·직무 분석 보고서 */}
+          {analysisContent && (
+            <Section number="00" title="기업 · 직무 분석" numColor="rgba(167,139,250,0.7)">
+              <div className="flex flex-col gap-6">
+                {analysisContent.split(/(?=##\s)/).filter(s => s.trim()).map((block, i) => {
+                  const lines = block.trim().split("\n").filter(Boolean);
+                  const rawTitle = lines[0]?.replace(/^##\s*/, "") ?? "";
+                  const numMatch = rawTitle.match(/^(\S+)\s+(\d+)\.\s*(.+)$/);
+                  const emoji = numMatch ? numMatch[1] : "";
+                  const sectionTitle = numMatch ? numMatch[3] : rawTitle;
+                  const bullets = lines.slice(1).filter(l => l.startsWith("- ")).map(l => l.replace(/^-\s*/, ""));
+                  return (
+                    <div key={i} className="rounded-2xl overflow-hidden" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                      <div className="px-5 py-3.5 border-b" style={{ borderColor: "rgba(255,255,255,0.06)", background: "rgba(255,255,255,0.04)" }}>
+                        <div className="flex items-center gap-2">
+                          <span className="text-base">{emoji}</span>
+                          <span className="text-sm font-bold text-white">{sectionTitle}</span>
+                        </div>
+                      </div>
+                      <div className="px-5 py-4 flex flex-col gap-4">
+                        {bullets.map((b, j) => {
+                          const colonIdx = b.indexOf(": ");
+                          const label = colonIdx > 0 && colonIdx < 24 ? b.slice(0, colonIdx) : null;
+                          const body = label ? b.slice(colonIdx + 2) : b;
+                          return (
+                            <div key={j} className="flex flex-col gap-1 pl-3" style={{ borderLeft: "2px solid rgba(167,139,250,0.3)" }}>
+                              {label && <p className="text-xs font-bold" style={{ color: "#A78BFA" }}>{label}</p>}
+                              <p className="text-sm leading-relaxed" style={{ color: "rgba(255,255,255,0.75)", wordBreak: "keep-all" }}>{body}</p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </Section>
+          )}
 
           {/* 01 · 완성본 */}
           <Section number="01" title="완성본" numColor={`${GOLD}99`}>
