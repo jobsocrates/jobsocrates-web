@@ -4,8 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
-const ACCENT = "#6366F1";
-const ACCENT_DARK = "#4338CA";
+const ACCENT = "#4338CA";
+const ACCENT_MID = "#6366F1";
 
 interface Props {
   tab: "login" | "signup";
@@ -20,7 +20,7 @@ function SocialBtn({ color, textColor = "#000", children, onClick, disabled }: {
       onClick={onClick}
       disabled={disabled}
       className="w-full flex items-center justify-center gap-3 py-3 rounded-xl text-sm font-medium transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
-      style={{ background: color, color: textColor }}
+      style={{ background: color, color: textColor, border: "1px solid #E5E7EB" }}
     >
       {children}
     </button>
@@ -39,6 +39,8 @@ function Input({ type = "text", placeholder, value, onChange, disabled, onEnter 
         input[type="password"]::-ms-reveal,
         input[type="password"]::-ms-clear { display: none; }
         input::-webkit-credentials-auto-fill-button { display: none; }
+        .auth-input::placeholder { color: #9CA3AF; }
+        .auth-input:focus { border-color: #6366F1 !important; box-shadow: 0 0 0 3px rgba(99,102,241,0.12); }
       `}</style>
       <input
         type={isPw ? (showPw ? "text" : "password") : type}
@@ -47,11 +49,11 @@ function Input({ type = "text", placeholder, value, onChange, disabled, onEnter 
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={(e) => { if (e.key === "Enter" && onEnter) onEnter(); }}
         disabled={disabled}
-        className="glow-input w-full px-4 py-3 rounded-xl text-sm focus:outline-none transition-colors disabled:opacity-50"
+        className="auth-input w-full px-4 py-3 rounded-xl text-sm focus:outline-none transition-all disabled:opacity-50"
         style={{
-          background: "rgba(99,102,241,0.08)",
-          border: "1px solid rgba(167,139,250,0.18)",
-          color: "rgba(255,255,255,0.9)",
+          background: "#F9FAFB",
+          border: "1.5px solid #E5E7EB",
+          color: "#111827",
           paddingRight: isPw ? "44px" : undefined,
         }}
       />
@@ -60,7 +62,7 @@ function Input({ type = "text", placeholder, value, onChange, disabled, onEnter 
           type="button"
           onClick={() => setShowPw(v => !v)}
           tabIndex={-1}
-          style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", padding: 4, color: "rgba(255,255,255,0.45)", display: "flex", alignItems: "center" }}
+          style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", padding: 4, color: "#9CA3AF", display: "flex", alignItems: "center" }}
         >
           {showPw ? (
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -83,9 +85,9 @@ function Input({ type = "text", placeholder, value, onChange, disabled, onEnter 
 function Divider() {
   return (
     <div className="flex items-center gap-3">
-      <div className="flex-1 h-px" style={{ background: "rgba(167,139,250,0.12)" }} />
-      <span className="text-xs" style={{ color: "rgba(167,139,250,0.45)" }}>또는</span>
-      <div className="flex-1 h-px" style={{ background: "rgba(167,139,250,0.12)" }} />
+      <div className="flex-1 h-px" style={{ background: "#E5E7EB" }} />
+      <span className="text-xs" style={{ color: "#9CA3AF" }}>또는</span>
+      <div className="flex-1 h-px" style={{ background: "#E5E7EB" }} />
     </div>
   );
 }
@@ -105,14 +107,8 @@ const TERMS = {
   },
 };
 
-function TermRow({
-  checked,
-  onChange,
-  termKey,
-}: {
-  checked: boolean;
-  onChange: () => void;
-  termKey: keyof typeof TERMS;
+function TermRow({ checked, onChange, termKey }: {
+  checked: boolean; onChange: () => void; termKey: keyof typeof TERMS;
 }) {
   const [open, setOpen] = useState(false);
   const { label, content } = TERMS[termKey];
@@ -120,12 +116,11 @@ function TermRow({
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-start gap-2">
-        {/* 체크박스 */}
         <div
           onClick={onChange}
           className="mt-0.5 w-4 h-4 rounded flex items-center justify-center flex-shrink-0 cursor-pointer transition-all"
           style={{
-            border: checked ? "none" : "1.5px solid rgba(255,255,255,0.25)",
+            border: checked ? "none" : "1.5px solid #D1D5DB",
             background: checked ? ACCENT : "transparent",
           }}
         >
@@ -135,47 +130,32 @@ function TermRow({
             </svg>
           )}
         </div>
-        {/* 라벨 + 펼치기 버튼 */}
         <div className="flex items-start justify-between flex-1 gap-1.5">
-          <span
-            className="text-xs leading-relaxed cursor-pointer"
-            style={{ color: "rgba(255,255,255,0.55)" }}
-            onClick={onChange}
-          >
+          <span className="text-xs leading-relaxed cursor-pointer" style={{ color: "#6B7280" }} onClick={onChange}>
             {label}
           </span>
           <button
-            onClick={() => setOpen((v) => !v)}
+            onClick={() => setOpen(v => !v)}
             className="flex-shrink-0 flex items-center gap-0.5 px-2 py-0.5 rounded-lg text-xs transition-all hover:opacity-80"
             style={{
-              background: open ? "rgba(99,102,241,0.15)" : "rgba(255,255,255,0.05)",
-              color: open ? ACCENT : "rgba(255,255,255,0.35)",
-              border: `1px solid ${open ? "rgba(99,102,241,0.35)" : "rgba(167,139,250,0.12)"}`,
+              background: open ? "#EDE9FE" : "#F3F4F6",
+              color: open ? ACCENT : "#9CA3AF",
+              border: `1px solid ${open ? "#C4B5FD" : "#E5E7EB"}`,
               whiteSpace: "nowrap",
             }}
           >
             {open ? "닫기" : "보기"}
-            <svg
-              width="10" height="10" viewBox="0 0 24 24" fill="none"
-              stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-              style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}
-            >
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+              style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>
               <polyline points="6 9 12 15 18 9" />
             </svg>
           </button>
         </div>
       </div>
 
-      {/* 약관 내용 */}
       {open && (
-        <div
-          className="ml-6 rounded-xl px-3 py-3"
-          style={{ background: "rgba(99,102,241,0.05)", border: "1px solid rgba(167,139,250,0.1)" }}
-        >
-          <p
-            className="text-xs leading-[1.85] whitespace-pre-wrap"
-            style={{ color: "rgba(255,255,255,0.38)" }}
-          >
+        <div className="ml-6 rounded-xl px-3 py-3" style={{ background: "#F9FAFB", border: "1px solid #E5E7EB" }}>
+          <p className="text-xs leading-[1.85] whitespace-pre-wrap" style={{ color: "#6B7280" }}>
             {content}
           </p>
         </div>
@@ -217,13 +197,10 @@ export function AuthModal({ tab: initialTab, onClose }: Props) {
     return () => { document.body.style.overflow = ""; };
   }, []);
 
-  // 스크롤 인디케이터: 아래로 더 볼 내용이 있는지 감지
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    const check = () => {
-      setCanScrollMore(el.scrollTop + el.clientHeight < el.scrollHeight - 8);
-    };
+    const check = () => { setCanScrollMore(el.scrollTop + el.clientHeight < el.scrollHeight - 8); };
     check();
     el.addEventListener("scroll", check, { passive: true });
     const ro = new ResizeObserver(check);
@@ -231,10 +208,7 @@ export function AuthModal({ tab: initialTab, onClose }: Props) {
     return () => { el.removeEventListener("scroll", check); ro.disconnect(); };
   }, [tab]);
 
-  useEffect(() => {
-    setError("");
-    setSuccessMsg("");
-  }, [tab]);
+  useEffect(() => { setError(""); setSuccessMsg(""); }, [tab]);
 
   function handleBackdrop(e: React.MouseEvent) {
     if (e.target === backdropRef.current) onClose();
@@ -247,46 +221,31 @@ export function AuthModal({ tab: initialTab, onClose }: Props) {
       const host = url.replace(/^https?:\/\//, "");
       window.location.href = `intent://${host}#Intent;scheme=https;package=com.android.chrome;end`;
     } else {
-      navigator.clipboard.writeText(url).then(() => {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2500);
-      });
+      navigator.clipboard.writeText(url).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2500); });
     }
   }
 
   function copyUrl() {
-    navigator.clipboard.writeText(window.location.href).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
-    });
+    navigator.clipboard.writeText(window.location.href).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2500); });
   }
 
   async function handleGoogle() {
     setLoading(true);
     setError("");
     const redirectTo = `${window.location.origin}/auth/callback`;
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo },
-    });
-    if (error) {
-      setError(error.message);
-      setLoading(false);
-    }
+    const { error } = await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo } });
+    if (error) { setError(error.message); setLoading(false); }
   }
 
   async function handleSubmit() {
     setError("");
     if (!email || !pw) { setError("이메일과 비밀번호를 입력해주세요."); return; }
-
     if (tab === "signup") {
       if (pw !== pw2) { setError("비밀번호가 일치하지 않습니다."); return; }
       if (pw.length < 6) { setError("비밀번호는 6자 이상이어야 합니다."); return; }
       if (!agree1 || !agree2) { setError("필수 약관에 동의해주세요."); return; }
     }
-
     setLoading(true);
-
     if (tab === "login") {
       const { error } = await supabase.auth.signInWithPassword({ email, password: pw });
       if (error) {
@@ -297,24 +256,15 @@ export function AuthModal({ tab: initialTab, onClose }: Props) {
           : error.message;
         setError(msg);
         setLoading(false);
-      } else {
-        onClose();
-      }
+      } else { onClose(); }
     } else {
       const { data, error } = await supabase.auth.signUp({
-        email,
-        password: pw,
+        email, password: pw,
         options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
       });
-      if (error) {
-        setError(error.message);
-        setLoading(false);
-      } else if (data.session) {
-        onClose();
-      } else {
-        setSuccessMsg("가입 확인 이메일을 보냈습니다. 메일함을 확인해주세요.");
-        setLoading(false);
-      }
+      if (error) { setError(error.message); setLoading(false); }
+      else if (data.session) { onClose(); }
+      else { setSuccessMsg("가입 확인 이메일을 보냈습니다. 메일함을 확인해주세요."); setLoading(false); }
     }
   }
 
@@ -323,26 +273,27 @@ export function AuthModal({ tab: initialTab, onClose }: Props) {
       ref={backdropRef}
       onClick={handleBackdrop}
       className="fixed inset-0 z-50 flex items-center justify-center px-4"
-      style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)" }}
+      style={{ background: "rgba(17,24,39,0.55)", backdropFilter: "blur(8px)" }}
     >
       <div
         className="w-full max-w-sm rounded-3xl overflow-hidden relative"
         style={{
-          background: "#0D0D2A",
-          border: "1px solid rgba(167,139,250,0.18)",
-          boxShadow: "0 0 0 1px rgba(99,102,241,0.08), 0 32px 64px rgba(10,10,50,0.6), 0 0 80px rgba(99,102,241,0.12)",
+          background: "#FFFFFF",
+          border: "1px solid #E5E7EB",
+          boxShadow: "0 20px 60px rgba(17,24,39,0.15), 0 4px 16px rgba(17,24,39,0.08)",
         }}
       >
         {/* 탭 */}
-        <div className="flex border-b" style={{ borderColor: "rgba(167,139,250,0.12)" }}>
+        <div className="flex border-b" style={{ borderColor: "#F3F4F6", background: "#FAFAFA" }}>
           {(["login", "signup"] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
-              className="flex-1 py-4 text-sm font-medium transition-colors"
+              className="flex-1 py-4 text-sm font-semibold transition-colors"
               style={{
-                color: tab === t ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.35)",
+                color: tab === t ? ACCENT : "#9CA3AF",
                 borderBottom: tab === t ? `2px solid ${ACCENT}` : "2px solid transparent",
+                background: "transparent",
               }}
             >
               {t === "login" ? "로그인" : "회원가입"}
@@ -351,20 +302,13 @@ export function AuthModal({ tab: initialTab, onClose }: Props) {
         </div>
 
         {/* 스크롤 영역 */}
-        <div
-          ref={scrollRef}
-          className="p-6 flex flex-col gap-3 overflow-y-auto"
-          style={{ maxHeight: "78vh" }}
-        >
-          {/* 소셜 — 인앱 브라우저면 외부 브라우저 유도 UI */}
+        <div ref={scrollRef} className="p-6 flex flex-col gap-3 overflow-y-auto" style={{ maxHeight: "78vh" }}>
+
           {isInApp ? (
-            <div
-              className="rounded-2xl p-4 flex flex-col gap-3"
-              style={{ background: "rgba(99,102,241,0.06)", border: "1px solid rgba(167,139,250,0.15)" }}
-            >
+            <div className="rounded-2xl p-4 flex flex-col gap-3" style={{ background: "#FFF9F0", border: "1px solid #FDE68A" }}>
               <div className="flex items-start gap-2.5">
                 <span className="text-base flex-shrink-0">⚠️</span>
-                <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.55)", wordBreak: "keep-all" }}>
+                <p className="text-xs leading-relaxed" style={{ color: "#92400E", wordBreak: "keep-all" }}>
                   카카오톡·인스타그램 등 앱 내 브라우저에서는 구글 로그인이 차단돼요.
                   <br />Chrome 또는 Safari에서 열어주세요.
                 </p>
@@ -372,20 +316,20 @@ export function AuthModal({ tab: initialTab, onClose }: Props) {
               <button
                 onClick={openInExternalBrowser}
                 className="w-full py-2.5 rounded-xl text-sm font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
-                style={{ background: ACCENT, color: "#fff" }}
+                style={{ background: `linear-gradient(135deg, ${ACCENT} 0%, ${ACCENT_MID} 100%)`, color: "#fff" }}
               >
                 외부 브라우저에서 열기
               </button>
               <button
                 onClick={copyUrl}
                 className="w-full py-2 rounded-xl text-xs font-medium transition-all hover:opacity-80"
-                style={{ background: "rgba(99,102,241,0.08)", color: copied ? "#6BFF9E" : "rgba(255,255,255,0.55)", border: "1px solid rgba(167,139,250,0.15)" }}
+                style={{ background: "#F3F4F6", color: copied ? "#059669" : "#6B7280", border: "1px solid #E5E7EB" }}
               >
                 {copied ? "✓ 주소 복사됨 — Safari·Chrome에 붙여넣기 해주세요" : "주소 복사하기"}
               </button>
             </div>
           ) : (
-            <SocialBtn color="white" textColor="#111" onClick={handleGoogle} disabled={loading}>
+            <SocialBtn color="#FFFFFF" textColor="#374151" onClick={handleGoogle} disabled={loading}>
               <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
               {loading ? "처리 중..." : tab === "login" ? "구글로 로그인" : "구글로 회원가입"}
             </SocialBtn>
@@ -393,15 +337,9 @@ export function AuthModal({ tab: initialTab, onClose }: Props) {
 
           <Divider />
 
-          {/* 에러 / 성공 메시지 */}
-          {error && (
-            <p className="text-xs px-1" style={{ color: "#FF6B6B" }}>{error}</p>
-          )}
-          {successMsg && (
-            <p className="text-xs px-1" style={{ color: "#6BFF9E" }}>{successMsg}</p>
-          )}
+          {error && <p className="text-xs px-1" style={{ color: "#EF4444" }}>{error}</p>}
+          {successMsg && <p className="text-xs px-1" style={{ color: "#059669" }}>{successMsg}</p>}
 
-          {/* 이메일/비밀번호 */}
           <Input type="email" placeholder="이메일" value={email} onChange={setEmail} disabled={loading} onEnter={handleSubmit} />
           <Input type="password" placeholder="비밀번호" value={pw} onChange={setPw} disabled={loading} onEnter={handleSubmit} />
           {tab === "signup" && (
@@ -412,51 +350,45 @@ export function AuthModal({ tab: initialTab, onClose }: Props) {
             onClick={handleSubmit}
             disabled={loading}
             className="w-full py-3.5 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
-            style={{ background: `linear-gradient(135deg, ${ACCENT_DARK} 0%, ${ACCENT} 100%)` }}
+            style={{ background: `linear-gradient(135deg, ${ACCENT} 0%, ${ACCENT_MID} 100%)`, boxShadow: "0 4px 14px rgba(99,102,241,0.35)" }}
           >
             {loading ? "처리 중..." : tab === "login" ? "로그인" : "회원가입"}
           </button>
 
-          {/* 약관 (회원가입만) */}
           {tab === "signup" && (
             <>
               <Divider />
               <div className="flex flex-col gap-3">
-                {/* 전체 동의 */}
                 <button
                   onClick={toggleAll}
                   className="w-full flex items-center gap-2.5 py-2.5 px-3 rounded-xl transition-colors"
-                  style={{ background: "rgba(99,102,241,0.06)", border: "1px solid rgba(167,139,250,0.15)" }}
+                  style={{ background: "#F9FAFB", border: "1px solid #E5E7EB" }}
                 >
                   <div
                     className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0 transition-all"
-                    style={{ background: allAgree ? ACCENT : "rgba(255,255,255,0.1)", border: allAgree ? "none" : "1.5px solid rgba(255,255,255,0.2)" }}
+                    style={{ background: allAgree ? ACCENT : "transparent", border: allAgree ? "none" : "1.5px solid #D1D5DB" }}
                   >
                     {allAgree && <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>}
                   </div>
-                  <span className="text-xs font-medium" style={{ color: "rgba(255,255,255,0.75)" }}>전체 동의</span>
+                  <span className="text-xs font-semibold" style={{ color: "#374151" }}>전체 동의</span>
                 </button>
 
                 <TermRow checked={agree1} onChange={() => setAgree1(p => !p)} termKey="privacy" />
                 <TermRow checked={agree2} onChange={() => setAgree2(p => !p)} termKey="terms" />
                 <TermRow checked={agree3} onChange={() => setAgree3(p => !p)} termKey="marketing" />
               </div>
-              {/* 하단 여백 */}
               <div className="h-1" />
             </>
           )}
         </div>
 
-        {/* 스크롤 인디케이터 — 아래 내용이 더 있을 때 */}
         {canScrollMore && (
           <div
             className="absolute bottom-0 left-0 right-0 flex flex-col items-center pb-3 pt-8 pointer-events-none"
-            style={{ background: "linear-gradient(to bottom, transparent, #0D0D2A 60%)" }}
+            style={{ background: "linear-gradient(to bottom, transparent, #FFFFFF 60%)" }}
           >
-            <span className="text-xs animate-bounce" style={{ color: "rgba(255,255,255,0.3)" }}>
-              아래로 스크롤
-            </span>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="animate-bounce">
+            <span className="text-xs animate-bounce" style={{ color: "#9CA3AF" }}>아래로 스크롤</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#D1D5DB" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="animate-bounce">
               <polyline points="6 9 12 15 18 9" />
             </svg>
           </div>
