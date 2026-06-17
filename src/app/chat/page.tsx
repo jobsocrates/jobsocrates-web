@@ -2458,7 +2458,7 @@ export default function ChatPage() {
                                   return (
                                     <div key={j} className="flex flex-col gap-1 pl-3" style={{ borderLeft: "2px solid #EDE9FE" }}>
                                       {label && (
-                                        <p className="text-[10px] font-black uppercase tracking-wider" style={{ color: "#6366F1", letterSpacing: "0.08em" }}>{label}</p>
+                                        <p className="text-sm font-bold" style={{ color: "#6366F1" }}>{label}</p>
                                       )}
                                       <p className="text-sm leading-relaxed" style={{ color: "#374151", wordBreak: "keep-all" }}>{body}</p>
                                     </div>
