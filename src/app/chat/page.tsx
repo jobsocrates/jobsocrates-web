@@ -1256,7 +1256,6 @@ export default function ChatPage() {
       setStageLeaving(false);
       setStageEntering(true);
       setTimeout(() => setStageEntering(false), 380);
-      fetchAnalysisReport(false);
     }, 260);
   }
 
