@@ -3,14 +3,15 @@
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 
-const ACCENT = "#C96442";
+const ACCENT = "#6366F1";
+const ACCENT_DARK = "#4338CA";
 const BLUE = "#6B8EFF";
 const GOLD = "#FFD166";
 const GREEN = "rgb(74,222,128)";
 const VIOLET = "#A78BFA";
 
 const STEP_COLORS = [
-  { bg: "rgba(201,100,66,0.1)", border: "rgba(201,100,66,0.25)", num: ACCENT },
+  { bg: "rgba(99,102,241,0.1)", border: "rgba(99,102,241,0.28)", num: ACCENT },
   { bg: "rgba(107,142,255,0.1)", border: "rgba(107,142,255,0.25)", num: BLUE },
   { bg: "rgba(74,222,128,0.1)", border: "rgba(74,222,128,0.25)", num: GREEN },
   { bg: "rgba(167,139,250,0.1)", border: "rgba(167,139,250,0.25)", num: VIOLET },
@@ -128,9 +129,9 @@ export function TutorialModal({ userId, onClose }: Props) {
         style={{
           maxWidth: "min(96vw, 820px)",
           maxHeight: "92dvh",
-          background: "#0D0D18",
-          border: "1px solid rgba(255,255,255,0.1)",
-          boxShadow: "0 60px 120px rgba(0,0,0,0.8)",
+          background: "#0D0D2A",
+          border: "1px solid rgba(167,139,250,0.18)",
+          boxShadow: "0 0 0 1px rgba(99,102,241,0.08), 0 60px 120px rgba(10,10,50,0.75), 0 0 100px rgba(99,102,241,0.14)",
           animation: "tutIn 1.1s cubic-bezier(0.16, 1, 0.3, 1) forwards",
         }}
       >
@@ -138,7 +139,7 @@ export function TutorialModal({ userId, onClose }: Props) {
         <div className="flex items-center justify-between px-5 sm:px-7 pt-4 sm:pt-5 pb-0 flex-shrink-0">
           <span
             className="text-sm font-semibold px-3 py-1 rounded-full"
-            style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.4)", border: "1px solid rgba(255,255,255,0.08)" }}
+            style={{ background: "rgba(99,102,241,0.08)", color: "rgba(167,139,250,0.7)", border: "1px solid rgba(167,139,250,0.15)" }}
           >
             {TUTORIAL_CONTENT.header}
           </span>
@@ -333,12 +334,12 @@ export function TutorialModal({ userId, onClose }: Props) {
         {/* ── 버튼 ── */}
         <div
           className="px-5 sm:px-7 pt-3 pb-4 sm:pb-6 flex flex-col gap-2 flex-shrink-0"
-          style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
+          style={{ borderTop: "1px solid rgba(167,139,250,0.1)" }}
         >
           <button
             onClick={goNext}
             className="w-full py-3.5 rounded-2xl text-base font-bold text-white transition-all hover:scale-[1.01] active:scale-[0.99]"
-            style={{ background: ACCENT, boxShadow: `0 6px 24px ${ACCENT}35`, letterSpacing: "-0.01em", fontSize: 16 }}
+            style={{ background: `linear-gradient(135deg, ${ACCENT_DARK} 0%, ${ACCENT} 100%)`, boxShadow: `0 6px 24px rgba(99,102,241,0.40)`, letterSpacing: "-0.01em", fontSize: 16 }}
           >
             {isLast ? "시작하기" : "다음"}
           </button>
