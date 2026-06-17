@@ -1057,6 +1057,27 @@ export default function ChatPage() {
             content: m.content,
           }));
 
+          const { data: iqs } = await supabase
+            .from("interview_questions")
+            .select("id, question, order_index")
+            .eq("cover_item_id", ci.id)
+            .order("order_index");
+          const loadedInterviewQs: InterviewQItem[] = await Promise.all(
+            (iqs || []).map(async (iq) => {
+              const { data: answers } = await supabase
+                .from("interview_answers")
+                .select("user_answer, ai_feedback, created_at")
+                .eq("interview_question_id", iq.id)
+                .order("created_at");
+              const qMsgs: ChatMsg[] = [];
+              for (const a of (answers || [])) {
+                if (a.user_answer) qMsgs.push({ id: uid(), role: "user" as const, text: a.user_answer });
+                if (a.ai_feedback) qMsgs.push({ id: uid(), role: "bot" as const, text: a.ai_feedback });
+              }
+              return { id: uid(), dbId: iq.id, question: iq.question, isExpanded: false, msgs: qMsgs, isLoadingFeedback: false, inputText: "" };
+            })
+          );
+
           return {
             id: uid(),
             dbId: ci.id,
@@ -1066,7 +1087,7 @@ export default function ChatPage() {
             status: (msgs.length > 0 ? "chatting" : "idle") as "idle" | "chatting",
             msgs,
             apiHistory,
-            interviewQs: [],
+            interviewQs: loadedInterviewQs,
             isLoadingQs: false,
             setupStep: "ready" as const,
             setupMsgs: [] as SetupMsg[],
@@ -1120,6 +1141,27 @@ export default function ChatPage() {
             content: m.content,
           }));
 
+          const { data: iqs } = await supabase
+            .from("interview_questions")
+            .select("id, question, order_index")
+            .eq("cover_item_id", ci.id)
+            .order("order_index");
+          const loadedInterviewQs: InterviewQItem[] = await Promise.all(
+            (iqs || []).map(async (iq) => {
+              const { data: answers } = await supabase
+                .from("interview_answers")
+                .select("user_answer, ai_feedback, created_at")
+                .eq("interview_question_id", iq.id)
+                .order("created_at");
+              const qMsgs: ChatMsg[] = [];
+              for (const a of (answers || [])) {
+                if (a.user_answer) qMsgs.push({ id: uid(), role: "user" as const, text: a.user_answer });
+                if (a.ai_feedback) qMsgs.push({ id: uid(), role: "bot" as const, text: a.ai_feedback });
+              }
+              return { id: uid(), dbId: iq.id, question: iq.question, isExpanded: false, msgs: qMsgs, isLoadingFeedback: false, inputText: "" };
+            })
+          );
+
           return {
             id: uid(),
             dbId: ci.id,
@@ -1129,7 +1171,7 @@ export default function ChatPage() {
             status: (msgs.length > 0 ? "chatting" : "idle") as "idle" | "chatting",
             msgs,
             apiHistory,
-            interviewQs: [],
+            interviewQs: loadedInterviewQs,
             isLoadingQs: false,
             setupStep: "ready" as const,
             setupMsgs: [] as SetupMsg[],
