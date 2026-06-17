@@ -40,7 +40,11 @@ function Input({ type = "text", placeholder, value, onChange, disabled, onEnter 
         input[type="password"]::-ms-clear { display: none; }
         input::-webkit-credentials-auto-fill-button { display: none; }
         .auth-input::placeholder { color: #9CA3AF; }
-        .auth-input:focus { border-color: #6366F1 !important; box-shadow: 0 0 0 3px rgba(99,102,241,0.12); }
+        .auth-input:focus {
+          border-color: #6366F1 !important;
+          box-shadow: 0 0 0 4px rgba(99,102,241,0.15), 0 0 16px rgba(99,102,241,0.12);
+          background: #FAFBFF !important;
+        }
       `}</style>
       <input
         type={isPw ? (showPw ? "text" : "password") : type}
