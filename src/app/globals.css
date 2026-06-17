@@ -104,6 +104,31 @@ textarea::-webkit-scrollbar {
   box-shadow: 0 0 0 3px rgba(107, 142, 255, 0.1), 0 0 20px rgba(107, 142, 255, 0.18) !important;
   outline: none;
 }
+
+/* ── Design System: DS input (lavender focus ring) ── */
+.ds-input {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.ds-input:focus {
+  border-color: #A78BFA !important;
+  box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.15) !important;
+  outline: none;
+}
+
+/* ── pill 입력창 focus-within ── */
+.pill-input {
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.pill-input:focus-within {
+  border-color: #A78BFA !important;
+  box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.15) !important;
+}
+
+/* ── Design System: Glow utilities ── */
+.glow-ds-primary { box-shadow: 0 0 0 1px rgba(99,102,241,0.22), 0 0 24px -6px rgba(99,102,241,0.32); }
+.glow-ds-accent  { box-shadow: 0 0 0 1px rgba(167,139,250,0.24), 0 0 24px -6px rgba(167,139,250,0.34); }
+.glow-ds-warn    { box-shadow: 0 0 0 1px rgba(251,191,36,0.22), 0 0 22px -6px rgba(251,191,36,0.30); }
+.glow-ds-danger  { box-shadow: 0 0 0 1px rgba(248,113,113,0.22), 0 0 22px -6px rgba(248,113,113,0.32); }
 .glow-input-accent {
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
