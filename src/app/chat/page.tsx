@@ -1291,7 +1291,6 @@ export default function ChatPage() {
       setTimeout(() => {
         const bot: SetupMsg = { id: uid(), role: "bot", text: "✅ 준비됐어요!\n논리 흐름 · 문맥 · 직무 이해도를 짚어드릴게요." };
         updateItem(selectedId, { setupStep: "ready", setupMsgs: [...base, bot] });
-        setShowAnalysisPanel(true);
       }, 480);
     }
   }
@@ -1583,7 +1582,7 @@ export default function ChatPage() {
           </div>
           <div className="flex-1 flex items-center justify-center px-5">
             <div className="w-full max-w-[460px] flex flex-col gap-5">
-              <p className="text-sm pl-4" style={{ color: "#6B7280" }}>정보를 입력하면 채팅으로 바로 시작합니다</p>
+              <p className="text-sm pl-1" style={{ color: "#6B7280" }}>정보를 입력하면 채팅으로 바로 시작합니다</p>
               {/* 회사 정보 */}
               <div className="flex flex-col gap-2.5">
                 <div className="grid grid-cols-2 gap-2.5">
