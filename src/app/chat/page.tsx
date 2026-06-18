@@ -1366,10 +1366,11 @@ export default function ChatPage() {
                     {selected.setupStep === "ready" ? (
                       <button
                         onClick={handleStartClick}
-                        className="w-full py-4 rounded-2xl text-base font-semibold text-white transition-all hover:scale-[1.01] active:scale-[0.99]"
+                        disabled={isStreaming}
+                        className="w-full py-4 rounded-2xl text-base font-semibold text-white transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
                         style={{ background: `linear-gradient(135deg, ${ACCENT} 0%, ${BLUE}CC 100%)`, boxShadow: `0 4px 24px ${ACCENT}28` }}
                       >
-                        분석하기 →
+                        {isStreaming ? "분석 중..." : "분석하기 →"}
                       </button>
                     ) : (
                       <div
@@ -1596,12 +1597,15 @@ export default function ChatPage() {
                                 : { background: ACCENT, color: "#fff", borderRadius: "16px 4px 16px 16px", wordBreak: "keep-all" }
                             }
                           >
-                            {msg.role === "bot" ? stripMd(msg.text) : msg.text}
-                            {isStreaming && msg.text === "" && (
-                              <div className="flex items-center h-6">
-                                <StreamingLoadingMsg />
-                              </div>
-                            )}
+                            {msg.role === "bot" && msg.text === "" ? (
+                              isStreaming ? (
+                                <div className="flex items-center h-6">
+                                  <StreamingLoadingMsg />
+                                </div>
+                              ) : (
+                                <span className="text-xs" style={{ color: "#9CA3AF" }}>응답을 불러오지 못했어요. 다시 시도해주세요.</span>
+                              )
+                            ) : msg.role === "bot" ? stripMd(msg.text) : msg.text}
                           </div>
                         </div>
                       );

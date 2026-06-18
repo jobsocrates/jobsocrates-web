@@ -307,7 +307,7 @@ export function CoverLetterSummary({ jobTitle, question, draft, msgs, interviewQ
         <div className="max-w-4xl mx-auto flex flex-col gap-12">
 
           {/* 00 · 기업·직무 분석 보고서 */}
-          {analysisContent && (
+          {analysisContent?.trim() && (
             <Section number="00" title="기업 · 직무 분석" numColor="rgba(167,139,250,0.7)">
               <div className="flex flex-col gap-6">
                 {analysisContent.split(/(?=##\s)/).filter(s => s.trim()).map((block, i) => {
