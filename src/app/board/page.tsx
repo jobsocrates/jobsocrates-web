@@ -106,7 +106,7 @@ function BoardPage() {
       setIsAdmin(admin);
       setVisible(admin);
       if (catConfig?.value) setCats(catConfig.value as CatNode[]);
-      if (show) {
+      if (admin) {
         const { data } = await supabase
           .from("posts")
           .select("id, title, category, created_at, is_pinned, nickname, admin_reply")
