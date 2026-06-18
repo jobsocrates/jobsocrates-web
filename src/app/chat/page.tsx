@@ -1231,7 +1231,6 @@ export default function ChatPage() {
   }
 
   function handleGoToChat() {
-    if (!companyName.trim()) { showToast("회사명을 입력해주세요", ""); return; }
     if (!jobTitle.trim()) { showToast("지원 직무를 입력해주세요", "jobTitle"); return; }
     const siteNote = companyWebsite.trim() ? ` 사이트: ${companyWebsite.trim()}` : "";
     const jobPostNote = jobLink.trim()
@@ -1641,7 +1640,7 @@ export default function ChatPage() {
                 <div className="grid grid-cols-2 gap-2.5">
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs font-semibold pl-1 flex items-center gap-0.5" style={{ color: "#111827" }}>
-                      기업명 <span style={{ color: "#EF4444" }}>*</span>
+                      기업명 <span className="font-normal" style={{ color: "#9CA3AF" }}>(선택)</span>
                     </label>
                     <input value={companyName} onChange={(e) => setCompanyName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleGoToChat()} placeholder="삼성전자" className="ds-input w-full px-4 py-3.5 rounded-2xl text-sm placeholder:text-[#9CA3AF]" style={{ background: "#FFFFFF", border: "1.5px solid #E5E7EB", color: "#111827", outline: "none", boxShadow: "none" }} />
                   </div>
