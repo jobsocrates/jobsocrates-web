@@ -1143,7 +1143,7 @@ export default function ChatPage() {
           }}
         >
           <button
-            onClick={() => { if (selected?.status === "chatting") { setShowGoBackConfirm(true); } else { setStage("info"); setShowAnalysisPanel(false); setAnalysisContent(""); } }}
+            onClick={() => { if (selected?.status === "chatting" || (selected?.msgs ?? []).length > 0) { setShowGoBackConfirm(true); } else { setStage("info"); setShowAnalysisPanel(false); setAnalysisContent(""); } }}
             className="flex items-center gap-1.5 text-sm font-semibold transition-opacity hover:opacity-70 flex-shrink-0"
             style={{ color: "#111827" }}
           >
@@ -2225,16 +2225,16 @@ export default function ChatPage() {
           onClick={() => setShowGoBackConfirm(false)}>
           <div style={{ background: "#18182A", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 20, padding: "28px 24px", maxWidth: 320, width: "100%", textAlign: "center", boxShadow: "0 24px 80px rgba(0,0,0,0.6)" }}
             onClick={e => e.stopPropagation()}>
-            <p style={{ fontSize: 15, fontWeight: 700, color: "rgba(255,255,255,0.9)", marginBottom: 8 }}>공고 화면으로 이동하시겠어요?</p>
-            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.38)", marginBottom: 22, lineHeight: 1.7, wordBreak: "keep-all" }}>소모된 뱃지는 돌아오지 않습니다.<br />새로 시작하지 않으면 기존 대화는 그대로 이어집니다.</p>
+            <p style={{ fontSize: 15, fontWeight: 700, color: "rgba(255,255,255,0.9)", marginBottom: 8 }}>공고 화면으로 이동할까요?</p>
+            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", marginBottom: 22, lineHeight: 1.75, wordBreak: "keep-all" }}>지금까지 나눈 대화는 저장돼 있어요.<br />돌아오면 이어서 진행할 수 있고,<br />새로 시작하면 뱃지가 차감됩니다.</p>
             <div style={{ display: "flex", gap: 10 }}>
               <button onClick={() => setShowGoBackConfirm(false)}
                 style={{ flex: 1, padding: "11px 0", borderRadius: 12, background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.65)", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
-                계속하기
+                대화 계속하기
               </button>
               <button onClick={() => { setShowGoBackConfirm(false); setStage("info"); setShowAnalysisPanel(false); setAnalysisContent(""); }}
-                style={{ flex: 1, padding: "11px 0", borderRadius: 12, background: "rgba(201,100,66,0.15)", border: "1px solid rgba(201,100,66,0.4)", color: "#C96442", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
-                이동
+                style={{ flex: 1, padding: "11px 0", borderRadius: 12, background: "rgba(99,102,241,0.15)", border: "1px solid rgba(99,102,241,0.35)", color: "#818CF8", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
+                공고로 이동
               </button>
             </div>
           </div>
