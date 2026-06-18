@@ -22,7 +22,7 @@ export const DRAFT_MAX = 1200;
 export const ADMIN_EMAIL = "ijhan6403@gmail.com";
 
 export const LOADING_MSGS = [
-  "회사와 직무를 파악하고 있어요.",
+  "글의 흐름을 파악하고 있어요.",
   "초안에서 경험 연결 포인트를 찾는 중이에요.",
   "조금 시간이 걸리는 분석이에요. 잠시만요.",
   "거의 다 됐어요.",
