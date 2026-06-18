@@ -265,9 +265,11 @@ export default function Home() {
             </button>
 
             <div className="flex items-center gap-3 sm:gap-4">
-              <Link href="/board" className="text-sm font-medium transition-colors hover:opacity-70" style={{ color: navText }}>
-                커뮤니티
-              </Link>
+              {userEmail === ADMIN_EMAIL && (
+                <Link href="/board" className="text-sm font-medium transition-colors hover:opacity-70" style={{ color: navText }}>
+                  커뮤니티
+                </Link>
+              )}
 
               {userEmail ? (
                 <>
@@ -578,7 +580,9 @@ export default function Home() {
             <img src="/ai-avatar.webp" alt="" className="w-8 h-8 rounded-full object-cover" />
             <span className="text-sm font-medium" style={{ color: "rgba(10,22,40,0.45)" }}>취업소크라테스 <span style={{ color: "rgba(10,22,40,0.25)" }}>JobSocrates</span></span>
             <div className="flex items-center gap-4">
-              <Link href="/board" className="text-sm transition-colors hover:opacity-70" style={{ color: "rgba(10,22,40,0.35)" }}>커뮤니티</Link>
+              {userEmail === ADMIN_EMAIL && (
+                <Link href="/board" className="text-sm transition-colors hover:opacity-70" style={{ color: "rgba(10,22,40,0.35)" }}>커뮤니티</Link>
+              )}
               <a href="mailto:jobsocrates76@gmail.com" className="text-sm transition-colors hover:opacity-70" style={{ color: "rgba(10,22,40,0.35)" }}>co-work · jobsocrates76@gmail.com</a>
             </div>
           </div>

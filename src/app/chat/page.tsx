@@ -122,6 +122,7 @@ export default function ChatPage() {
   const [showTutorial, setShowTutorial] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showGoBackConfirm, setShowGoBackConfirm] = useState(false);
+  const [showResumeItemModal, setShowResumeItemModal] = useState(false);
   const [showDuplicateDraft, setShowDuplicateDraft] = useState(false);
   const [duplicateDraftInfo, setDuplicateDraftInfo] = useState<{
     sessionId: string;
@@ -670,6 +671,11 @@ export default function ChatPage() {
 
   async function fetchAnalysisReport(showPanel = true) {
     if (isLoadingAnalysis) return;
+    if (process.env.NODE_ENV === "development") {
+      if (showPanel) setShowAnalysisPanel(true);
+      setAnalysisContent("⚠️ 로컬 테스트 모드: 분석 보고서는 토큰 절약을 위해 비활성화되어 있습니다.");
+      return;
+    }
     setAnalysisContent("");
     setIsLoadingAnalysis(true);
     if (showPanel) setShowAnalysisPanel(true);
@@ -770,6 +776,11 @@ export default function ChatPage() {
     if (!selected.charLimit.trim()) { showToast("글자수 제한을 먼저 입력해주세요", "charLimit"); return; }
     if (!selected.draft.trim()) { showToast("자소서 초안을 먼저 입력해주세요", "draft"); return; }
 
+    if (selected.msgs.length > 0) {
+      setShowResumeItemModal(true);
+      return;
+    }
+
     const isAdmin = currentUser?.email === ADMIN_EMAIL;
     if (!isAdmin && userCredits !== null && userCredits <= 0) {
       showToast("뱃지가 없어요. 관리자에게 문의해주세요", "");
@@ -827,7 +838,7 @@ export default function ChatPage() {
 
     setItems((prev) =>
       prev.map((it) =>
-        it.id === selectedId ? { ...it, status: "chatting" as const, apiHistory: seed, dbId: itemDbId } : it
+        it.id === selectedId ? { ...it, msgs: [], status: "chatting" as const, apiHistory: seed, dbId: itemDbId } : it
       )
     );
     await fetchBotReply(seed, selectedId, selected.draft, selected.question, selected.charLimit, itemDbId);
@@ -1031,7 +1042,7 @@ export default function ChatPage() {
       {/* ── STAGE 1: 정보 입력 ── */}
       {stage === "info" && (
         <div className="h-dvh flex flex-col" style={{ background: "#F9FAFB", opacity: stageLeaving ? 0 : 1, transform: stageLeaving ? "scale(0.97) translateY(-6px)" : "scale(1) translateY(0)", transition: "opacity 0.26s ease, transform 0.26s ease" }}>
-          <div className="flex items-center justify-between px-6 py-4 flex-shrink-0">
+          <div className="flex items-center justify-between px-6 py-4 flex-shrink-0" style={{ borderBottom: "1px solid #E5E7EB", background: "#FFFFFF" }}>
             <Link href="/" className="flex items-center gap-1.5 text-sm font-semibold hover:opacity-70 transition-opacity" style={{ color: "#111827" }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></svg>
               홈
@@ -1042,7 +1053,47 @@ export default function ChatPage() {
             </div>
             <div style={{ width: "52px" }} />
           </div>
-          <div className="flex-1 flex items-center justify-center px-5">
+          <div className="flex-1 flex overflow-hidden">
+            {/* 왼쪽 사이드바 (데스크탑) */}
+            {items.some(it => it.msgs.length > 0 || it.question) && (
+              <div className="hidden lg:flex flex-shrink-0 flex-col border-r overflow-hidden" style={{ width: "220px", borderColor: "#E5E7EB", background: "#FFFFFF" }}>
+                <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-1.5">
+                  <p className="text-xs px-1 pt-0.5 pb-1.5 font-semibold tracking-wider uppercase" style={{ color: "#6B7280", letterSpacing: "0.10em" }}>자소서 항목</p>
+                  {items.map((item, idx) => {
+                    const isSel = item.id === selectedId;
+                    return (
+                      <div
+                        key={item.id}
+                        role="button" tabIndex={0}
+                        onClick={() => { setSelectedId(item.id); if (item.msgs.length > 0 || item.status === "chatting") setStage("chat"); }}
+                        onKeyDown={(e) => { if (e.key === "Enter") { setSelectedId(item.id); if (item.msgs.length > 0 || item.status === "chatting") setStage("chat"); } }}
+                        className="w-full text-left rounded-xl px-3 py-2.5 flex flex-col gap-0.5 transition-all group relative cursor-pointer"
+                        style={{ background: isSel ? "#F5F3FF" : "transparent", border: `${isSel ? "2px" : "1px"} solid ${isSel ? "#A78BFA" : "#E5E7EB"}` }}
+                      >
+                        <div className="flex items-center gap-2 pr-6">
+                          <span className="text-xs font-bold flex-shrink-0" style={{ color: isSel ? "#4C3F99" : "#6B7280" }}>{String(idx + 1).padStart(2, "0")}</span>
+                          <span className="text-[13px] font-medium truncate" style={{ color: "#111827" }}>
+                            {item.question || <span style={{ color: "#6B7280" }}>문항 미입력</span>}
+                          </span>
+                        </div>
+                        {item.draft && (
+                          <p className="text-xs truncate pl-6" style={{ color: "#6B7280" }}>{item.draft}</p>
+                        )}
+                        <div className="absolute right-2 top-2.5 flex items-center gap-1">
+                          {item.status === "chatting" && (
+                            <span className="rounded-full font-medium px-1.5 py-0.5" style={{ background: `${BLUE}10`, color: BLUE, fontSize: "10px", lineHeight: "1.4" }}>진행</span>
+                          )}
+                          {item.msgs.length > 0 && item.status !== "chatting" && (
+                            <span className="rounded-full font-medium px-1.5 py-0.5" style={{ background: "rgba(16,185,129,0.08)", color: "#059669", fontSize: "10px", lineHeight: "1.4" }}>완료</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+            <div className="flex-1 flex items-center justify-center px-5 overflow-y-auto">
             <div className="w-full max-w-[460px] flex flex-col gap-5">
               <p className="text-sm pl-1" style={{ color: "#6B7280" }}>정보를 입력하면 채팅으로 바로 시작합니다</p>
               {/* 회사 정보 */}
@@ -1123,6 +1174,7 @@ export default function ChatPage() {
                   </svg>
                 </button>
               </div>
+            </div>
             </div>
           </div>
         </div>
@@ -2235,6 +2287,36 @@ export default function ChatPage() {
               <button onClick={() => { setShowGoBackConfirm(false); setStage("info"); setShowAnalysisPanel(false); setAnalysisContent(""); }}
                 style={{ flex: 1, padding: "11px 0", borderRadius: 12, background: "rgba(99,102,241,0.15)", border: "1px solid rgba(99,102,241,0.35)", color: "#818CF8", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
                 공고로 이동
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showResumeItemModal && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(6px)" }}
+          onClick={() => setShowResumeItemModal(false)}>
+          <div style={{ background: "#18182A", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 20, padding: "28px 24px", maxWidth: 320, width: "100%", textAlign: "center", boxShadow: "0 24px 80px rgba(0,0,0,0.6)" }}
+            onClick={e => e.stopPropagation()}>
+            <p style={{ fontSize: 15, fontWeight: 700, color: "rgba(255,255,255,0.9)", marginBottom: 8 }}>이어서 할까요, 새로 시작할까요?</p>
+            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", marginBottom: 22, lineHeight: 1.75, wordBreak: "keep-all" }}>이전에 나눈 대화가 있어요.<br />이어서 진행하면 추가 뱃지가 차감되지 않아요.</p>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => { setShowResumeItemModal(false); setStage("chat"); setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 100); }}
+                style={{ flex: 1, padding: "11px 0", borderRadius: 12, background: "rgba(99,102,241,0.15)", border: "1px solid rgba(99,102,241,0.35)", color: "#818CF8", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
+                이어서 하기
+              </button>
+              <button onClick={() => {
+                setShowResumeItemModal(false);
+                updateItem(selectedId, { interviewQs: [] });
+                const isAdmin = currentUser?.email === ADMIN_EMAIL;
+                if (!isAdmin && userCredits !== null && userCredits <= 0) {
+                  showToast("뱃지가 없어요. 관리자에게 문의해주세요", "");
+                  return;
+                }
+                proceedWithAnalysis();
+              }}
+                style={{ flex: 1, padding: "11px 0", borderRadius: 12, background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.65)", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
+                새로 시작
               </button>
             </div>
           </div>

@@ -104,8 +104,7 @@ function BoardPage() {
       ]);
       const admin = authData.user?.email === ADMIN_EMAIL;
       setIsAdmin(admin);
-      const show = config?.value === true || admin;
-      setVisible(show);
+      setVisible(admin);
       if (catConfig?.value) setCats(catConfig.value as CatNode[]);
       if (show) {
         const { data } = await supabase
