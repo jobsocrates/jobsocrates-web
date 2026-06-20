@@ -79,7 +79,8 @@ export function buildPrintHtml(
   changes: string,
   diagMsgs: SummaryMsg[],
   interviewQs: SummaryInterviewQ[],
-  baseUrl = ""
+  baseUrl = "",
+  analysisContent = ""
 ): string {
   const changeItems = changes
     .split("\n")
@@ -164,6 +165,14 @@ body{font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#ff
 .legend-dot{width:10px;height:10px;border-radius:50%;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 
 hr{border:none;border-top:1px solid #d1d5db;margin:40px 0}
+.analysis-block{border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;margin-bottom:16px}
+.analysis-block-header{background:#f5f3ff;padding:10px 16px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #ede9fe}
+.analysis-block-emoji{font-size:14px}
+.analysis-block-title{font-size:13px;font-weight:700;color:#4338ca}
+.analysis-block-body{padding:14px 18px;display:flex;flex-direction:column;gap:12px}
+.analysis-item{padding-left:12px;border-left:2px solid #ede9fe}
+.analysis-label{font-size:11px;font-weight:700;color:#6366f1;margin-bottom:3px}
+.analysis-body{font-size:13px;line-height:1.8;color:#374151;word-break:keep-all}
 .interview-q{margin-bottom:28px}
 .interview-q-num{font-size:10px;font-weight:800;color:#4338ca;letter-spacing:.1em;margin-bottom:6px;text-transform:uppercase}
 .interview-q-text{font-size:13.5px;font-weight:600;color:#111827;line-height:1.65;word-break:keep-all;padding:12px 16px;background:#eef2ff;border-radius:0 10px 10px 10px;border-left:4px solid #4338ca;margin-bottom:10px}
@@ -177,6 +186,35 @@ hr{border:none;border-top:1px solid #d1d5db;margin:40px 0}
   <h1>취업소크라테스 — 첨삭 리포트</h1>
   <p class="meta">${escHtml(jobTitle)}${jobTitle && question ? " &nbsp;·&nbsp; " : ""}${escHtml(question)}</p>
 </div>
+
+${analysisContent?.trim() ? (() => {
+  const blocks = analysisContent.split(/(?=##\s)/).filter(s => s.trim());
+  const blocksHtml = blocks.map(block => {
+    const lines = block.trim().split("\n").filter(Boolean);
+    const rawTitle = lines[0]?.replace(/^##\s*/, "") ?? "";
+    const numMatch = rawTitle.match(/^(\S+)\s+\d+\.\s*(.+)$/);
+    const emoji = numMatch ? numMatch[1] : "";
+    const sectionTitle = numMatch ? numMatch[2] : rawTitle;
+    const bullets = lines.slice(1).filter(l => l.startsWith("- ")).map(l => l.replace(/^-\s*/, ""));
+    const bulletsHtml = bullets.map(b => {
+      const colonIdx = b.indexOf(": ");
+      const label = colonIdx > 0 && colonIdx < 24 ? b.slice(0, colonIdx) : null;
+      const body = label ? b.slice(colonIdx + 2) : b;
+      return `<div class="analysis-item">${label ? `<p class="analysis-label">${escHtml(label)}</p>` : ""}<p class="analysis-body">${escHtml(body)}</p></div>`;
+    }).join("");
+    return `<div class="analysis-block"><div class="analysis-block-header"><span class="analysis-block-emoji">${emoji}</span><span class="analysis-block-title">${escHtml(sectionTitle)}</span></div><div class="analysis-block-body">${bulletsHtml}</div></div>`;
+  }).join("");
+  return `
+<div class="section">
+  <div class="section-header">
+    <span class="section-num">00</span>
+    <span class="section-title">기업 · 직무 분석</span>
+  </div>
+  ${blocksHtml}
+</div>
+<hr>
+`;
+})() : ""}
 
 ${revision ? `
 <div class="section">
@@ -255,7 +293,7 @@ export function CoverLetterSummary({ jobTitle, question, draft, msgs, interviewQ
 
   function handlePdf() {
     const html = buildPrintHtml(
-      jobTitle, question, revision, changes, diagMsgs, interviewQs, window.location.origin
+      jobTitle, question, revision, changes, diagMsgs, interviewQs, window.location.origin, analysisContent
     );
     const win = window.open("", "_blank");
     if (!win) return;
