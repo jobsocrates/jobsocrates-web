@@ -241,6 +241,15 @@ export function AuthModal({ tab: initialTab, onClose }: Props) {
     if (error) { setError(error.message); setLoading(false); }
   }
 
+  async function handleKakao() {
+    if (tab === "signup" && (!agree1 || !agree2)) { setError("필수 약관에 동의해주세요."); return; }
+    setLoading(true);
+    setError("");
+    const redirectTo = `${window.location.origin}/auth/callback`;
+    const { error } = await supabase.auth.signInWithOAuth({ provider: "kakao", options: { redirectTo } });
+    if (error) { setError(error.message); setLoading(false); }
+  }
+
   async function handleSubmit() {
     setError("");
     if (!email || !pw) { setError("이메일과 비밀번호를 입력해주세요."); return; }
@@ -308,28 +317,26 @@ export function AuthModal({ tab: initialTab, onClose }: Props) {
         {/* 스크롤 영역 */}
         <div ref={scrollRef} className="p-6 flex flex-col gap-3 overflow-y-auto" style={{ maxHeight: "78vh" }}>
 
+          {/* 카카오 버튼 — 항상 표시 */}
+          <SocialBtn color="#FEE500" textColor="#191919" onClick={handleKakao} disabled={loading}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="#191919"><path d="M12 3C6.477 3 2 6.477 2 10.8c0 2.7 1.6 5.1 4.1 6.6l-1 3.7 4.3-2.8c.8.1 1.7.2 2.6.2 5.523 0 10-3.477 10-7.8S17.523 3 12 3z"/></svg>
+            {loading ? "처리 중..." : tab === "login" ? "카카오로 로그인" : "카카오로 시작하기"}
+          </SocialBtn>
+
+          {/* 구글 버튼 — 항상 표시 */}
           {isInApp ? (
             <div className="rounded-2xl p-4 flex flex-col gap-3" style={{ background: "#FFF9F0", border: "1px solid #FDE68A" }}>
               <div className="flex items-start gap-2.5">
                 <span className="text-base flex-shrink-0">⚠️</span>
                 <p className="text-xs leading-relaxed" style={{ color: "#92400E", wordBreak: "keep-all" }}>
-                  카카오톡·인스타그램 등 앱 내 브라우저에서는 구글 로그인이 차단돼요.
-                  <br />Chrome 또는 Safari에서 열어주세요.
+                  앱 내 브라우저에서는 구글 로그인이 차단돼요. Chrome 또는 Safari에서 열어주세요.
                 </p>
               </div>
-              <button
-                onClick={openInExternalBrowser}
-                className="w-full py-2.5 rounded-xl text-sm font-semibold transition-all hover:opacity-90 active:scale-[0.98]"
-                style={{ background: `linear-gradient(135deg, ${ACCENT} 0%, ${ACCENT_MID} 100%)`, color: "#fff" }}
-              >
+              <button onClick={openInExternalBrowser} className="w-full py-2.5 rounded-xl text-sm font-semibold transition-all hover:opacity-90" style={{ background: `linear-gradient(135deg, ${ACCENT} 0%, ${ACCENT_MID} 100%)`, color: "#fff" }}>
                 외부 브라우저에서 열기
               </button>
-              <button
-                onClick={copyUrl}
-                className="w-full py-2 rounded-xl text-xs font-medium transition-all hover:opacity-80"
-                style={{ background: "#F3F4F6", color: copied ? "#059669" : "#6B7280", border: "1px solid #E5E7EB" }}
-              >
-                {copied ? "✓ 주소 복사됨 — Safari·Chrome에 붙여넣기 해주세요" : "주소 복사하기"}
+              <button onClick={copyUrl} className="w-full py-2 rounded-xl text-xs font-medium transition-all hover:opacity-80" style={{ background: "#F3F4F6", color: copied ? "#059669" : "#6B7280", border: "1px solid #E5E7EB" }}>
+                {copied ? "✓ 주소 복사됨" : "주소 복사하기"}
               </button>
             </div>
           ) : (
@@ -339,44 +346,37 @@ export function AuthModal({ tab: initialTab, onClose }: Props) {
             </SocialBtn>
           )}
 
-          <Divider />
-
           {error && <p className="text-xs px-1" style={{ color: "#EF4444" }}>{error}</p>}
           {successMsg && <p className="text-xs px-1" style={{ color: "#059669" }}>{successMsg}</p>}
 
-          <Input type="email" placeholder="이메일" value={email} onChange={setEmail} disabled={loading} onEnter={handleSubmit} />
-          <Input type="password" placeholder="비밀번호" value={pw} onChange={setPw} disabled={loading} onEnter={handleSubmit} />
-          {tab === "signup" && (
-            <Input type="password" placeholder="비밀번호 확인" value={pw2} onChange={setPw2} disabled={loading} onEnter={handleSubmit} />
+          {/* 이메일 로그인 — 로그인 탭만 */}
+          {tab === "login" && (
+            <>
+              <Divider />
+              <Input type="email" placeholder="이메일" value={email} onChange={setEmail} disabled={loading} onEnter={handleSubmit} />
+              <Input type="password" placeholder="비밀번호" value={pw} onChange={setPw} disabled={loading} onEnter={handleSubmit} />
+              <button
+                onClick={handleSubmit}
+                disabled={loading}
+                className="w-full py-3.5 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
+                style={{ background: `linear-gradient(135deg, ${ACCENT} 0%, ${ACCENT_MID} 100%)`, boxShadow: "0 4px 14px rgba(99,102,241,0.35)" }}
+              >
+                {loading ? "처리 중..." : "이메일로 로그인"}
+              </button>
+            </>
           )}
 
-          <button
-            onClick={handleSubmit}
-            disabled={loading}
-            className="w-full py-3.5 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
-            style={{ background: `linear-gradient(135deg, ${ACCENT} 0%, ${ACCENT_MID} 100%)`, boxShadow: "0 4px 14px rgba(99,102,241,0.35)" }}
-          >
-            {loading ? "처리 중..." : tab === "login" ? "로그인" : "회원가입"}
-          </button>
-
+          {/* 약관 — 회원가입 탭만 */}
           {tab === "signup" && (
             <>
               <Divider />
               <div className="flex flex-col gap-3">
-                <button
-                  onClick={toggleAll}
-                  className="w-full flex items-center gap-2.5 py-2.5 px-3 rounded-xl transition-colors"
-                  style={{ background: "#F9FAFB", border: "1px solid #E5E7EB" }}
-                >
-                  <div
-                    className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0 transition-all"
-                    style={{ background: allAgree ? ACCENT : "transparent", border: allAgree ? "none" : "1.5px solid #D1D5DB" }}
-                  >
+                <button onClick={toggleAll} className="w-full flex items-center gap-2.5 py-2.5 px-3 rounded-xl transition-colors" style={{ background: "#F9FAFB", border: "1px solid #E5E7EB" }}>
+                  <div className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0 transition-all" style={{ background: allAgree ? ACCENT : "transparent", border: allAgree ? "none" : "1.5px solid #D1D5DB" }}>
                     {allAgree && <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>}
                   </div>
                   <span className="text-xs font-semibold" style={{ color: "#374151" }}>전체 동의</span>
                 </button>
-
                 <TermRow checked={agree1} onChange={() => setAgree1(p => !p)} termKey="privacy" />
                 <TermRow checked={agree2} onChange={() => setAgree2(p => !p)} termKey="terms" />
                 <TermRow checked={agree3} onChange={() => setAgree3(p => !p)} termKey="marketing" />

@@ -285,7 +285,8 @@ export default function Home() {
                     </Link>
                   )}
                   {userEmail === ADMIN_EMAIL && (
-                    <a href="/admin" className="text-sm font-medium transition-colors hover:opacity-70" style={{ color: navText }}>
+                    <a href="/admin" className="text-sm font-medium transition-colors hover:opacity-70 flex items-center gap-1" style={{ color: navText }}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
                       <span className="hidden sm:inline">관리자</span>
                     </a>
                   )}

@@ -1151,9 +1151,9 @@ export default function ChatPage() {
                 {([
                   { key: "analyze",     label: "직무역량",    desc: "경험과 역량을 꺼냅니다",  color: BLUE,   emoji: "💼" },
                   { key: "motivation",  label: "지원동기",    desc: "나만의 동기를 찾습니다",  color: GOLD,   emoji: "✨" },
-                  { key: "personality", label: "성격 장단점", desc: "나다운 문장으로 씁니다",  color: VIOLET, emoji: "🌱" },
+                  { key: "personality", label: "내 성향", desc: "나다운 문장으로 씁니다",  color: VIOLET, emoji: "🌱" },
                 ] as { key: typeof chatMode; label: string; desc: string; color: string; emoji: string }[]).map(({ key, label, desc, color, emoji }) => (
-                  <button key={key} onClick={() => { if (key === "personality") { setShowPersonalityBlock(true); return; } setChatMode(key); }} className="flex flex-col gap-2 px-4 py-4 rounded-2xl text-left transition-all" style={{ background: "#FFFFFF", border: `${chatMode === key ? "2px" : "1px"} solid ${chatMode === key ? color : "#E5E7EB"}`, boxShadow: chatMode === key ? `0 2px 8px rgba(0,0,0,0.08)` : "none", transition: "all 0.15s ease" }}>
+                  <button key={key} onClick={() => { if (key === "personality" && process.env.NODE_ENV === "production") { setShowPersonalityBlock(true); return; } setChatMode(key); }} className="flex flex-col gap-2 px-4 py-4 rounded-2xl text-left transition-all" style={{ background: "#FFFFFF", border: `${chatMode === key ? "2px" : "1px"} solid ${chatMode === key ? color : "#E5E7EB"}`, boxShadow: chatMode === key ? `0 2px 8px rgba(0,0,0,0.08)` : "none", transition: "all 0.15s ease" }}>
                     <span className="text-xl leading-none">{emoji}</span>
                     <span className="text-sm font-semibold" style={{ color: "#111827" }}>{label}</span>
                     <p className="text-xs leading-relaxed" style={{ color: "#6B7280", wordBreak: "keep-all" }}>{desc}</p>

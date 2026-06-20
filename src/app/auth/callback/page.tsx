@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import type { Session } from "@supabase/supabase-js";
 
@@ -13,91 +13,56 @@ async function ensureProfile(session: Session) {
 }
 
 export default function AuthCallbackPage() {
-  const [error, setError] = useState("");
-
   useEffect(() => {
-    // 방법 1: 이미 세션이 있으면 바로 이동
-    supabase.auth.getSession().then(({ data }) => {
+    const redirectHome = () => { window.location.href = "/"; };
+
+    // 이미 세션 있으면 바로 이동
+    supabase.auth.getSession().then(async ({ data }) => {
       if (data.session) {
-        window.location.href = "/";
-        return;
+        await ensureProfile(data.session);
+        redirectHome();
       }
     });
 
-    // 방법 2: URL에 code 있으면 직접 교환
+    // code 파라미터로 세션 교환 (PKCE)
     const code = new URLSearchParams(window.location.search).get("code");
-    const token_hash = new URLSearchParams(window.location.search).get("token_hash");
-    const type = new URLSearchParams(window.location.search).get("type");
-
-    console.log("[Callback] href:", window.location.href);
-
     if (code) {
       supabase.auth.exchangeCodeForSession(code).then(async ({ data, error }) => {
-        if (error) setError(error.message);
-        else {
-          if (data.session) await ensureProfile(data.session);
-          window.location.href = "/";
+        if (!error && data.session) {
+          await ensureProfile(data.session);
+          redirectHome();
         }
       });
-      return;
     }
 
+    // token_hash (이메일 인증)
+    const token_hash = new URLSearchParams(window.location.search).get("token_hash");
+    const type = new URLSearchParams(window.location.search).get("type");
     if (token_hash && type) {
       supabase.auth.verifyOtp({ token_hash, type: type as "signup" | "recovery" | "email" }).then(async ({ data, error }) => {
-        if (error) setError(error.message);
-        else {
-          if (data.session) await ensureProfile(data.session);
-          window.location.href = "/";
+        if (!error && data.session) {
+          await ensureProfile(data.session);
+          redirectHome();
         }
       });
-      return;
     }
 
-    // 방법 3: onAuthStateChange로 대기 (Supabase가 hash 자동 처리하는 경우)
+    // onAuthStateChange 대기 (fallback)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("[Callback] auth event:", event, !!session);
       if (event === "SIGNED_IN" && session) {
         await ensureProfile(session);
-        window.location.href = "/";
+        redirectHome();
       }
     });
 
-    // 5초 후에도 로그인 안 되면 홈으로
-    const timeout = setTimeout(() => {
-      supabase.auth.getSession().then(({ data }) => {
-        if (data.session) window.location.href = "/";
-        else window.location.href = "/";
-      });
-    }, 5000);
+    // 5초 후 무조건 홈으로
+    const timeout = setTimeout(redirectHome, 5000);
 
     return () => {
       subscription.unsubscribe();
       clearTimeout(timeout);
     };
   }, []);
-
-  if (error) {
-    return (
-      <div
-        className="min-h-screen flex flex-col items-center justify-center gap-4 px-6"
-        style={{ background: "#0D0D18" }}
-      >
-        <p className="text-xs font-semibold tracking-wider uppercase" style={{ color: "rgba(255,107,53,0.7)" }}>
-          로그인 오류
-        </p>
-        <p className="text-sm text-center max-w-sm" style={{ color: "rgba(255,255,255,0.55)", wordBreak: "keep-all" }}>
-          {error}
-        </p>
-        <button
-          onClick={() => window.location.href = "/"}
-          className="mt-2 text-sm underline"
-          style={{ color: "rgba(255,255,255,0.35)" }}
-        >
-          홈으로 돌아가기
-        </button>
-      </div>
-    );
-  }
 
   return (
     <div
