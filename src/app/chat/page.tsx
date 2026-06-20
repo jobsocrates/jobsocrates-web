@@ -1106,7 +1106,7 @@ export default function ChatPage() {
                     <label className="text-xs font-semibold pl-1" style={{ color: "#6B7280" }}>회사 사이트</label>
                     <input value={companyWebsite} onChange={(e) => setCompanyWebsite(e.target.value)} placeholder="https://..." className="ds-input w-full px-4 py-3.5 rounded-2xl text-sm placeholder:text-[#9CA3AF]" style={{ background: "#FFFFFF", border: "1.5px solid #E5E7EB", color: "#111827", outline: "none", boxShadow: "none" }} />
                     {companyWebsite.trim() && (
-                      <p className="text-xs pl-1 leading-relaxed" style={{ color: "#9CA3AF", wordBreak: "keep-all" }}>홈페이지 구조에 따라 AI가 내용을 제대로 읽지 못할 수 있어요. 회사 정보는 꼭 직접 확인해주세요.</p>
+                      <p className="text-xs pl-1 leading-relaxed" style={{ color: "#9CA3AF", wordBreak: "keep-all" }}>사이트 구조에 따라 AI가 내용을 제대로 읽지 못할 수 있어요. 회사 정보는 꼭 직접 확인해주세요.</p>
                     )}
                   </div>
                 </div>
