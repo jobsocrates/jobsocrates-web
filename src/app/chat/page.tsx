@@ -671,11 +671,6 @@ export default function ChatPage() {
 
   async function fetchAnalysisReport(showPanel = true) {
     if (isLoadingAnalysis) return;
-    if (process.env.NODE_ENV === "development") {
-      if (showPanel) setShowAnalysisPanel(true);
-      setAnalysisContent("⚠️ 로컬 테스트 모드: 분석 보고서는 토큰 절약을 위해 비활성화되어 있습니다.");
-      return;
-    }
     setAnalysisContent("");
     setIsLoadingAnalysis(true);
     if (showPanel) setShowAnalysisPanel(true);
@@ -1426,6 +1421,7 @@ export default function ChatPage() {
                         {isStreaming ? "분석 중..." : "분석하기 →"}
                       </button>
                     ) : (
+                      <>
                       <div
                         className="pill-input flex items-end gap-2"
                         style={{
@@ -1482,6 +1478,14 @@ export default function ChatPage() {
                           </svg>
                         </button>
                       </div>
+                      {selected.setupStep === "draft" && setupInput.length > 0 && (
+                        <div className="px-1 pt-1.5 pb-0.5 text-right">
+                          <span className="text-[11px]" style={{ color: selected.charLimit && setupInput.length > Number(selected.charLimit) ? "#EF4444" : "#9CA3AF" }}>
+                            {setupInput.length}{selected.charLimit ? ` / ${selected.charLimit}자` : "자"}
+                          </span>
+                        </div>
+                      )}
+                      </>
                     )}
                   </div>
                 </div>
@@ -1822,7 +1826,7 @@ export default function ChatPage() {
                 {/* 패널 헤더 */}
                 <div className="flex items-center justify-between px-5 py-3 border-b flex-shrink-0" style={{ borderColor: "#E5E7EB", background: "#FFFFFF" }}>
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-black tracking-widest uppercase" style={{ color: "#6366F1", letterSpacing: "0.1em" }}>분석 보고서</span>
+                    <span className="text-sm font-black tracking-widest uppercase" style={{ color: "#6366F1", letterSpacing: "0.1em" }}>분석 보고서</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <button
