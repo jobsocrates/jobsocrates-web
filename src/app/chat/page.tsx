@@ -121,6 +121,7 @@ export default function ChatPage() {
   const [welcome, setWelcome] = useState("");
   const [showTutorial, setShowTutorial] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [showPersonalityBlock, setShowPersonalityBlock] = useState(false);
   const [showGoBackConfirm, setShowGoBackConfirm] = useState(false);
   const [showResumeItemModal, setShowResumeItemModal] = useState(false);
   const [showDuplicateDraft, setShowDuplicateDraft] = useState(false);
@@ -670,6 +671,7 @@ export default function ChatPage() {
   }
 
   async function fetchAnalysisReport(showPanel = true) {
+    if (process.env.NODE_ENV === "development") return;
     if (isLoadingAnalysis) return;
     setAnalysisContent("");
     setIsLoadingAnalysis(true);
@@ -1151,7 +1153,7 @@ export default function ChatPage() {
                   { key: "motivation",  label: "지원동기",    desc: "나만의 동기를 찾습니다",  color: GOLD,   emoji: "✨" },
                   { key: "personality", label: "성격 장단점", desc: "나다운 문장으로 씁니다",  color: VIOLET, emoji: "🌱" },
                 ] as { key: typeof chatMode; label: string; desc: string; color: string; emoji: string }[]).map(({ key, label, desc, color, emoji }) => (
-                  <button key={key} onClick={() => setChatMode(key)} className="flex flex-col gap-2 px-4 py-4 rounded-2xl text-left transition-all" style={{ background: "#FFFFFF", border: `${chatMode === key ? "2px" : "1px"} solid ${chatMode === key ? color : "#E5E7EB"}`, boxShadow: chatMode === key ? `0 2px 8px rgba(0,0,0,0.08)` : "none", transition: "all 0.15s ease" }}>
+                  <button key={key} onClick={() => { if (key === "personality") { setShowPersonalityBlock(true); return; } setChatMode(key); }} className="flex flex-col gap-2 px-4 py-4 rounded-2xl text-left transition-all" style={{ background: "#FFFFFF", border: `${chatMode === key ? "2px" : "1px"} solid ${chatMode === key ? color : "#E5E7EB"}`, boxShadow: chatMode === key ? `0 2px 8px rgba(0,0,0,0.08)` : "none", transition: "all 0.15s ease" }}>
                     <span className="text-xl leading-none">{emoji}</span>
                     <span className="text-sm font-semibold" style={{ color: "#111827" }}>{label}</span>
                     <p className="text-xs leading-relaxed" style={{ color: "#6B7280", wordBreak: "keep-all" }}>{desc}</p>
@@ -2323,6 +2325,19 @@ export default function ChatPage() {
                 새로 시작
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showPersonalityBlock && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(6px)" }}
+          onClick={() => setShowPersonalityBlock(false)}>
+          <div style={{ background: "#18182A", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 20, padding: "32px 24px", maxWidth: 300, width: "100%", textAlign: "center", boxShadow: "0 24px 80px rgba(0,0,0,0.6)" }}
+            onClick={e => e.stopPropagation()}>
+            <p style={{ fontSize: 28, marginBottom: 12 }}>🌱</p>
+            <p style={{ fontSize: 15, fontWeight: 700, color: "#fff", marginBottom: 8 }}>업데이트 중이에요</p>
+            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", lineHeight: 1.7, wordBreak: "keep-all" }}>성격 장단점 기능을 더 잘 만들고 있어요. 조금만 기다려주세요!</p>
+            <button onClick={() => setShowPersonalityBlock(false)} style={{ marginTop: 20, width: "100%", padding: "12px 0", borderRadius: 12, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.6)", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>확인</button>
           </div>
         </div>
       )}
