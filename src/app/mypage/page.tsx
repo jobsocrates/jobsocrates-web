@@ -165,7 +165,7 @@ export default function MyPage() {
     }
   }
 
-  async function handleViewHtml(jobTitle: string, item: CoverItemRecord) {
+  async function handleViewHtml(jobTitle: string, item: CoverItemRecord, analysisReport = "") {
     setViewLoadingId(item.id);
     try {
       const [{ data: msgRows }, { data: revRows }, { data: iqRows }] = await Promise.all([
