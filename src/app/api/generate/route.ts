@@ -265,6 +265,9 @@ export async function POST(req: Request) {
     }
 
     case "company-analysis": {
+      if (process.env.NODE_ENV === "development") {
+        return new Response("", { status: 200 });
+      }
       const hasCompany = !!(body.companyName?.trim() || body.companyWebsite?.trim());
 
       const COMMON_PRINCIPLES = `작성 원칙:
@@ -308,8 +311,12 @@ ${COMMON_PRINCIPLES}
 - 직무 수행에 필요한 전문 지식: 이 직무를 수행하기 위해 갖추어야 할 도구·기술·도메인 지식을 구체적으로 서술한다.
 
 ## 🔭 6. ${body.jobTitle || "지원 직무"}의 눈으로 읽은 이 회사
-지원 직무의 관점에서 이 기업과 제품·서비스의 특징을 해석해라.
-직무마다 중요하게 보는 관점과 특성이 다르기 때문이다. 그러니 해석과 이해가 필요하다.`
+이 직무에서 일한다는 게 실질적으로 어떤 과제인지 2~3가지 핵심 포인트로 정리해라.
+각 포인트는 아래 구조로 써라:
+- 이 회사·직무의 핵심 과제 또는 기회가 무엇인가
+- 그게 왜 이 직무에서 중요한가
+- 자소서나 면접에서 이 포인트를 어떻게 활용할 수 있는가
+긴 에세이 금지. 포인트당 불릿 3개, 각 불릿 2문장 이내.`
         : `당신은 취업 전략 컨설턴트입니다. 지원자가 자소서와 면접을 준비할 수 있도록, 직무를 심층 분석한 전문 보고서를 작성합니다. 기업 정보가 제공되지 않았으므로 직무 분석에만 집중합니다.
 
 ${COMMON_PRINCIPLES}
@@ -326,9 +333,13 @@ ${COMMON_PRINCIPLES}
 ## 💡 2. 요구 역량
 - 직무 수행에 필요한 전문 지식: 이 직무를 수행하기 위해 갖추어야 할 도구·기술·도메인 지식을 구체적으로 서술한다.
 
-## 🔭 3. ${body.jobTitle || "지원 직무"}의 눈으로 읽은 이 회사
-지원 직무의 관점에서 이 기업과 제품·서비스의 특징을 해석해라.
-직무마다 중요하게 보는 관점과 특성이 다르기 때문이다. 그러니 해석과 이해가 필요하다.`;
+## 🔭 3. ${body.jobTitle || "지원 직무"}의 눈으로 읽은 이 직무
+이 직무에서 일한다는 게 실질적으로 어떤 과제인지 2~3가지 핵심 포인트로 정리해라.
+각 포인트는 아래 구조로 써라:
+- 이 직무의 핵심 과제 또는 기회가 무엇인가
+- 그게 왜 이 직무에서 중요한가
+- 자소서나 면접에서 이 포인트를 어떻게 활용할 수 있는가
+긴 에세이 금지. 포인트당 불릿 3개, 각 불릿 2문장 이내.`;
 
       // URL 병렬 fetch
       const [companyPageText, jobPageText] = await Promise.all([
@@ -379,6 +390,26 @@ ${COMMON_PRINCIPLES}
       }
 
       return stream(sys, [{ role: "user", content: msgContent }], 4096);
+    }
+
+    case "classify": {
+      const sys = `자소서 문항을 읽고 유형을 JSON으로만 반환해라. 다른 텍스트 없이 JSON만 출력해라.
+
+유형 판단 기준 — 문항이 회사에 "왜 지원했냐"를 묻는가, 아니면 "뭘 했냐"를 묻는가를 기준으로 나눠라.
+
+- "motivation": 지원동기, 이 회사에 지원한 이유, 입사 후 포부·목표, 왜 이 직무인가, 당사를 선택한 이유. 회사명·직무명이 없어도 "왜"를 묻는 문항이면 motivation이다.
+- "analyze": 경험·강점·도전·역량·성과를 서술하라는 문항. 구체적 사례나 경험 중심.
+- "personality": 성격·장단점·가치관·어떤 사람인가 중심.
+- "composite": 위 유형 2개 이상이 한 문항 안에 섞인 경우.
+
+주의: "강점을 서술하고 이루고 싶은 목표를 써라" 같은 문항은 composite다. "목표"만 있어도 지원동기와 묶여 있으면 motivation이다.
+
+복합이면 parts 배열에 파트별로 유형과 텍스트를 담아라.
+
+단일 예시: {"type": "motivation"}
+복합 예시: {"type": "composite", "parts": [{"type": "analyze", "text": "직무 강점 서술"}, {"type": "motivation", "text": "이루고 싶은 목표"}]}`;
+      const messages: MsgParam[] = [{ role: "user", content: `문항:\n${body.question}` }];
+      return generate(sys, messages);
     }
 
     default:

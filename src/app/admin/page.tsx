@@ -301,7 +301,7 @@ export default function AdminPage() {
     const [{ data, error }, sessionRes] = await Promise.all([
       supabase
         .from("sessions")
-        .select("id, job_title, created_at, user_id, profiles(email)")
+        .select("id, job_title, analysis_report, created_at, user_id, profiles(email)")
         .order("created_at", { ascending: false }),
       supabase.auth.getSession(),
     ]);
@@ -956,6 +956,13 @@ export default function AdminPage() {
 
                 {/* Conversation scroll area */}
                 <div style={{ flex: 1, overflowY: "auto", padding: "20px 24px" }}>
+                  {/* 분석 보고서 */}
+                  {(selectedSession as any)?.analysis_report && (
+                    <details style={{ marginBottom: 20, borderRadius: 10, border: "1px solid rgba(107,142,255,0.18)", background: "rgba(107,142,255,0.04)", padding: "10px 14px" }}>
+                      <summary style={{ fontSize: 11, fontWeight: 700, color: BLUE, cursor: "pointer", letterSpacing: "0.06em" }}>📊 분석 보고서</summary>
+                      <p style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", marginTop: 10, whiteSpace: "pre-wrap", lineHeight: 1.7 }}>{(selectedSession as any).analysis_report}</p>
+                    </details>
+                  )}
                   {detailLoading ? (
                     <div style={{ display: "flex", justifyContent: "center", paddingTop: 40 }}>
                       <div style={{ width: 20, height: 20, borderRadius: "50%", border: `2px solid rgba(201,100,66,0.2)`, borderTopColor: ACCENT, animation: "spin 0.8s linear infinite" }} />

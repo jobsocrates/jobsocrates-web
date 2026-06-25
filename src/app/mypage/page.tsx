@@ -77,7 +77,7 @@ export default function MyPage() {
           .order("created_at", { ascending: false })
           .limit(50),
         supabase.from("sessions")
-          .select("id, job_title, created_at, cover_items(id, question, status, messages(id, role, content), revisions(id), interview_questions(id, interview_answers(id)))")
+          .select("id, job_title, analysis_report, created_at, cover_items(id, question, status, messages(id, role, content), revisions(id), interview_questions(id, interview_answers(id)))")
           .eq("user_id", data.user.id)
           .order("created_at", { ascending: false })
           .limit(20),
@@ -91,7 +91,7 @@ export default function MyPage() {
   }, []);
 
 
-  async function handleDownloadPdf(jobTitle: string, item: CoverItemRecord) {
+  async function handleDownloadPdf(jobTitle: string, item: CoverItemRecord, analysisReport = "") {
     setPdfLoadingId(item.id);
     try {
       const [{ data: msgRows }, { data: revRows }, { data: iqRows }] = await Promise.all([
@@ -153,7 +153,7 @@ export default function MyPage() {
         return { question: iq.question as string, msgs: qMsgs };
       });
 
-      const html = buildPrintHtml(jobTitle, item.question, revision, changes, cleanDiag, interviewQs, window.location.origin);
+      const html = buildPrintHtml(jobTitle, item.question, revision, changes, cleanDiag, interviewQs, window.location.origin, analysisReport);
       const win = window.open("", "_blank");
       if (!win) return;
       win.document.write(html);
@@ -220,7 +220,7 @@ export default function MyPage() {
         return { question: iq.question as string, msgs: qMsgs };
       });
 
-      const html = buildPrintHtml(jobTitle, item.question, revision, changes, diagMsgs, interviewQs, window.location.origin);
+      const html = buildPrintHtml(jobTitle, item.question, revision, changes, diagMsgs, interviewQs, window.location.origin, analysisReport);
       const win = window.open("", "_blank");
       if (!win) return;
       win.document.write(html);
@@ -425,7 +425,7 @@ export default function MyPage() {
                                     {viewLoadingId === item.id ? "..." : "바로 보기"}
                                   </button>
                                   <button
-                                    onClick={() => handleDownloadPdf(session.job_title, item)}
+                                    onClick={() => handleDownloadPdf(session.job_title, item, (session as any).analysis_report || "")}
                                     disabled={pdfLoadingId === item.id || viewLoadingId === item.id}
                                     style={{ fontSize: 11, fontWeight: 600, color: "rgba(255,255,255,0.4)", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 7, padding: "4px 10px", cursor: pdfLoadingId === item.id ? "default" : "pointer", opacity: pdfLoadingId === item.id ? 0.5 : 1 }}
                                   >

@@ -80,6 +80,7 @@ export default function ChatPage() {
   const [showAnalysisPanel, setShowAnalysisPanel] = useState(false);
   const [analysisContent, setAnalysisContent] = useState("");
   const analysisContentRef = useRef("");
+  const companyAnalysisKeyRef = useRef("");
   const [isLoadingAnalysis, setIsLoadingAnalysis] = useState(false);
   const [editingField, setEditingField] = useState<"question" | "charLimit" | null>(null);
   const [editFieldValue, setEditFieldValue] = useState("");
@@ -659,7 +660,13 @@ export default function ChatPage() {
       ? "📝 어떤 문항인가요?\n예: '지원 동기와 입사 후 포부를 서술하시오.'"
       : "📝 어떤 문항인가요?\n예: '본인의 성격 장단점을 서술하시오.'";
     updateItem(selectedId, { setupStep: "question", setupMsgs: [{ id: uid(), role: "bot", text: firstText }] });
-    setAnalysisContent("");
+    // 회사가 바뀐 경우에만 분석 보고서 초기화
+    const newKey = `${companyName.trim()}||${companyWebsite.trim()}`;
+    if (companyAnalysisKeyRef.current !== newKey) {
+      setAnalysisContent("");
+      analysisContentRef.current = "";
+      companyAnalysisKeyRef.current = newKey;
+    }
     setShowAnalysisPanel(false);
     setStageLeaving(true);
     setTimeout(() => {
@@ -671,8 +678,12 @@ export default function ChatPage() {
   }
 
   async function fetchAnalysisReport(showPanel = true) {
-    if (process.env.NODE_ENV === "development") return;
     if (isLoadingAnalysis) return;
+    // 같은 회사 분석이 이미 있으면 패널만 열고 재분석 생략
+    if (analysisContentRef.current) {
+      if (showPanel) setShowAnalysisPanel(true);
+      return;
+    }
     setAnalysisContent("");
     setIsLoadingAnalysis(true);
     if (showPanel) setShowAnalysisPanel(true);
@@ -751,7 +762,12 @@ export default function ChatPage() {
       }
       updateItem(selectedId, { draft: t });
       setTimeout(() => {
-        const bot: SetupMsg = { id: uid(), role: "bot", text: "✅ 준비됐어요!\n논리 흐름 · 문맥 · 직무 이해도를 짚어드릴게요." };
+        const setupReadyText = chatMode === "analyze"
+          ? "✅ 준비됐어요!\n논리 흐름 · 문맥 · 직무 이해도를 짚어드릴게요."
+          : chatMode === "motivation"
+          ? "✅ 준비됐어요!\n논리 흐름 · 문맥 · 회사·직무 연결성을 짚어드릴게요."
+          : "✅ 준비됐어요!\n초안 살펴볼게요.";
+        const bot: SetupMsg = { id: uid(), role: "bot", text: setupReadyText };
         updateItem(selectedId, { setupStep: "ready", setupMsgs: [...base, bot] });
       }, 480);
     }
@@ -1094,65 +1110,76 @@ export default function ChatPage() {
             <div className="w-full max-w-[460px] flex flex-col gap-5">
               <p className="text-sm pl-1" style={{ color: "#6B7280" }}>정보를 입력하면 채팅으로 바로 시작합니다</p>
               {/* 회사 정보 */}
-              <div className="flex flex-col gap-2.5">
-                <div className="grid grid-cols-2 gap-2.5">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-semibold pl-1 flex items-center gap-0.5" style={{ color: "#111827" }}>
-                      기업명 <span className="font-normal" style={{ color: "#9CA3AF" }}>(선택)</span>
-                    </label>
-                    <input value={companyName} onChange={(e) => setCompanyName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleGoToChat()} placeholder="삼성전자" className="ds-input w-full px-4 py-3.5 rounded-2xl text-sm placeholder:text-[#9CA3AF]" style={{ background: "#FFFFFF", border: "1.5px solid #E5E7EB", color: "#111827", outline: "none", boxShadow: "none" }} />
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-2">
+                  <p className="text-xs font-semibold pl-0.5" style={{ color: "#374151", letterSpacing: "0.06em" }}>회사 정보 <span className="font-normal" style={{ color: "#6B7280" }}>(선택)</span></p>
+                  <div className="grid gap-2.5" style={{ gridTemplateColumns: "2fr 3fr" }}>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs pl-1" style={{ color: "#374151" }}>기업명</label>
+                      <input value={companyName} onChange={(e) => setCompanyName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleGoToChat()} placeholder="삼성전자" className="ds-input w-full px-4 py-3.5 rounded-2xl text-sm placeholder:text-[#9CA3AF]" style={{ background: "#FFFFFF", border: "1.5px solid #D1D5DB", color: "#111827", outline: "none" }} />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs pl-1" style={{ color: "#374151" }}>회사 사이트</label>
+                      <input value={companyWebsite} onChange={(e) => setCompanyWebsite(e.target.value)} placeholder="https://..." className="ds-input w-full px-4 py-3.5 rounded-2xl text-sm placeholder:text-[#9CA3AF]" style={{ background: "#FFFFFF", border: "1.5px solid #D1D5DB", color: "#111827", outline: "none" }} />
+                    </div>
                   </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-semibold pl-1" style={{ color: "#6B7280" }}>회사 사이트</label>
-                    <input value={companyWebsite} onChange={(e) => setCompanyWebsite(e.target.value)} placeholder="https://..." className="ds-input w-full px-4 py-3.5 rounded-2xl text-sm placeholder:text-[#9CA3AF]" style={{ background: "#FFFFFF", border: "1.5px solid #E5E7EB", color: "#111827", outline: "none", boxShadow: "none" }} />
-                    <p className="text-xs pl-1 leading-relaxed" style={{ color: "#6B7280", wordBreak: "keep-all" }}>사이트 구조에 따라 AI가 내용을 제대로 읽지 못할 수 있어요. 회사 정보는 꼭 직접 확인해주세요.</p>
+                  <p className="text-xs pl-0.5 flex items-start gap-1" style={{ color: "#9CA3AF", wordBreak: "keep-all" }}>
+                    <span style={{ flexShrink: 0 }}>ⓘ</span>
+                    <span>사이트 구조에 따라 AI가 내용을 제대로 읽지 못할 수 있어요. 회사 정보는 꼭 직접 확인해주세요.</span>
+                  </p>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <p className="text-xs font-semibold pl-0.5" style={{ color: "#374151", letterSpacing: "0.06em" }}>직무 정보</p>
+                  <div className="grid gap-2.5" style={{ gridTemplateColumns: "2fr 3fr" }}>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs pl-1 flex items-center gap-1" style={{ color: "#374151" }}>
+                        지원 직무 <span style={{ color: "#EF4444" }}>*</span>
+                      </label>
+                      <input value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleGoToChat()} placeholder="마케팅 기획" className="ds-input w-full px-4 py-3.5 rounded-2xl text-sm placeholder:text-[#9CA3AF]" style={{ background: "#FFFFFF", border: `1.5px solid ${toastField === "jobTitle" ? "#EF4444" : "#D1D5DB"}`, color: "#111827", outline: "none" }} />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-xs pl-1" style={{ color: "#374151" }}>채용공고 <span style={{ color: "#9CA3AF", fontWeight: 400 }}>(선택)</span></label>
+                      {(() => {
+                        const hasContent = jobLink.trim() || jobPostText.trim() || jobPostImagePreview;
+                        return (
+                          <button
+                            type="button"
+                            onClick={() => setShowJobPostModal(true)}
+                            className="w-full px-4 py-3.5 rounded-2xl text-sm text-left flex items-center justify-between transition-all hover:opacity-80 h-full"
+                            style={{
+                              background: hasContent ? "#F5F3FF" : "#FFFFFF",
+                              border: `1.5px solid ${hasContent ? "#A78BFA" : "#D1D5DB"}`,
+                              color: hasContent ? "#4C3F99" : "#9CA3AF",
+                            }}
+                          >
+                            <span className="flex items-center gap-2 min-w-0">
+                              <span className="text-base leading-none flex-shrink-0">{hasContent ? "📎" : "📋"}</span>
+                              <span className="truncate text-xs">
+                                {hasContent
+                                  ? jobLink.trim()
+                                    ? `링크 입력됨`
+                                    : jobPostText.trim()
+                                    ? `텍스트 입력됨`
+                                    : "이미지 첨부됨"
+                                  : "입력하기"}
+                              </span>
+                            </span>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.5, flexShrink: 0 }}>
+                              <polyline points="9 18 15 12 9 6" />
+                            </svg>
+                          </button>
+                        );
+                      })()}
+                    </div>
                   </div>
                 </div>
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold pl-1 flex items-center gap-0.5" style={{ color: "#111827" }}>
-                    지원 직무 <span style={{ color: "#EF4444" }}>*</span>
-                  </label>
-                  <input value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleGoToChat()} placeholder="마케팅 기획" className="ds-input w-full px-4 py-3.5 rounded-2xl text-sm placeholder:text-[#9CA3AF]" style={{ background: "#FFFFFF", border: `1.5px solid ${toastField === "jobTitle" ? "#EF4444" : "#E5E7EB"}`, color: "#111827", outline: "none", boxShadow: "none" }} />
-                </div>
-                {/* 채용공고 입력 버튼 */}
-                {(() => {
-                  const hasContent = jobLink.trim() || jobPostText.trim() || jobPostImagePreview;
-                  return (
-                    <button
-                      type="button"
-                      onClick={() => setShowJobPostModal(true)}
-                      className="w-full px-4 py-3.5 rounded-2xl text-sm text-left flex items-center justify-between transition-all hover:opacity-80"
-                      style={{
-                        background: hasContent ? "#F5F3FF" : "#FFFFFF",
-                        border: `1.5px solid ${hasContent ? "#A78BFA" : "#E5E7EB"}`,
-                        color: hasContent ? "#4C3F99" : "#6B7280",
-                      }}
-                    >
-                      <span className="flex items-center gap-2">
-                        <span className="text-base leading-none">{hasContent ? "📎" : "📋"}</span>
-                        <span>
-                          {hasContent
-                            ? jobLink.trim()
-                              ? `링크: ${jobLink.trim().slice(0, 30)}${jobLink.trim().length > 30 ? "…" : ""}`
-                              : jobPostText.trim()
-                              ? `텍스트: ${jobPostText.trim().slice(0, 25)}${jobPostText.trim().length > 25 ? "…" : ""}`
-                              : "이미지 첨부됨"
-                            : "채용공고 입력하기 (선택)"}
-                        </span>
-                      </span>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.5, flexShrink: 0 }}>
-                        <polyline points="9 18 15 12 9 6" />
-                      </svg>
-                    </button>
-                  );
-                })()}
               </div>
               {/* 카테고리 */}
               <div className="grid grid-cols-3 gap-2.5">
                 {([
-                  { key: "analyze",     label: "직무역량",    desc: "경험과 역량을 꺼냅니다",  color: BLUE,   emoji: "💼" },
-                  { key: "motivation",  label: "지원동기",    desc: "나만의 동기를 찾습니다",  color: GOLD,   emoji: "✨" },
-                  { key: "personality", label: "내 성향", desc: "나다운 문장으로 씁니다",  color: VIOLET, emoji: "🌱" },
+                  { key: "analyze",     label: "일 속의 나",     desc: "직무역량",           color: BLUE,   emoji: "💼" },
+                  { key: "motivation",  label: "미래 속의 나",   desc: "지원동기 및 포부",      color: GOLD,   emoji: "✨" },
+                  { key: "personality", label: "경험 속의 나",   desc: "성격 장단점",           color: VIOLET, emoji: "🌱" },
                 ] as { key: typeof chatMode; label: string; desc: string; color: string; emoji: string }[]).map(({ key, label, desc, color, emoji }) => (
                   <button key={key} onClick={() => { if (key === "personality" && process.env.NODE_ENV === "production") { setShowPersonalityBlock(true); return; } setChatMode(key); }} className="flex flex-col gap-2 px-4 py-4 rounded-2xl text-left transition-all" style={{ background: "#FFFFFF", border: `${chatMode === key ? "2px" : "1px"} solid ${chatMode === key ? color : "#E5E7EB"}`, boxShadow: chatMode === key ? `0 2px 8px rgba(0,0,0,0.08)` : "none", transition: "all 0.15s ease" }}>
                     <span className="text-xl leading-none">{emoji}</span>
@@ -1892,7 +1919,9 @@ export default function ChatPage() {
                         {analysisContent.split(/(?=##\s)/).filter(s => s.trim()).map((section, i) => {
                           const lines = section.trim().split("\n").filter(Boolean);
                           const rawTitle = lines[0]?.replace(/^##\s*/, "") ?? "";
-                          const bullets = lines.slice(1).filter((l) => l.startsWith("- ")).map((l) => l.replace(/^-\s*/, ""));
+                          const bodyLines = lines.slice(1);
+                          const bullets = bodyLines.filter((l) => l.startsWith("- ")).map((l) => l.replace(/^-\s*/, ""));
+                          const paragraphs = bodyLines.filter((l) => !l.startsWith("- "));
                           const numMatch = rawTitle.match(/^(\S+)\s+(\d+)\.\s*(.+)$/);
                           const emoji = numMatch ? numMatch[1] : "";
                           const num = numMatch ? numMatch[2] : String(i + 1);
@@ -1911,6 +1940,7 @@ export default function ChatPage() {
                               </div>
 
                               {/* 불릿 항목 */}
+                              {bullets.length > 0 && (
                               <div className="flex flex-col gap-3 pl-10">
                                 {bullets.map((b, j) => {
                                   const colonIdx = b.indexOf(": ");
@@ -1926,6 +1956,16 @@ export default function ChatPage() {
                                   );
                                 })}
                               </div>
+                              )}
+
+                              {/* 문단 텍스트 (불릿 없는 섹션) */}
+                              {paragraphs.length > 0 && (
+                              <div className="flex flex-col gap-2 pl-10">
+                                {paragraphs.map((p, j) => (
+                                  <p key={j} className="text-sm leading-relaxed" style={{ color: "#374151", wordBreak: "keep-all" }}>{p}</p>
+                                ))}
+                              </div>
+                              )}
 
                               {i < 5 && <div style={{ height: "1px", background: "#F3F4F6" }} />}
                             </div>
