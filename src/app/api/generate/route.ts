@@ -23,13 +23,13 @@ function buildCtx(ctx: DiggingContext): string {
 type MsgParam = Anthropic.MessageParam;
 type SystemParam = string | Anthropic.Messages.TextBlockParam[];
 
-async function stream(system: SystemParam, messages: MsgParam[], maxTokens = 2048) {
+async function stream(system: SystemParam, messages: MsgParam[], maxTokens = 2048, model = "claude-sonnet-4-6") {
   const enc = new TextEncoder();
   const client = getClient();
   let s: ReturnType<typeof client.messages.stream>;
   try {
     s = await client.messages.stream({
-      model: "claude-sonnet-4-6",
+      model,
       max_tokens: maxTokens,
       system,
       messages,
@@ -64,10 +64,10 @@ async function stream(system: SystemParam, messages: MsgParam[], maxTokens = 204
   );
 }
 
-async function generate(system: string, messages: MsgParam[]) {
+async function generate(system: string, messages: MsgParam[], model = "claude-sonnet-4-6") {
   const client = getClient();
   const res = await client.messages.create({
-    model: "claude-sonnet-4-6",
+    model,
     max_tokens: 2048,
     system,
     messages,
@@ -159,42 +159,138 @@ export async function POST(req: Request) {
     }
 
     case "personality": {
-      const reportCtx = body.analysisReport ? `\n\n## 기업·직무 분석 보고서\n${body.analysisReport}` : "";
       const sys: Anthropic.Messages.TextBlockParam[] = [
         { type: "text", text: prompt("common") + "\n\n" + prompt("personality"), cache_control: { type: "ephemeral" } },
-        { type: "text", text: `## 세션 정보\n직무: ${body.jobTitle || "미입력"}\n회사: ${body.companyInfo || "미입력"}\n글자 수 제한: ${body.charLimit ? `${body.charLimit}자 (수정본 작성 시 이 글자 수에 맞춰야 함)` : "미입력"}${reportCtx}\n\n## 자소서 초안\n${body.draft}`, cache_control: { type: "ephemeral" } },
+        { type: "text", text: `## 세션 정보\n직무: ${body.jobTitle || "미입력"}\n회사: ${body.companyInfo || "미입력"}\n글자 수 제한: ${body.charLimit ? `${body.charLimit}자 (수정본 작성 시 이 글자 수에 맞춰야 함)` : "미입력"}${body.jobPostText ? `\n\n## 채용공고(JD)\n${body.jobPostText}` : ""}\n\n## 자소서 초안\n${body.draft}`, cache_control: { type: "ephemeral" } },
       ];
-      const msgs: MsgParam[] = body.messages?.length > 0
+      const baseMsgs: MsgParam[] = body.messages?.length > 0
         ? body.messages
         : [{ role: "user", content: "초안을 분석하고 첫 질문을 시작해줘." }];
+      let msgs: MsgParam[] = baseMsgs;
+      if (body.jobPostImage && baseMsgs.length === 1 && typeof baseMsgs[0].content === "string") {
+        const m = (body.jobPostImage as string).match(/^data:([^;]+);base64,(.+)$/);
+        if (m) {
+          const mediaType = m[1] as "image/jpeg" | "image/png" | "image/gif" | "image/webp";
+          msgs = [{
+            role: "user",
+            content: [
+              { type: "image", source: { type: "base64", media_type: mediaType, data: m[2] } },
+              { type: "text", text: `위 이미지는 이 직무의 채용공고입니다. 직무 이해의 근거로 참고해주세요.\n\n${baseMsgs[0].content as string}` },
+            ],
+          }];
+        }
+      }
       return stream(sys, msgs);
     }
 
     case "motivation": {
-      const reportCtx = body.analysisReport ? `\n\n## 기업·직무 분석 보고서\n${body.analysisReport}` : "";
       const sys: Anthropic.Messages.TextBlockParam[] = [
-        { type: "text", text: prompt("common") + "\n\n" + prompt("motivation"), cache_control: { type: "ephemeral" } },
-        { type: "text", text: `## 세션 정보\n직무: ${body.jobTitle}\n회사: ${body.companyInfo || "미입력"}\n글자 수 제한: ${body.charLimit ? `${body.charLimit}자 (완성본 작성 시 이 글자 수에 맞춰야 함)` : "미입력"}${reportCtx}\n\n## 자소서 초안\n${body.draft}`, cache_control: { type: "ephemeral" } },
+        { type: "text", text: prompt("common") + "\n\n" + prompt("motivation_v2"), cache_control: { type: "ephemeral" } },
+        { type: "text", text: `## 세션 정보\n직무: ${body.jobTitle}\n회사: ${body.companyInfo || "미입력"}\n글자 수 제한: ${body.charLimit ? `${body.charLimit}자 (완성본 작성 시 이 글자 수에 맞춰야 함)` : "미입력"}${body.jobPostText ? `\n\n## 채용공고(JD)\n${body.jobPostText}` : ""}\n\n## 자소서 초안\n${body.draft}`, cache_control: { type: "ephemeral" } },
       ];
-      const msgs: MsgParam[] = body.messages?.length > 0
+      const baseMsgs: MsgParam[] = body.messages?.length > 0
         ? body.messages
         : [{ role: "user", content: "초안을 분석하고 첫 질문을 시작해줘." }];
+      let msgs: MsgParam[] = baseMsgs;
+      if (body.jobPostImage && baseMsgs.length === 1 && typeof baseMsgs[0].content === "string") {
+        const m = (body.jobPostImage as string).match(/^data:([^;]+);base64,(.+)$/);
+        if (m) {
+          const mediaType = m[1] as "image/jpeg" | "image/png" | "image/gif" | "image/webp";
+          msgs = [{
+            role: "user",
+            content: [
+              { type: "image", source: { type: "base64", media_type: mediaType, data: m[2] } },
+              { type: "text", text: `위 이미지는 이 직무의 채용공고입니다. 회사·직무 이해의 근거로 참고해주세요.\n\n${baseMsgs[0].content as string}` },
+            ],
+          }];
+        }
+      }
       return stream(sys, msgs);
     }
 
     case "analyze": {
-      const reportCtx = body.analysisReport ? `\n\n## 기업·직무 분석 보고서 (직무 이해 1순위 근거)\n${body.analysisReport}` : "";
       const sys: Anthropic.Messages.TextBlockParam[] = [
-        { type: "text", text: prompt("analyze_v2"), cache_control: { type: "ephemeral" } },
-        { type: "text", text: `## 세션 정보\n직무: ${body.jobTitle}\n회사: ${body.companyInfo || "미입력"}\n문항: ${body.question || "미입력"}\n글자 수 제한: ${body.charLimit ? `${body.charLimit}자 (수정본 작성 시 이 글자 수에 맞춰야 함)` : "미입력"}${reportCtx}\n\n## 자소서 초안\n${body.draft}`, cache_control: { type: "ephemeral" } },
+        { type: "text", text: prompt("analyze_v4"), cache_control: { type: "ephemeral" } },
+        { type: "text", text: `## 세션 정보\n직무: ${body.jobTitle}\n회사: ${body.companyInfo || "미입력"}\n문항: ${body.question || "미입력"}\n글자 수 제한: ${body.charLimit ? `${body.charLimit}자 (수정본 작성 시 이 글자 수에 맞춰야 함)` : "미입력"}${body.jobPostText ? `\n\n## 채용공고(JD)\n${body.jobPostText}` : ""}\n\n## 자소서 초안\n${body.draft}`, cache_control: { type: "ephemeral" } },
       ];
-      const msgs: MsgParam[] = body.messages?.length > 0
+      const baseMsgs: MsgParam[] = body.messages?.length > 0
         ? body.messages
         : [{ role: "user", content: "자소서 초안을 분석하고 첫 질문을 시작해줘." }];
+      // 첫 호출에 채용공고 이미지가 있으면 첫 메시지에 붙여 직무 이해 근거로 활용
+      let msgs: MsgParam[] = baseMsgs;
+      if (body.jobPostImage && baseMsgs.length === 1 && typeof baseMsgs[0].content === "string") {
+        const m = (body.jobPostImage as string).match(/^data:([^;]+);base64,(.+)$/);
+        if (m) {
+          const mediaType = m[1] as "image/jpeg" | "image/png" | "image/gif" | "image/webp";
+          msgs = [{
+            role: "user",
+            content: [
+              { type: "image", source: { type: "base64", media_type: mediaType, data: m[2] } },
+              { type: "text", text: `위 이미지는 이 직무의 채용공고입니다. 직무 이해의 근거로 참고해주세요.\n\n${baseMsgs[0].content as string}` },
+            ],
+          }];
+        }
+      }
       return stream(sys, msgs);
     }
 
     case "interview-questions": {
+      if (body.chatMode === "motivation") {
+        const sys =
+          "당신은 이 회사의 면접관입니다. 지원자의 지원동기 자소서를 보고, 실제 면접에서 던질 법한 날카로운 예상 질문 4개를 만드세요.\n" +
+          "원론적 질문(왜 지원했나요 / 입사 후 무엇을 하고 싶나요)은 금지입니다 — 이미 준비된 답만 나옵니다. 자소서가 주장한 내용을 압박하고 검증하는 질문이어야 합니다.\n" +
+          "아래 네 각도로 하나씩, 반드시 이 회사·이 자소서의 구체적 내용에 근거해 만드세요:\n" +
+          "1. 회사 이해 압박 — 자소서가 보인 회사·직무 이해를 한 단계 더 깊이 파고들거나 경쟁사 대비 차별점을 묻는다. 동기가 진짜 이해인지 검증.\n" +
+          "2. 접합점 간극 — 지원자의 경험과 이 직무가 실제로 요구하는 것 사이의 차이를 짚어, 그 간극을 어떻게 메울지 묻는다.\n" +
+          "3. 포부 현실성 — 자소서의 입사 후 포부를 현업 관점에서 찌른다. 그렇게 단순하지 않은 지점을 묻는다.\n" +
+          "4. 동기 택일 — 같은 일을 하는 다른 회사가 아니라 왜 하필 이 회사인지를 날카롭게 묻는다(합격 시 택일 상황 포함).\n" +
+          "각 질문은 이 회사·자소서 맥락에 구체적이어야 하며 일반론이면 안 됩니다. 질문 문장에 쉼표(,)를 쓰지 마세요.\n" +
+          "반드시 JSON 배열만 출력하세요. 다른 텍스트 없이: [\"질문1\",\"질문2\",\"질문3\",\"질문4\"]";
+        const jd = body.jobPostText ? `채용공고(JD):\n${body.jobPostText}\n\n` : "";
+        const messages: MsgParam[] = [
+          {
+            role: "user",
+            content:
+              `회사: ${body.companyInfo || "미입력"}\n직무: ${body.jobTitle || "미입력"}\n자소서 문항: ${body.question || "미입력"}\n\n${jd}지원동기 자소서:\n${body.coverLetter}\n\n` +
+              "위 네 각도로 예상 질문 4개를 JSON 배열로만 출력해줘.",
+          },
+        ];
+        return generate(sys, messages);
+      }
+      if (body.chatMode === "analyze") {
+        const sys =
+          "당신은 이 회사의 면접관입니다. 지원자의 직무역량 자소서를 보고, 실제 면접에서 던질 법한 날카로운 예상 질문 4개를 만드세요.\n" +
+          "원론적 질문(뻔한 자기소개·장단점)은 금지입니다. 자소서가 주장한 역량·경험을 압박하고 검증하는 질문이어야 합니다.\n" +
+          "아래 네 각도로 하나씩, 반드시 이 자소서의 구체적 경험·역량에 근거해 만드세요:\n" +
+          "1. 판단 근거 압박 — 자소서 속 핵심 판단·선택에 대해 왜 그렇게 했는지, 다른 선택지는 왜 아니었는지 캐묻는다.\n" +
+          "2. 재현성 검증 — 그 성과가 운·상황이 아니라 본인 역량임을, 비슷한 상황에서 또 해낼 수 있음을 어떻게 보장하는지 묻는다.\n" +
+          "3. 직무 적용 — 그 역량을 이 직무가 실제로 하는 업무에 어떻게 적용할지 구체적으로 묻는다.\n" +
+          "4. 깊이·한계 압박 — 그 경험에서 아쉬웠던 점·한계, 또는 한 단계 더 깊은 전문성을 이 직무·도메인 맥락에서 찌른다.\n" +
+          "각 질문은 이 자소서·직무 맥락에 구체적이어야 하며 일반론이면 안 됩니다. 질문 문장에 쉼표(,)를 쓰지 마세요.\n" +
+          "반드시 JSON 배열만 출력하세요. 다른 텍스트 없이: [\"질문1\",\"질문2\",\"질문3\",\"질문4\"]";
+        const jd = body.jobPostText ? `채용공고(JD):\n${body.jobPostText}\n\n` : "";
+        const messages: MsgParam[] = [
+          { role: "user", content: `회사: ${body.companyInfo || "미입력"}\n직무: ${body.jobTitle || "미입력"}\n자소서 문항: ${body.question || "미입력"}\n\n${jd}자소서:\n${body.coverLetter}\n\n위 네 각도로 예상 질문 4개를 JSON 배열로만 출력해줘.` },
+        ];
+        return generate(sys, messages);
+      }
+      if (body.chatMode === "personality") {
+        const sys =
+          "당신은 이 회사의 면접관입니다. 지원자의 성향(성격·가치관) 자소서를 보고, 실제 면접에서 던질 법한 날카로운 예상 질문 4개를 만드세요.\n" +
+          "원론적 질문(장단점이 뭔가요 같은 뻔한 것)은 금지입니다. 자소서가 주장한 성향이 진짜이고 일관되는지 검증하는 질문이어야 합니다.\n" +
+          "아래 네 각도로 하나씩, 반드시 이 자소서의 구체적 일화·성향에 근거해 만드세요:\n" +
+          "1. 일관성 검증 — 그 성향이 드러난 다른 사례를 묻는다. 한 번의 일화인지 반복되는 패턴인지 확인한다.\n" +
+          "2. 반대 상황 — 그 성향이 약점으로 작용했거나 통하지 않았던 상황을 묻는다.\n" +
+          "3. 직무·조직 적합성 — 그 성향이 이 직무·조직 환경에서 실제로 어떻게 작동할지 묻는다.\n" +
+          "4. 자기 인식 깊이 — 그 성향의 근원이나 그것을 다루는 방식을 찌른다.\n" +
+          "각 질문은 이 자소서 맥락에 구체적이어야 하며 일반론이면 안 됩니다. 질문 문장에 쉼표(,)를 쓰지 마세요.\n" +
+          "반드시 JSON 배열만 출력하세요. 다른 텍스트 없이: [\"질문1\",\"질문2\",\"질문3\",\"질문4\"]";
+        const jd = body.jobPostText ? `채용공고(JD):\n${body.jobPostText}\n\n` : "";
+        const messages: MsgParam[] = [
+          { role: "user", content: `회사: ${body.companyInfo || "미입력"}\n직무: ${body.jobTitle || "미입력"}\n자소서 문항: ${body.question || "미입력"}\n\n${jd}자소서:\n${body.coverLetter}\n\n위 네 각도로 예상 질문 4개를 JSON 배열로만 출력해줘.` },
+        ];
+        return generate(sys, messages);
+      }
       const sys =
         "당신은 면접 전문가입니다. 자소서를 분석하여 면접관이 실제로 물어볼 법한 예상 질문 4개를 생성하세요. " +
         "질문 문장에 쉼표(,)를 사용하지 마세요. " +
@@ -217,6 +313,35 @@ export async function POST(req: Request) {
         "학생 답변에 피드백을 줘라. 잘한 점과 보완할 점을 구체적으로 짚어줘. \"~요\" 체로 따뜻하게. 4~5문장 이내. 마크다운 볼드(**) 절대 금지. 쉼표(,) 남발 금지. 명사·항목 나열 외에는 쓰지 마라.";
       const messages: MsgParam[] = [{ role: "user", content: body.answer }];
       return stream(sys, messages);
+    }
+
+    case "interview-polish": {
+      const sys =
+        `면접 코치. 직무: ${body.jobTitle || "미입력"}. 면접 질문: "${body.interviewQuestion}".\n` +
+        "학생이 앞선 피드백을 반영해 다시 쓴 답변이다. 새로 피드백하거나 평가하지 마라. 이 답변의 '문장만' 다듬어, 면접에서 말하기 좋은 정돈된 답변으로 만들어줘라.\n" +
+        "- 내용·논점·구조는 학생 것 그대로 둬라. 없는 내용을 더하거나 성과·규모를 부풀리지 마라.\n" +
+        "- 구어체·군더더기를 정리하고 문장을 매끄럽게. 면접에서 말하듯 자연스럽게(합니다체 중심).\n" +
+        "- 다듬은 답변 본문만 출력해라. 말머리·설명·따옴표 없이. 마크다운 볼드(**) 금지.";
+      const messages: MsgParam[] = [{ role: "user", content: body.answer }];
+      return stream(sys, messages);
+    }
+
+    case "subtitle": {
+      const sys =
+        "당신은 자소서 소제목(헤드라인) 카피라이터입니다. 완성된 자소서를 읽고 그 글에 어울리는 소제목 3개를 추천하세요.\n" +
+        "소제목은 글 맨 위에 붙는 짧은 제목으로, 채용담당자가 첫눈에 '이 글이 무엇을 말하는지'를 잡게 합니다.\n" +
+        "규칙:\n" +
+        "- 반드시 이 글의 핵심(구체적 경험·결과·판단·행동)에서 뽑아라. 글에 없는 내용을 지어내지 마라.\n" +
+        "- 뻔한 클리셰 절대 금지: '도전하는 인재', '열정과 책임감', '소통의 달인', 'OO의 달인', '함께 성장', '끊임없는 노력'처럼 어느 자소서에나 붙는 말은 쓰지 마라.\n" +
+        "- 이 글만의 것이어야 한다. 가능하면 글 속 구체적 장면·핵심 행동·결과를 담아라.\n" +
+        "- 길이는 8~22자 내외로 짧고 강하게.\n" +
+        "- 3개는 서로 다른 각도로 만들어라(예: 하나는 결과·성과 중심, 하나는 일하는 방식·태도 중심, 하나는 핵심을 압축한 비유·이미지).\n" +
+        "- 따옴표·마침표·이모지 없이 제목 텍스트만. 소제목 안에 쉼표(,)를 쓰지 마라.\n" +
+        "반드시 JSON 배열만 출력하세요. 다른 텍스트 없이: [\"소제목1\",\"소제목2\",\"소제목3\"]";
+      const messages: MsgParam[] = [
+        { role: "user", content: `직무: ${body.jobTitle || "미입력"}\n자소서 문항: ${body.question || "미입력"}\n\n완성된 자소서:\n${body.coverLetter}\n\n위 글에 어울리는 소제목 3개를 JSON 배열로만 추천해줘.` },
+      ];
+      return generate(sys, messages, "claude-haiku-4-5-20251001");
     }
 
     case "update-message": {

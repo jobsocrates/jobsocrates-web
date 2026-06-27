@@ -19,7 +19,7 @@ function DiagnosisMini() {
       <div className="px-3 py-2.5 flex flex-col gap-1.5">
         {[
           ["①", "논리 흐름은 잡혀있어요", "rgba(255,255,255,0.80)"],
-          ["②", "핵심 경험이 너무 추상적이에요", "rgba(255,255,255,0.42)"],
+          ["②", "판단 과정이 보이지 않아요", "rgba(255,255,255,0.42)"],
           ["③", "직무 연결고리가 약해요", "rgba(255,255,255,0.42)"],
         ].map(([n, t, c]) => (
           <div key={n as string} className="flex items-start gap-2">
@@ -38,18 +38,18 @@ function BoostMini() {
       <div className="flex items-end gap-2">
         <img src="/ai-avatar.webp" alt="" className="w-4 h-4 rounded-full object-cover flex-shrink-0" />
         <div className="px-3 py-2 text-xs leading-relaxed" style={{ background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.80)", borderRadius: "4px 10px 10px 10px" }}>
-          「팀 성과」— 당신이 직접 한 게 뭔가요?
+          「역할 재분배」— 무슨 기준으로 나눴어요?
         </div>
       </div>
       <div className="flex justify-end">
         <div className="px-3 py-2 text-xs" style={{ background: NAVY, color: "#fff", borderRadius: "10px 4px 10px 10px" }}>
-          API 설계랑 QA를 혼자 담당했어요
+          작동할 기능 3개만 남기고 UI는 후순위로 뒀어요
         </div>
       </div>
       <div className="flex items-end gap-2">
         <img src="/ai-avatar.webp" alt="" className="w-4 h-4 rounded-full object-cover flex-shrink-0" />
         <div className="px-3 py-2 text-xs leading-relaxed" style={{ background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.80)", borderRadius: "4px 10px 10px 10px" }}>
-          배포 직전 성능 이슈, 어떻게 해결했어요?
+          UI를 미룬 그 판단, 기준이 뭐였어요?
         </div>
       </div>
     </div>
@@ -66,14 +66,14 @@ function RevisionMini() {
         </div>
         <div className="px-3 py-2.5 relative overflow-hidden" style={{ maxHeight: "54px" }}>
           <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.72)", wordBreak: "keep-all" }}>
-            'API 설계부터 QA까지 직접 담당하며, 배포 직전 성능 이슈를 단독으로 해결했습니다...'
+            '시연 D-2일, 작동해야 할 기능 3개를 먼저 선별하고 UI 보완은 후순위로 조정했습니다...'
           </p>
           <div className="absolute bottom-0 left-0 right-0 h-4" style={{ background: "linear-gradient(transparent, rgba(8,18,46,0.9))" }} />
         </div>
       </div>
       <div className="rounded-xl px-3 py-2" style={{ background: `${GOLD}0C`, border: `1px solid ${GOLD}28` }}>
         <p className="text-xs font-semibold mb-0.5" style={{ color: GOLD }}>바뀐 점</p>
-        <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.50)" }}>팀 성과 → 직접 담당한 내용으로 구체화</p>
+        <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.50)" }}>막연한 '역할 재분배' → 판단 기준이 드러나는 문장</p>
       </div>
     </div>
   );
@@ -85,14 +85,14 @@ function InterviewMini() {
       <div className="flex items-start gap-2.5 px-3 py-2.5">
         <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-px font-bold text-white" style={{ background: VIOLET, fontSize: "8px" }}>1</div>
         <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.80)", wordBreak: "keep-all" }}>
-          "혼자 해결했다고 하셨는데, 팀 협업은 어떻게 하셨나요?"
+          "UI를 후순위로 둔 결정, 팀원 설득은 어떻게 했나요?"
         </p>
       </div>
       <div className="px-3 pb-2.5 border-t" style={{ borderColor: `${VIOLET}18` }}>
         <div className="mt-2 px-2.5 py-2 rounded-lg" style={{ background: "rgba(255,255,255,0.04)" }}>
           <p className="text-xs font-semibold mb-1" style={{ color: VIOLET, fontSize: "10px" }}>AI 피드백</p>
           <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.46)", wordBreak: "keep-all" }}>
-            진행 상황을 공유했다는 점부터 언급하고, 협업 관점으로 재구성하세요.
+            '작동이 먼저'라는 판단 근거를 앞세우고, 합의 과정을 덧붙여 답하세요.
           </p>
         </div>
       </div>
@@ -113,25 +113,25 @@ const STEPS: Step[] = [
   {
     num: "01", color: BLUE, tag: "초안 분석",
     title: "부족한 점이 뭔지 먼저 알려드립니다",
-    desc: "고치기 전에, 지금 초안에서 무엇이 부족한지 짚어드립니다. 논리 흐름, 문맥 연결, 직무 이해도를 한눈에.",
+    desc: "고치기 전에, 지금 무엇이 부족한지부터 짚어드립니다.",
     visual: <DiagnosisMini />,
   },
   {
     num: "02", color: GOLD, tag: "이야기 발굴",
     title: "질문 하나로 추상적인 표현이 사라집니다",
-    desc: "물어보지 않으면 절대 꺼내지 못했을 당신의 이야기를 대화로 끌어냅니다.",
+    desc: "물어보지 않으면 못 꺼냈을 이야기를, 질문으로 끌어냅니다.",
     visual: <BoostMini />,
   },
   {
     num: "03", color: CORAL, tag: "문장 완성",
     title: "나눈 대화가 그대로 자소서가 됩니다",
-    desc: "우리가 나눈 모든 대화를 기반으로 자소서가 완성됩니다. PDF 다운로드도 가능해요.",
+    desc: "나눈 대화가 그대로 한 편의 자소서가 됩니다.",
     visual: <RevisionMini />,
   },
   {
     num: "04", color: VIOLET, tag: "실전 대비",
     title: "그 대화가 곧 면접 준비가 됩니다",
-    desc: "자소서를 쓰며 나눈 대화가 면접 질문이 됩니다. 내 답변에 피드백까지 바로 받으세요.",
+    desc: "그 대화가 면접 질문이 되고, 답변 피드백까지 이어집니다.",
     visual: <InterviewMini />,
   },
 ];
@@ -151,142 +151,67 @@ export function HowSection() {
           </h2>
         </div>
 
-        {/* ── 여정 타임라인 ── */}
-        <div className="relative">
+        {/* 출발 라벨 */}
+        <div className="anim flex items-center gap-2 mb-4 px-1">
+          <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: "rgba(255,255,255,0.5)" }} />
+          <span className="text-sm" style={{ color: "rgba(255,255,255,0.4)" }}>자소서 초안 · 여기서 시작합니다</span>
+        </div>
 
-          {/* 출발 */}
-          <div className="flex items-center gap-5 mb-6 anim">
-            <div className="flex flex-col items-center flex-shrink-0" style={{ width: "44px" }}>
-              <div
-                className="w-3 h-3 rounded-full"
-                style={{ background: "rgba(255,255,255,0.55)", boxShadow: "0 0 8px rgba(255,255,255,0.3)" }}
-              />
-              <div style={{ width: "2px", height: "20px", background: `linear-gradient(to bottom, rgba(255,255,255,0.35), ${BLUE})` }} />
-            </div>
-            <span className="text-sm" style={{ color: "rgba(255,255,255,0.38)" }}>
-              자소서 초안 · 여기서 시작합니다
-            </span>
-          </div>
-
-          {/* 스텝들 */}
-          {STEPS.map((step, i) => {
-            const isLast = i === STEPS.length - 1;
-            const nextColor = !isLast ? STEPS[i + 1].color : null;
-            return (
-              <div key={step.num}>
-
-                {/* 스텝 행 */}
-                <div className={`flex gap-5 anim anim-delay-${i + 1}`}>
-
-                  {/* 타임라인 열 */}
-                  <div className="flex flex-col items-center flex-shrink-0" style={{ width: "44px" }}>
-                    {/* 번호 도트 */}
-                    <div
-                      className="w-11 h-11 rounded-full flex items-center justify-center font-bold text-sm text-white flex-shrink-0 z-10"
-                      style={{
-                        background: step.color,
-                        boxShadow: `0 0 0 4px rgba(${step.color === BLUE ? "59,98,204" : step.color === GOLD ? "212,146,10" : step.color === CORAL ? "224,90,58" : "167,139,250"},0.18), 0 0 20px ${step.color}50`,
-                      }}
-                    >
-                      {step.num}
-                    </div>
-                    {/* 연결선 */}
-                    {!isLast && (
-                      <div style={{ width: "2px", flex: 1, minHeight: "48px", background: `linear-gradient(to bottom, ${step.color}, ${nextColor})`, opacity: 0.6 }} />
-                    )}
-                  </div>
-
-                  {/* 콘텐츠 */}
-                  <div className={`flex-1 ${isLast ? "pb-0" : "pb-12"} min-w-0`}>
-                    {/* 태그 */}
-                    <div className="flex items-center gap-2 mb-3 mt-2.5">
-                      <span
-                        className="text-xs font-semibold px-2.5 py-1 rounded-full"
-                        style={{ background: `${step.color}16`, color: step.color, border: `1px solid ${step.color}28` }}
-                      >
-                        {step.tag}
-                      </span>
-                    </div>
-
-                    {/* 제목 + 비주얼 (데스크탑: 가로, 모바일: 세로) */}
-                    <div className="flex flex-col sm:flex-row gap-5">
-                      {/* 텍스트 */}
-                      <div className="flex-1 flex flex-col gap-3">
-                        <h3
-                          className="text-lg lg:text-xl font-bold text-white leading-snug"
-                          style={{ wordBreak: "keep-all", letterSpacing: "-0.02em" }}
-                        >
-                          {step.title}
-                        </h3>
-                        <p className="text-sm leading-relaxed" style={{ color: "rgba(255,255,255,0.38)", wordBreak: "keep-all" }}>
-                          {step.desc}
-                        </p>
-                      </div>
-
-                      {/* 미니 UI 프리뷰 */}
-                      <div
-                        className="sm:w-56 lg:w-64 flex-shrink-0 rounded-xl p-3"
-                        style={{ background: "rgba(0,0,0,0.22)", border: "1px solid rgba(255,255,255,0.06)" }}
-                      >
-                        {step.visual}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 스텝 사이 연결 레이블 */}
-                {!isLast && (
-                  <div className="flex items-center gap-5 my-2">
-                    <div className="flex-shrink-0" style={{ width: "44px" }} />
-                    <div className="flex items-center gap-2">
-                      <div style={{ width: "16px", height: "1.5px", background: `linear-gradient(to right, ${step.color}, transparent)`, opacity: 0.7 }} />
-                      <span
-                        className="text-xs font-semibold tracking-wide"
-                        style={{
-                          color: step.color,
-                          opacity: 0.85,
-                          background: `${step.color}12`,
-                          border: `1px solid ${step.color}28`,
-                          borderRadius: "20px",
-                          padding: "3px 10px",
-                          letterSpacing: "0.02em",
-                        }}
-                      >
-                        {i === 0 ? "부족한 부분을 파악했으면" : i === 1 ? "이야기가 구체화되면" : "완성된 자소서를 토대로"}
-                      </span>
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={step.color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.7, flexShrink: 0 }}>
-                        <polyline points="9 18 15 12 9 6"/>
-                      </svg>
-                    </div>
-                  </div>
-                )}
-
-              </div>
-            );
-          })}
-
-          {/* 도착 */}
-          <div className="flex items-center gap-5 mt-6 anim">
-            <div className="flex flex-col items-center flex-shrink-0" style={{ width: "44px" }}>
-              <div style={{ width: "2px", height: "20px", background: `linear-gradient(to bottom, ${VIOLET}, ${VIOLET}80)` }} />
-              <div
-                className="w-5 h-5 rounded-full flex items-center justify-center"
-                style={{ background: VIOLET, boxShadow: `0 0 0 4px ${VIOLET}20, 0 0 20px ${VIOLET}60` }}
-              >
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-              </div>
-            </div>
+        {/* ── 스텝 카드 ── */}
+        <div className="flex flex-col gap-4">
+          {STEPS.map((step, i) => (
             <div
-              className="rounded-xl px-4 py-3"
-              style={{ background: `${VIOLET}12`, border: `1px solid ${VIOLET}28` }}
+              key={step.num}
+              className={`anim anim-delay-${i + 1} rounded-3xl p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-5 sm:gap-7`}
+              style={{ background: "rgba(255,255,255,0.035)", border: "1px solid rgba(255,255,255,0.08)" }}
             >
-              <p className="text-sm font-semibold text-white">자소서 완성 · 면접 준비까지</p>
-              <p className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.40)" }}>여기까지 오면 이미 절반은 합격입니다.</p>
-            </div>
-          </div>
+              {/* 왼쪽: 번호 + 태그 + 제목 + 설명 */}
+              <div className="flex-1 min-w-0 flex flex-col gap-3">
+                <div className="flex items-center gap-2.5">
+                  <span
+                    className="flex items-center justify-center rounded-xl font-bold text-sm text-white flex-shrink-0"
+                    style={{ width: "34px", height: "34px", background: step.color, boxShadow: `0 0 20px ${step.color}55` }}
+                  >
+                    {step.num}
+                  </span>
+                  <span
+                    className="text-xs font-semibold px-2.5 py-1 rounded-full"
+                    style={{ background: `${step.color}16`, color: step.color, border: `1px solid ${step.color}30` }}
+                  >
+                    {step.tag}
+                  </span>
+                </div>
+                <h3 className="text-lg lg:text-xl font-bold text-white leading-snug" style={{ wordBreak: "keep-all", letterSpacing: "-0.02em" }}>
+                  {step.title}
+                </h3>
+                <p className="text-sm leading-relaxed" style={{ color: "rgba(255,255,255,0.42)", wordBreak: "keep-all" }}>
+                  {step.desc}
+                </p>
+              </div>
 
+              {/* 오른쪽: 미니 UI 프리뷰 */}
+              <div
+                className="w-full sm:w-[270px] flex-shrink-0 rounded-2xl p-3"
+                style={{ background: "rgba(0,0,0,0.25)", border: "1px solid rgba(255,255,255,0.06)" }}
+              >
+                {step.visual}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* 도착 — 완성 */}
+        <div
+          className="anim mt-4 rounded-3xl px-6 py-5 flex items-center gap-4"
+          style={{ background: `linear-gradient(120deg, ${VIOLET}1F, ${VIOLET}08)`, border: `1px solid ${VIOLET}3A` }}
+        >
+          <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: VIOLET, boxShadow: `0 0 26px ${VIOLET}66` }}>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+          </div>
+          <div>
+            <p className="text-base font-bold text-white">자소서 완성 · 면접 준비까지</p>
+            <p className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.45)" }}>여기까지 오면 이미 절반은 합격입니다.</p>
+          </div>
         </div>
       </div>
     </section>

@@ -9,9 +9,11 @@ interface Props {
   onToggle: () => void;
   onInputChange: (text: string) => void;
   onSubmit: () => void;
+  onRetry: () => void;
+  onFinish: () => void;
 }
 
-export function InterviewQCard({ item, index, onToggle, onInputChange, onSubmit }: Props) {
+export function InterviewQCard({ item, index, onToggle, onInputChange, onSubmit, onRetry, onFinish }: Props) {
   return (
     <div
       className="rounded-2xl overflow-hidden"
@@ -77,8 +79,13 @@ export function InterviewQCard({ item, index, onToggle, onInputChange, onSubmit 
             </div>
           )}
 
-          {item.msgs.length === 0 && (
+          {(item.phase === "initial" || item.phase === "retrying") && !item.isLoadingFeedback && (
             <div className="px-4 py-3 flex flex-col gap-1.5">
+              {item.phase === "retrying" && (
+                <p className="text-xs mb-0.5 leading-relaxed" style={{ color: VIOLET }}>
+                  피드백을 반영해 다시 써보세요. 문장은 제가 다듬어드릴게요.
+                </p>
+              )}
               <div className="flex items-end gap-2">
                 <textarea
                   value={item.inputText}
@@ -90,7 +97,7 @@ export function InterviewQCard({ item, index, onToggle, onInputChange, onSubmit 
                     el.style.height = Math.min(el.scrollHeight, 200) + "px";
                   }}
                   disabled={item.isLoadingFeedback}
-                  placeholder="답변을 입력하세요"
+                  placeholder={item.phase === "retrying" ? "피드백을 반영해서 다시 답변해보세요" : "답변을 입력하세요"}
                   rows={2}
                   className="flex-1 focus:outline-none disabled:opacity-30 resize-none placeholder:opacity-35"
                   style={{
@@ -120,6 +127,31 @@ export function InterviewQCard({ item, index, onToggle, onInputChange, onSubmit 
                   {item.inputText.length}/300
                 </span>
               </div>
+            </div>
+          )}
+
+          {item.phase === "feedback" && (
+            <div className="px-4 pb-3 pt-1 flex gap-2">
+              <button
+                onClick={onRetry}
+                className="flex-1 flex items-center justify-center rounded-xl text-xs font-semibold py-2.5 transition-all hover:opacity-80 active:scale-[0.98]"
+                style={{ background: VIOLET, color: "#fff" }}
+              >
+                피드백대로 다시 써보기
+              </button>
+              <button
+                onClick={onFinish}
+                className="flex items-center justify-center rounded-xl text-xs font-semibold py-2.5 px-4 transition-all hover:opacity-80 active:scale-[0.98]"
+                style={{ background: "#FFFFFF", color: "#6B7280", border: "1px solid #E5E7EB" }}
+              >
+                그냥 마무리
+              </button>
+            </div>
+          )}
+
+          {item.phase === "polished" && (
+            <div className="px-4 pb-3 pt-0.5">
+              <span className="text-xs" style={{ color: VIOLET }}>문장을 다듬었어요. 이렇게 말하면 더 깔끔해요.</span>
             </div>
           )}
         </div>

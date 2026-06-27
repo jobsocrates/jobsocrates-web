@@ -80,7 +80,8 @@ export function buildPrintHtml(
   diagMsgs: SummaryMsg[],
   interviewQs: SummaryInterviewQ[],
   baseUrl = "",
-  analysisContent = ""
+  analysisContent = "",
+  subtitle = ""
 ): string {
   const changeItems = changes
     .split("\n")
@@ -222,6 +223,7 @@ ${revision ? `
     <span class="section-num">01</span>
     <span class="section-title">완성본</span>
   </div>
+  ${subtitle ? `<p style="font-size:16px;font-weight:800;color:#111827;letter-spacing:-0.02em;margin-bottom:10px">${escHtml(subtitle)}</p>` : ""}
   <div class="revision-box">
     <div class="revision-header"><p>수정된 자소서</p></div>
     <div class="revision-body">${escHtml(revision)}</div>
@@ -293,7 +295,7 @@ export function CoverLetterSummary({ jobTitle, question, draft, msgs, interviewQ
 
   function handlePdf() {
     const html = buildPrintHtml(
-      jobTitle, question, revision, changes, diagMsgs, interviewQs, window.location.origin, analysisContent
+      jobTitle, question, revision, changes, diagMsgs, interviewQs, window.location.origin, analysisContent, subtitle
     );
     const win = window.open("", "_blank");
     if (!win) return;
@@ -386,6 +388,9 @@ export function CoverLetterSummary({ jobTitle, question, draft, msgs, interviewQ
           {/* 01 · 완성본 */}
           <Section number="01" title="완성본" numColor={`${GOLD}99`}>
             <div className="flex flex-col gap-4">
+              {revision && subtitle && (
+                <p className="text-base font-bold" style={{ color: "#fff", letterSpacing: "-0.02em", marginBottom: -6 }}>{subtitle}</p>
+              )}
               {revision ? (
                 <DraftBox label="수정된 자소서" text={revision} accent />
               ) : (

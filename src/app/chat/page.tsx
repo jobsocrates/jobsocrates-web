@@ -5,6 +5,7 @@ import Link from "next/link";
 import { CoverLetterSummary } from "@/components/CoverLetterSummary";
 import { TutorialModal } from "@/components/TutorialModal";
 import { supabase } from "@/lib/supabase";
+import { trackVisitor } from "@/lib/track";
 import type { ChatMsg, InterviewQItem, SetupMsg, CoverItem, ResumeSession } from "@/types/chat";
 import { formatRelativeTime, stripMd, parseRevisionMsg } from "@/lib/chatUtils";
 import { StreamingLoadingMsg } from "@/components/chat/StreamingLoadingMsg";
@@ -75,9 +76,10 @@ export default function ChatPage() {
   const [jobPostText, setJobPostText] = useState("");
   const [jobPostImagePreview, setJobPostImagePreview] = useState("");
   const [showJobPostModal, setShowJobPostModal] = useState(false);
-  const [jobPostTab, setJobPostTab] = useState<"link" | "text" | "image">("link");
+  const [jobPostTab, setJobPostTab] = useState<"text" | "image">("text");
   const jobPostFileRef = useRef<HTMLInputElement>(null);
   const [showAnalysisPanel, setShowAnalysisPanel] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(true);
   const [analysisContent, setAnalysisContent] = useState("");
   const analysisContentRef = useRef("");
   const companyAnalysisKeyRef = useRef("");
@@ -98,6 +100,11 @@ export default function ChatPage() {
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
+  const [showModeSelect, setShowModeSelect] = useState(false);
+  const [showReviewGate, setShowReviewGate] = useState(false);
+  const [reviewText, setReviewText] = useState("");
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [reviewDone, setReviewDone] = useState(false);
   const [toast, setToast] = useState("");
   const [toastField, setToastField] = useState<"jobTitle" | "question" | "charLimit" | "draft" | "">("");
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -150,6 +157,7 @@ export default function ChatPage() {
   // 로그인 유저 로드 + 환영 메시지
   useEffect(() => {
     supabase.from("page_views").insert({ path: "/chat" });
+    trackVisitor();
     // getSession: localStorage 세션을 즉시 읽어 currentUser 확보
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
@@ -187,10 +195,28 @@ export default function ChatPage() {
     setItems((prev) => prev.map((it) => (it.id === id ? { ...it, ...patch } : it)));
   }
 
-  function addItem() {
-    const item: CoverItem = { id: uid(), dbId: null, question: "", draft: "", charLimit: "", status: "idle", msgs: [], apiHistory: [], interviewQs: [], isLoadingQs: false, setupStep: "question", setupMsgs: [] };
+  function addItem(mode: typeof chatMode = chatMode) {
+    const id = uid();
+    const firstText = mode === "analyze"
+      ? "📝 분석할 자소서 문항을 알려주세요.\n예: '팀 프로젝트에서 발휘한 리더십 경험을 서술하시오.'"
+      : mode === "motivation"
+      ? "📝 어떤 문항인가요?\n예: '지원 동기와 입사 후 포부를 서술하시오.'"
+      : "📝 어떤 문항인가요?\n예: '본인의 성격 장단점을 서술하시오.'";
+    const item: CoverItem = { id, dbId: null, question: "", draft: "", charLimit: "", status: "idle", msgs: [], apiHistory: [], interviewQs: [], isLoadingQs: false, setupStep: "question", setupMsgs: [{ id: uid(), role: "bot", text: firstText }] };
     setItems((prev) => [...prev, item]);
-    setSelectedId(item.id);
+    setSelectedId(id);
+  }
+
+  // 완성본 소제목 선택 → 메시지에 [소제목] 마커로 박고 DB 영속화 (PDF·마이페이지 반영)
+  async function applySubtitle(msg: { id: number; text: string; dbId?: string }, subtitle: string) {
+    const cleaned = msg.text.replace(/\[소제목\][\s\S]*?\[\/소제목\]\s*/g, "");
+    const newText = `[소제목]${subtitle}[/소제목]\n${cleaned}`;
+    setItems((prev) => prev.map((it) => it.id === selectedId ? { ...it, msgs: it.msgs.map((m) => m.id === msg.id ? { ...m, text: newText } : m) } : it));
+    if (msg.dbId) {
+      try {
+        await fetch("/api/generate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "update-message", message_id: msg.dbId, content: newText }) });
+      } catch { /* 무시 */ }
+    }
   }
 
   function removeItem(id: number) {
@@ -296,10 +322,10 @@ export default function ChatPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(
           chatMode === "motivation"
-            ? { type: "motivation", jobTitle, companyInfo, draft, charLimit, messages: history, analysisReport: analysisContent }
+            ? { type: "motivation", jobTitle, companyInfo, draft, charLimit, messages: history, analysisReport: analysisContent, jobPostText, jobPostImage: history.length <= 1 ? jobPostImagePreview : "" }
             : chatMode === "personality"
-            ? { type: "personality", jobTitle, companyInfo, draft, charLimit, messages: history, analysisReport: analysisContent }
-            : { type: "analyze", jobTitle, companyInfo, question, draft, charLimit, messages: history, analysisReport: analysisContent }
+            ? { type: "personality", jobTitle, companyInfo, draft, charLimit, messages: history, analysisReport: analysisContent, jobPostText, jobPostImage: history.length <= 1 ? jobPostImagePreview : "" }
+            : { type: "analyze", jobTitle, companyInfo, question, draft, charLimit, messages: history, analysisReport: analysisContent, jobPostText, jobPostImage: history.length <= 1 ? jobPostImagePreview : "" }
         ),
       });
       if (!res.body) throw new Error();
@@ -339,6 +365,9 @@ export default function ChatPage() {
         }
         const aId = crypto.randomUUID();
         assistantMsgDbId = await saveDbMessage(itemDbId, "assistant", full, aId);
+        if (assistantMsgDbId) {
+          setItems((prev) => prev.map((it) => it.id === itemId ? { ...it, msgs: it.msgs.map((m) => m.id === msgId ? { ...m, dbId: assistantMsgDbId! } : m) } : it));
+        }
 
         if (revMatch) {
           await saveDbRevision(itemDbId, revMatch[1].trim(), chgMatch ? chgMatch[1].trim() : "");
@@ -364,6 +393,15 @@ export default function ChatPage() {
     el.style.height = "46px";
     el.style.height = Math.min(el.scrollHeight, 160) + "px";
   }, [input]);
+
+  // 셋업 입력칸(문항·글자수) 자동 높이 — draft는 rows=5 유지
+  useEffect(() => {
+    const el = setupInputRef.current;
+    if (!el) return;
+    if (selected?.setupStep === "draft") { el.style.height = ""; return; }
+    el.style.height = "auto";
+    el.style.height = Math.min(el.scrollHeight, 120) + "px";
+  }, [setupInput, selected?.setupStep, selectedId]);
 
   useEffect(() => {
     setTimeout(() => setupBottomRef.current?.scrollIntoView({ behavior: "smooth" }), 60);
@@ -490,7 +528,7 @@ export default function ChatPage() {
                 if (a.user_answer) qMsgs.push({ id: uid(), role: "user" as const, text: a.user_answer });
                 if (a.ai_feedback) qMsgs.push({ id: uid(), role: "bot" as const, text: a.ai_feedback });
               }
-              return { id: uid(), dbId: iq.id, question: iq.question, isExpanded: false, msgs: qMsgs, isLoadingFeedback: false, inputText: "" };
+              return { id: uid(), dbId: iq.id, question: iq.question, isExpanded: false, msgs: qMsgs, isLoadingFeedback: false, inputText: "", phase: qMsgs.length > 0 ? "done" as const : "initial" as const };
             })
           );
 
@@ -576,7 +614,7 @@ export default function ChatPage() {
                 if (a.user_answer) qMsgs.push({ id: uid(), role: "user" as const, text: a.user_answer });
                 if (a.ai_feedback) qMsgs.push({ id: uid(), role: "bot" as const, text: a.ai_feedback });
               }
-              return { id: uid(), dbId: iq.id, question: iq.question, isExpanded: false, msgs: qMsgs, isLoadingFeedback: false, inputText: "" };
+              return { id: uid(), dbId: iq.id, question: iq.question, isExpanded: false, msgs: qMsgs, isLoadingFeedback: false, inputText: "", phase: qMsgs.length > 0 ? "done" as const : "initial" as const };
             })
           );
 
@@ -645,15 +683,7 @@ export default function ChatPage() {
 
   function handleGoToChat() {
     if (!jobTitle.trim()) { showToast("지원 직무를 입력해주세요", "jobTitle"); return; }
-    const siteNote = companyWebsite.trim() ? ` 사이트: ${companyWebsite.trim()}` : "";
-    const jobPostNote = jobLink.trim()
-      ? ` 채용공고 링크: ${jobLink.trim()}`
-      : jobPostText.trim()
-      ? ` 채용공고 내용: ${jobPostText.trim()}`
-      : jobPostImagePreview
-      ? " (채용공고 이미지 첨부)"
-      : "";
-    setCompanyInfo(companyName.trim() + siteNote + jobPostNote);
+    setCompanyInfo(companyName.trim());
     const firstText = chatMode === "analyze"
       ? "📝 분석할 자소서 문항을 알려주세요.\n예: '팀 프로젝트에서 발휘한 리더십 경험을 서술하시오.'"
       : chatMode === "motivation"
@@ -889,6 +919,34 @@ export default function ChatPage() {
     await fetchBotReply(newHistory, selectedId, selected.draft, selected.question, selected.charLimit, selected.dbId);
   }
 
+  // 완성본 직전 후기 게이트
+  function requestRevision() {
+    if (reviewDone || currentUser?.email === ADMIN_EMAIL) { handleRevisionRequest(); return; }
+    setShowReviewGate(true);
+  }
+  async function submitReviewAndProceed() {
+    const text = reviewText.trim();
+    if (!text || reviewSubmitting) return;
+    setReviewSubmitting(true);
+    try {
+      if (currentUser) {
+        await supabase.from("reviews").insert({
+          user_id: currentUser.id,
+          email: currentUser.email,
+          type: "digging",
+          content: text,
+          job_title: jobTitle || null,
+          status: "approved",
+        });
+      }
+    } catch { /* 무시 */ }
+    setReviewSubmitting(false);
+    setReviewDone(true);
+    setShowReviewGate(false);
+    setReviewText("");
+    handleRevisionRequest();
+  }
+
   async function handleAdminRegenerate() {
     if (!selected || isStreaming) return;
     const revIdx = selected.msgs.findIndex(m => m.role === "user" && m.text === "완성본을 작성해줘.");
@@ -918,7 +976,10 @@ export default function ChatPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           type: "interview-questions",
+          chatMode,
           jobTitle,
+          companyInfo,
+          jobPostText,
           question: selected.question,
           coverLetter: revision || selected.draft,
         }),
@@ -945,7 +1006,7 @@ export default function ChatPage() {
       updateItem(selectedId, {
         isLoadingQs: false,
         interviewQs: sliced.map((q: string, idx: number) => ({
-          id: uid(), dbId: dbIdByIndex[idx] ?? null, question: q, isExpanded: false, msgs: [], isLoadingFeedback: false, inputText: "",
+          id: uid(), dbId: dbIdByIndex[idx] ?? null, question: q, isExpanded: false, msgs: [], isLoadingFeedback: false, inputText: "", phase: "initial" as const,
         })),
       });
       setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
@@ -959,6 +1020,7 @@ export default function ChatPage() {
     const qItem = selected.interviewQs.find((q) => q.id === qId);
     if (!qItem || !qItem.inputText.trim() || qItem.isLoadingFeedback) return;
     const answer = qItem.inputText.trim();
+    const isRetry = qItem.phase === "retrying";
     const userMsgId = uid();
     const botMsgId = uid();
     const revMsg = selected.msgs.find(
@@ -975,7 +1037,7 @@ export default function ChatPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          type: "interview-feedback",
+          type: isRetry ? "interview-polish" : "interview-feedback",
           jobTitle,
           question: selected.question,
           interviewQuestion: qItem.question,
@@ -1000,7 +1062,7 @@ export default function ChatPage() {
         );
       }
 
-      // ── DB: 면접 답변 + AI 피드백 저장 ──
+      // ── DB: 면접 답변 + AI 응답 저장 (최초=답변+피드백, 재작성=재답변+다듬은문장) ──
       if (qItem.dbId) {
         const { error: iaErr } = await supabase.from("interview_answers").insert({
           interview_question_id: qItem.dbId,
@@ -1021,11 +1083,19 @@ export default function ChatPage() {
       setItems((prev) =>
         prev.map((it) =>
           it.id === selectedId
-            ? { ...it, interviewQs: it.interviewQs.map((q) => q.id === qId ? { ...q, isLoadingFeedback: false } : q) }
+            ? { ...it, interviewQs: it.interviewQs.map((q) => q.id === qId ? { ...q, isLoadingFeedback: false, phase: isRetry ? "polished" as const : "feedback" as const } : q) }
             : it
         )
       );
     }
+  }
+
+  function retryInterviewAnswer(qId: number) {
+    updateInterviewQ(qId, { phase: "retrying", inputText: "" });
+  }
+
+  function finishInterviewQ(qId: number) {
+    updateInterviewQ(qId, { phase: "done" });
   }
 
   const canStart = chatMode === "analyze"
@@ -1054,152 +1124,211 @@ export default function ChatPage() {
     <>
       {/* ── STAGE 1: 정보 입력 ── */}
       {stage === "info" && (
-        <div className="h-dvh flex flex-col" style={{ background: "#F9FAFB", opacity: stageLeaving ? 0 : 1, transform: stageLeaving ? "scale(0.97) translateY(-6px)" : "scale(1) translateY(0)", transition: "opacity 0.26s ease, transform 0.26s ease" }}>
-          <div className="flex items-center justify-between px-6 py-4 flex-shrink-0" style={{ borderBottom: "1px solid #E5E7EB", background: "#FFFFFF" }}>
-            <Link href="/" className="flex items-center gap-1.5 text-sm font-semibold hover:opacity-70 transition-opacity" style={{ color: "#111827" }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></svg>
-              홈
-            </Link>
-            <div className="flex items-center gap-2">
-              <img src="/ai-avatar.webp" alt="" className="w-6 h-6 rounded-full object-cover" />
-              <span className="text-sm font-semibold" style={{ color: "#111827" }}>취업소크라테스</span>
-            </div>
-            <div style={{ width: "52px" }} />
-          </div>
-          <div className="flex-1 flex overflow-hidden">
-            {/* 왼쪽 사이드바 (데스크탑) */}
-            {items.some(it => it.msgs.length > 0 || it.question) && (
-              <div className="hidden lg:flex flex-shrink-0 flex-col border-r overflow-hidden" style={{ width: "220px", borderColor: "#E5E7EB", background: "#FFFFFF" }}>
-                <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-1.5">
-                  <p className="text-xs px-1 pt-0.5 pb-1.5 font-semibold tracking-wider uppercase" style={{ color: "#6B7280", letterSpacing: "0.10em" }}>자소서 항목</p>
-                  {items.map((item, idx) => {
-                    const isSel = item.id === selectedId;
-                    return (
-                      <div
-                        key={item.id}
-                        role="button" tabIndex={0}
-                        onClick={() => { setSelectedId(item.id); if (item.msgs.length > 0 || item.status === "chatting") setStage("chat"); }}
-                        onKeyDown={(e) => { if (e.key === "Enter") { setSelectedId(item.id); if (item.msgs.length > 0 || item.status === "chatting") setStage("chat"); } }}
-                        className="w-full text-left rounded-xl px-3 py-2.5 flex flex-col gap-0.5 transition-all group relative cursor-pointer"
-                        style={{ background: isSel ? "#F5F3FF" : "transparent", border: `${isSel ? "2px" : "1px"} solid ${isSel ? "#A78BFA" : "#E5E7EB"}` }}
-                      >
-                        <div className="flex items-center gap-2 pr-6">
-                          <span className="text-xs font-bold flex-shrink-0" style={{ color: isSel ? "#4C3F99" : "#6B7280" }}>{String(idx + 1).padStart(2, "0")}</span>
-                          <span className="text-[13px] font-medium truncate" style={{ color: "#111827" }}>
-                            {item.question || <span style={{ color: "#6B7280" }}>문항 미입력</span>}
-                          </span>
-                        </div>
-                        {item.draft && (
-                          <p className="text-xs truncate pl-6" style={{ color: "#6B7280" }}>{item.draft}</p>
-                        )}
-                        <div className="absolute right-2 top-2.5 flex items-center gap-1">
-                          {item.status === "chatting" && (
-                            <span className="rounded-full font-medium px-1.5 py-0.5" style={{ background: `${BLUE}10`, color: BLUE, fontSize: "10px", lineHeight: "1.4" }}>진행</span>
-                          )}
-                          {item.msgs.length > 0 && item.status !== "chatting" && (
-                            <span className="rounded-full font-medium px-1.5 py-0.5" style={{ background: "rgba(16,185,129,0.08)", color: "#059669", fontSize: "10px", lineHeight: "1.4" }}>완료</span>
-                          )}
-                        </div>
+        <div className="h-dvh flex overflow-hidden" style={{ background: "#F9FAFB", opacity: stageLeaving ? 0 : 1, transform: stageLeaving ? "scale(0.97) translateY(-6px)" : "scale(1) translateY(0)", transition: "opacity 0.26s ease, transform 0.26s ease" }}>
+          <style>{`
+            @keyframes infoOrb1 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(36px,-30px) scale(1.14)} }
+            @keyframes infoOrb2 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(-30px,34px) scale(1.1)} }
+            @keyframes infoRise { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:none} }
+            .info-rise-1 { animation: infoRise 0.6s cubic-bezier(0.22,1,0.36,1) 0.05s both; }
+            .info-rise-2 { animation: infoRise 0.6s cubic-bezier(0.22,1,0.36,1) 0.13s both; }
+            .info-rise-3 { animation: infoRise 0.6s cubic-bezier(0.22,1,0.36,1) 0.21s both; }
+            .info-rise-4 { animation: infoRise 0.6s cubic-bezier(0.22,1,0.36,1) 0.29s both; }
+          `}</style>
+
+          {/* ── 왼쪽: 작업 사이드바(항목 있을 때) or 브랜드 패널(첫 진입) ── */}
+          {items.some(it => it.msgs.length > 0 || it.question) ? (
+            <div className="hidden lg:flex flex-shrink-0 flex-col border-r overflow-hidden" style={{ width: "240px", borderColor: "#EDEFF2", background: "#FFFFFF" }}>
+              <Link href="/" className="px-5 py-4 flex items-center gap-2 border-b hover:opacity-70 transition-opacity" style={{ borderColor: "#F0F1F3" }}>
+                <img src="/ai-avatar.webp" alt="" className="w-6 h-6 rounded-full object-cover" />
+                <span className="text-sm font-bold" style={{ color: "#111827" }}>취업소크라테스</span>
+              </Link>
+              <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-1.5">
+                <p className="text-xs px-1 pt-0.5 pb-1.5 font-semibold tracking-wider uppercase" style={{ color: "#9CA3AF", letterSpacing: "0.10em" }}>자소서 항목</p>
+                {items.map((item, idx) => {
+                  const isSel = item.id === selectedId;
+                  return (
+                    <div
+                      key={item.id}
+                      role="button" tabIndex={0}
+                      onClick={() => { setSelectedId(item.id); if (item.msgs.length > 0 || item.status === "chatting") setStage("chat"); }}
+                      onKeyDown={(e) => { if (e.key === "Enter") { setSelectedId(item.id); if (item.msgs.length > 0 || item.status === "chatting") setStage("chat"); } }}
+                      className="w-full text-left rounded-xl px-3 py-2.5 flex flex-col gap-0.5 transition-all group relative cursor-pointer"
+                      style={{ background: isSel ? "#F5F3FF" : "transparent", border: `${isSel ? "1.5px" : "1px"} solid ${isSel ? "#A78BFA" : "#EDEFF2"}` }}
+                    >
+                      <div className="flex items-center gap-2 pr-6">
+                        <span className="text-xs font-bold flex-shrink-0" style={{ color: isSel ? "#4C3F99" : "#9CA3AF" }}>{String(idx + 1).padStart(2, "0")}</span>
+                        <span className="text-[13px] font-medium truncate" style={{ color: "#111827" }}>
+                          {item.question || <span style={{ color: "#9CA3AF" }}>문항 미입력</span>}
+                        </span>
                       </div>
-                    );
-                  })}
+                      {item.draft && (
+                        <p className="text-xs truncate pl-6" style={{ color: "#9CA3AF" }}>{item.draft}</p>
+                      )}
+                      <div className="absolute right-2 top-2.5 flex items-center gap-1">
+                        {item.status === "chatting" && (
+                          <span className="rounded-full font-medium px-1.5 py-0.5" style={{ background: `${BLUE}10`, color: BLUE, fontSize: "10px", lineHeight: "1.4" }}>진행</span>
+                        )}
+                        {item.msgs.length > 0 && item.status !== "chatting" && (
+                          <span className="rounded-full font-medium px-1.5 py-0.5" style={{ background: "rgba(16,185,129,0.08)", color: "#059669", fontSize: "10px", lineHeight: "1.4" }}>완료</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <div className="hidden lg:flex flex-shrink-0 flex-col relative overflow-hidden" style={{ width: "44%", maxWidth: "560px", background: "linear-gradient(160deg, #07101F 0%, #0C1A3A 52%, #081424 100%)" }}>
+              {/* 오로라 오브 */}
+              <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                <div style={{ position:"absolute", top:"10%", left:"-10%", width:"460px", height:"420px", borderRadius:"50%", background:"#3B62CC", filter:"blur(120px)", opacity:0.20, animation:"infoOrb1 15s ease-in-out infinite" }} />
+                <div style={{ position:"absolute", bottom:"4%", right:"-8%", width:"400px", height:"380px", borderRadius:"50%", background:"#A78BFA", filter:"blur(120px)", opacity:0.16, animation:"infoOrb2 18s ease-in-out infinite" }} />
+              </div>
+
+              <Link href="/" className="relative px-10 pt-9 flex items-center gap-2 hover:opacity-80 transition-opacity info-rise-1">
+                <img src="/ai-avatar.webp" alt="" className="w-7 h-7 rounded-full object-cover" />
+                <span className="text-sm font-bold" style={{ color: "rgba(255,255,255,0.92)" }}>취업소크라테스</span>
+              </Link>
+
+              <div className="relative flex-1 flex flex-col justify-center px-10 pb-[16%]">
+                <h2 className="font-bold leading-[0.98] tracking-tight info-rise-2" style={{ fontSize: "clamp(2.6rem, 4vw, 3.6rem)", color: "#FFFFFF", letterSpacing: "-0.03em" }}>Redesign</h2>
+                <h2 className="font-bold leading-[0.98] tracking-tight mb-6 info-rise-2" style={{ fontSize: "clamp(2.6rem, 4vw, 3.6rem)", letterSpacing: "-0.03em", background: "linear-gradient(125deg, #60A5FA 0%, #818CF8 32%, #A78BFA 58%, #5EEAD4 88%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>Your Story</h2>
+                <p className="text-base leading-[1.8] info-rise-3" style={{ color: "rgba(255,255,255,0.50)", wordBreak: "keep-all", maxWidth: "340px" }}>
+                  당신의 경험을,<br />
+                  <span style={{ color: "rgba(255,255,255,0.85)", fontWeight: 600 }}>면접까지 살아남는 자소서</span>로.
+                </p>
+
+                {/* 스텝 흐름 */}
+                <div className="flex items-center gap-2 flex-wrap mt-9 info-rise-4">
+                  {[
+                    { label: "초안 분석", color: "#60A5FA" },
+                    { label: "이야기 발굴", color: "#FFD166" },
+                    { label: "문장 완성", color: "#FF8A65" },
+                    { label: "실전 대비", color: "#C4B5FD" },
+                  ].map(({ label, color }, i) => (
+                    <div key={label} className="flex items-center gap-2">
+                      {i > 0 && (
+                        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.20)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                      )}
+                      <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full" style={{ background: `${color}14`, color, border: `1px solid ${color}28` }}>{label}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
-            )}
-            <div className="flex-1 flex items-center justify-center px-5 overflow-y-auto">
-            <div className="w-full max-w-[460px] flex flex-col gap-5">
-              <p className="text-sm pl-1" style={{ color: "#6B7280" }}>정보를 입력하면 채팅으로 바로 시작합니다</p>
-              {/* 회사 정보 */}
-              <div className="flex flex-col gap-3">
-                <div className="flex flex-col gap-2">
-                  <p className="text-xs font-semibold pl-0.5" style={{ color: "#374151", letterSpacing: "0.06em" }}>회사 정보 <span className="font-normal" style={{ color: "#6B7280" }}>(선택)</span></p>
-                  <div className="grid gap-2.5" style={{ gridTemplateColumns: "2fr 3fr" }}>
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-xs pl-1" style={{ color: "#374151" }}>기업명</label>
-                      <input value={companyName} onChange={(e) => setCompanyName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleGoToChat()} placeholder="삼성전자" className="ds-input w-full px-4 py-3.5 rounded-2xl text-sm placeholder:text-[#9CA3AF]" style={{ background: "#FFFFFF", border: "1.5px solid #D1D5DB", color: "#111827", outline: "none" }} />
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-xs pl-1" style={{ color: "#374151" }}>회사 사이트</label>
-                      <input value={companyWebsite} onChange={(e) => setCompanyWebsite(e.target.value)} placeholder="https://..." className="ds-input w-full px-4 py-3.5 rounded-2xl text-sm placeholder:text-[#9CA3AF]" style={{ background: "#FFFFFF", border: "1.5px solid #D1D5DB", color: "#111827", outline: "none" }} />
-                    </div>
-                  </div>
-                  <p className="text-xs pl-0.5 flex items-start gap-1" style={{ color: "#9CA3AF", wordBreak: "keep-all" }}>
-                    <span style={{ flexShrink: 0 }}>ⓘ</span>
-                    <span>사이트 구조에 따라 AI가 내용을 제대로 읽지 못할 수 있어요. 회사 정보는 꼭 직접 확인해주세요.</span>
-                  </p>
+            </div>
+          )}
+
+          {/* ── 오른쪽: 입력 폼 ── */}
+          <div className="flex-1 flex flex-col overflow-hidden">
+            {/* 상단 바 */}
+            <div className="flex items-center justify-between px-6 py-4 flex-shrink-0 lg:justify-end">
+              <Link href="/" className="flex items-center gap-1.5 text-sm font-semibold hover:opacity-70 transition-opacity lg:hidden" style={{ color: "#111827" }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></svg>
+                홈
+              </Link>
+              <div className="flex items-center gap-2 lg:hidden">
+                <img src="/ai-avatar.webp" alt="" className="w-6 h-6 rounded-full object-cover" />
+                <span className="text-sm font-bold" style={{ color: "#111827" }}>취업소크라테스</span>
+              </div>
+            </div>
+
+            <div className="flex-1 flex items-center justify-center px-6 pb-8 overflow-y-auto">
+              <div className="w-full max-w-[480px] flex flex-col gap-6 info-rise-2">
+                <div className="flex flex-col gap-1.5">
+                  <h1 className="text-2xl sm:text-[1.75rem] font-bold" style={{ color: "#111827", letterSpacing: "-0.02em" }}>어떤 공고에 지원하나요?</h1>
+                  <p className="text-sm" style={{ color: "#6B7280" }}>정보를 입력하면 바로 채팅으로 이어집니다.</p>
                 </div>
-                <div className="flex flex-col gap-2">
-                  <p className="text-xs font-semibold pl-0.5" style={{ color: "#374151", letterSpacing: "0.06em" }}>직무 정보</p>
-                  <div className="grid gap-2.5" style={{ gridTemplateColumns: "2fr 3fr" }}>
+
+                {/* 회사 정보 */}
+                <div className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-2">
+                    <p className="text-xs font-semibold pl-0.5" style={{ color: "#374151", letterSpacing: "0.06em" }}>회사 정보 <span className="font-normal" style={{ color: "#9CA3AF" }}>(선택)</span></p>
                     <div className="flex flex-col gap-1.5">
-                      <label className="text-xs pl-1 flex items-center gap-1" style={{ color: "#374151" }}>
-                        지원 직무 <span style={{ color: "#EF4444" }}>*</span>
-                      </label>
-                      <input value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleGoToChat()} placeholder="마케팅 기획" className="ds-input w-full px-4 py-3.5 rounded-2xl text-sm placeholder:text-[#9CA3AF]" style={{ background: "#FFFFFF", border: `1.5px solid ${toastField === "jobTitle" ? "#EF4444" : "#D1D5DB"}`, color: "#111827", outline: "none" }} />
+                      <label className="text-xs pl-1" style={{ color: "#6B7280" }}>기업명</label>
+                      <input value={companyName} onChange={(e) => setCompanyName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleGoToChat()} placeholder="삼성전자" className="ds-input w-full px-4 py-3.5 rounded-xl text-sm placeholder:text-[#B6BCC6]" style={{ background: "#FFFFFF", border: "1.5px solid #E5E7EB", color: "#111827", outline: "none" }} />
                     </div>
-                    <div className="flex flex-col gap-1.5">
-                      <label className="text-xs pl-1" style={{ color: "#374151" }}>채용공고 <span style={{ color: "#9CA3AF", fontWeight: 400 }}>(선택)</span></label>
-                      {(() => {
-                        const hasContent = jobLink.trim() || jobPostText.trim() || jobPostImagePreview;
-                        return (
-                          <button
-                            type="button"
-                            onClick={() => setShowJobPostModal(true)}
-                            className="w-full px-4 py-3.5 rounded-2xl text-sm text-left flex items-center justify-between transition-all hover:opacity-80 h-full"
-                            style={{
-                              background: hasContent ? "#F5F3FF" : "#FFFFFF",
-                              border: `1.5px solid ${hasContent ? "#A78BFA" : "#D1D5DB"}`,
-                              color: hasContent ? "#4C3F99" : "#9CA3AF",
-                            }}
-                          >
-                            <span className="flex items-center gap-2 min-w-0">
-                              <span className="text-base leading-none flex-shrink-0">{hasContent ? "📎" : "📋"}</span>
-                              <span className="truncate text-xs">
-                                {hasContent
-                                  ? jobLink.trim()
-                                    ? `링크 입력됨`
-                                    : jobPostText.trim()
-                                    ? `텍스트 입력됨`
-                                    : "이미지 첨부됨"
-                                  : "입력하기"}
+                    <p className="text-xs pl-0.5 flex items-start gap-1" style={{ color: "#9CA3AF", wordBreak: "keep-all" }}>
+                      <span style={{ flexShrink: 0 }}>ⓘ</span>
+                      <span>기업 정보가 부족할 경우 분석이 제한될 수 있어요. 채용공고를 함께 넣어주면 더 정확해져요.</span>
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <p className="text-xs font-semibold pl-0.5" style={{ color: "#374151", letterSpacing: "0.06em" }}>직무 정보</p>
+                    <div className="grid gap-2.5" style={{ gridTemplateColumns: "2fr 3fr" }}>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs pl-1 flex items-center gap-1" style={{ color: "#6B7280" }}>
+                          지원 직무 <span style={{ color: "#EF4444" }}>*</span>
+                        </label>
+                        <input value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleGoToChat()} placeholder="마케팅 기획" className="ds-input w-full px-4 py-3.5 rounded-xl text-sm placeholder:text-[#B6BCC6]" style={{ background: "#FFFFFF", border: `1.5px solid ${toastField === "jobTitle" ? "#EF4444" : "#E5E7EB"}`, color: "#111827", outline: "none" }} />
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs pl-1" style={{ color: "#6B7280" }}>채용공고 <span style={{ color: "#9CA3AF", fontWeight: 400 }}>(선택)</span></label>
+                        {(() => {
+                          const hasContent = jobPostText.trim() || jobPostImagePreview;
+                          return (
+                            <button
+                              type="button"
+                              onClick={() => setShowJobPostModal(true)}
+                              className="w-full px-4 py-3.5 rounded-xl text-sm text-left flex items-center justify-between transition-all hover:opacity-80 h-full"
+                              style={{
+                                background: hasContent ? "#F5F3FF" : "#FFFFFF",
+                                border: `1.5px solid ${hasContent ? "#A78BFA" : "#E5E7EB"}`,
+                                color: hasContent ? "#4C3F99" : "#9CA3AF",
+                              }}
+                            >
+                              <span className="flex items-center gap-2 min-w-0">
+                                <span className="text-base leading-none flex-shrink-0">{hasContent ? "📎" : "📋"}</span>
+                                <span className="truncate text-xs">
+                                  {hasContent
+                                    ? jobPostText.trim()
+                                      ? `텍스트 입력됨`
+                                      : "이미지 첨부됨"
+                                    : "입력하기"}
+                                </span>
                               </span>
-                            </span>
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.5, flexShrink: 0 }}>
-                              <polyline points="9 18 15 12 9 6" />
-                            </svg>
-                          </button>
-                        );
-                      })()}
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.5, flexShrink: 0 }}>
+                                <polyline points="9 18 15 12 9 6" />
+                              </svg>
+                            </button>
+                          );
+                        })()}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-              {/* 카테고리 */}
-              <div className="grid grid-cols-3 gap-2.5">
-                {([
-                  { key: "analyze",     label: "일 속의 나",     desc: "직무역량",           color: BLUE,   emoji: "💼" },
-                  { key: "motivation",  label: "미래 속의 나",   desc: "지원동기 및 포부",      color: GOLD,   emoji: "✨" },
-                  { key: "personality", label: "경험 속의 나",   desc: "성격 장단점",           color: VIOLET, emoji: "🌱" },
-                ] as { key: typeof chatMode; label: string; desc: string; color: string; emoji: string }[]).map(({ key, label, desc, color, emoji }) => (
-                  <button key={key} onClick={() => { if (key === "personality" && process.env.NODE_ENV === "production") { setShowPersonalityBlock(true); return; } setChatMode(key); }} className="flex flex-col gap-2 px-4 py-4 rounded-2xl text-left transition-all" style={{ background: "#FFFFFF", border: `${chatMode === key ? "2px" : "1px"} solid ${chatMode === key ? color : "#E5E7EB"}`, boxShadow: chatMode === key ? `0 2px 8px rgba(0,0,0,0.08)` : "none", transition: "all 0.15s ease" }}>
-                    <span className="text-xl leading-none">{emoji}</span>
-                    <span className="text-sm font-semibold" style={{ color: "#111827" }}>{label}</span>
-                    <p className="text-xs leading-relaxed" style={{ color: "#6B7280", wordBreak: "keep-all" }}>{desc}</p>
-                  </button>
-                ))}
-              </div>
-              <div className="flex items-center">
+
+                {/* 카테고리 */}
+                <div className="flex flex-col gap-2">
+                  <p className="text-xs font-semibold pl-0.5" style={{ color: "#374151", letterSpacing: "0.06em" }}>자소서 유형</p>
+                  <div className="grid grid-cols-3 gap-2.5">
+                    {([
+                      { key: "analyze",     label: "직무 역량",      desc: "경험으로 직무 적합성을 보여주고 싶다면",  color: BLUE,   emoji: "💼" },
+                      { key: "motivation",  label: "지원 동기·포부", desc: "왜 이 회사·직무인지, 포부를 쓴다면",     color: GOLD,   emoji: "✨" },
+                      { key: "personality", label: "성격·인성",      desc: "성격 장단점·가치관, 갈등·협업·도전 경험",  color: VIOLET, emoji: "🌱" },
+                    ] as { key: typeof chatMode; label: string; desc: string; color: string; emoji: string }[]).map(({ key, label, desc, color, emoji }) => {
+                      const on = chatMode === key;
+                      return (
+                        <button key={key} onClick={() => { if (key === "personality" && process.env.NODE_ENV === "production") { setShowPersonalityBlock(true); return; } setChatMode(key); }} className="flex flex-col gap-2 px-4 py-4 rounded-xl text-left transition-all active:scale-[0.98]" style={{ background: on ? `${color}0C` : "#FFFFFF", border: `1.5px solid ${on ? color : "#E5E7EB"}`, boxShadow: on ? `0 6px 18px -8px ${color}80` : "none" }}>
+                          <span className="text-xl leading-none">{emoji}</span>
+                          <span className="text-sm font-bold" style={{ color: on ? color : "#111827" }}>{label}</span>
+                          <p className="text-xs leading-relaxed" style={{ color: "#6B7280", wordBreak: "keep-all" }}>{desc}</p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 <button
                   onClick={handleGoToChat}
-                  className="flex items-center gap-2 pl-4 hover:opacity-60 transition-opacity active:scale-[0.97]"
+                  className="w-full inline-flex items-center justify-center gap-2 px-6 py-4 rounded-xl font-bold text-[15px] transition-all hover:opacity-92 active:scale-[0.98]"
+                  style={{ background: "linear-gradient(135deg, #1A3461 0%, #312E81 100%)", color: "#FFFFFF", boxShadow: "0 10px 28px -10px rgba(49,46,129,0.55)", letterSpacing: "-0.01em" }}
                 >
-                  <span className="text-base font-bold" style={{ color: "#111827", letterSpacing: "-0.01em" }}>시작하기</span>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#111827" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  채팅 시작하기
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
                   </svg>
                 </button>
               </div>
-            </div>
             </div>
           </div>
         </div>
@@ -1220,14 +1349,14 @@ export default function ChatPage() {
           }}
         >
           <button
-            onClick={() => { if (selected?.status === "chatting" || (selected?.msgs ?? []).length > 0) { setShowGoBackConfirm(true); } else { setStage("info"); setShowAnalysisPanel(false); setAnalysisContent(""); } }}
+            onClick={() => { if (selected?.status === "chatting" || (selected?.msgs ?? []).length > 0) { setShowGoBackConfirm(true); } else { window.location.href = "/"; } }}
             className="flex items-center gap-1.5 text-sm font-semibold transition-opacity hover:opacity-70 flex-shrink-0"
             style={{ color: "#111827" }}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" />
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
             </svg>
-            공고
+            나가기
           </button>
           <button
             className="flex items-center gap-1.5 min-w-0 hover:opacity-75 transition-opacity"
@@ -1242,19 +1371,13 @@ export default function ChatPage() {
           <div className="flex items-center gap-2 flex-shrink-0">
             {currentUser && userCredits !== null && currentUser.email !== ADMIN_EMAIL && (
               <div
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-sm font-semibold"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-semibold"
                 style={{ background: "rgba(212,146,10,0.10)", border: "1px solid rgba(212,146,10,0.22)", color: "#8B6A0A" }}
               >
-                🏅 {userCredits}
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>
+                {userCredits}
               </div>
             )}
-            <button
-              onClick={() => setShowLogoutConfirm(true)}
-              className="text-xs lg:text-sm px-2.5 py-1.5 rounded-lg transition-all hover:opacity-70"
-              style={{ background: "#F3F4F6", border: "1px solid #E5E7EB", color: "#6B7280" }}
-            >
-              로그아웃
-            </button>
           </div>
         </header>
 
@@ -1264,9 +1387,9 @@ export default function ChatPage() {
             className="fixed top-16 left-1/2 lg:left-[calc(136px+50vw)] z-50 px-5 py-2.5 rounded-2xl text-sm font-medium shadow-lg"
             style={{
               transform: "translateX(-50%)",
-              background: "rgba(67,56,202,0.15)",
-              border: "1px solid rgba(67,56,202,0.35)",
-              color: "rgba(255,255,255,0.9)",
+              background: "#312E81",
+              border: "1px solid #312E81",
+              color: "#FFFFFF",
               backdropFilter: "blur(12px)",
             }}
           >
@@ -1280,9 +1403,9 @@ export default function ChatPage() {
             className="fixed top-16 left-1/2 lg:left-[calc(136px+50vw)] z-50 px-5 py-2.5 rounded-2xl text-sm font-medium shadow-lg"
             style={{
               transform: "translateX(-50%)",
-              background: "rgba(201,100,66,0.18)",
-              border: "1px solid rgba(201,100,66,0.45)",
-              color: "rgba(255,255,255,0.92)",
+              background: "#1A3461",
+              border: "1px solid #1A3461",
+              color: "#FFFFFF",
               backdropFilter: "blur(12px)",
               whiteSpace: "nowrap",
             }}
@@ -1329,23 +1452,6 @@ export default function ChatPage() {
                 </div>
               )}
 
-              {/* 분석 보고서 버튼 */}
-              <button
-                onClick={() => {
-                  if (showAnalysisPanel) { setShowAnalysisPanel(false); }
-                  else if (analysisContent || isLoadingAnalysis) { setShowAnalysisPanel(true); }
-                  else { fetchAnalysisReport(); }
-                }}
-                className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all hover:opacity-80"
-                style={{
-                  background: showAnalysisPanel ? "#312E81" : "#EDE9FE",
-                  color: showAnalysisPanel ? "#fff" : "#4338CA",
-                  border: `1px solid ${showAnalysisPanel ? "#312E81" : "#C4B5FD"}`,
-                }}
-              >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-                {showAnalysisPanel ? "보고서 닫기" : "분석 보고서"}
-              </button>
             </div>
 
             {/* 항목 목록 */}
@@ -1429,7 +1535,7 @@ export default function ChatPage() {
                           className="max-w-[78%] px-4 py-3.5 text-sm leading-[1.85] whitespace-pre-wrap"
                           style={msg.role === "bot"
                             ? { background: "#FFFFFF", color: "#111827", borderRadius: "4px 16px 16px 16px", wordBreak: "keep-all", boxShadow: "none", border: "1px solid #E5E7EB" }
-                            : { background: ACCENT, color: "#fff", borderRadius: "16px 4px 16px 16px", wordBreak: "keep-all" }
+                            : { background: DS_PRIMARY, color: "#fff", borderRadius: "16px 4px 16px 16px", wordBreak: "keep-all" }
                           }
                         >{msg.text}</div>
                       </div>
@@ -1446,7 +1552,7 @@ export default function ChatPage() {
                         onClick={handleStartClick}
                         disabled={isStreaming}
                         className="w-full py-4 rounded-2xl text-base font-semibold text-white transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
-                        style={{ background: `linear-gradient(135deg, ${ACCENT} 0%, ${BLUE}CC 100%)`, boxShadow: `0 4px 24px ${ACCENT}28` }}
+                        style={{ background: "linear-gradient(135deg, #1A3461 0%, #312E81 100%)", boxShadow: "0 10px 28px -10px rgba(49,46,129,0.55)" }}
                       >
                         {isStreaming ? "분석 중..." : "분석하기 →"}
                       </button>
@@ -1669,6 +1775,9 @@ export default function ChatPage() {
                             jobTitle={jobTitle}
                             question={selected.question}
                             charLimit={selected.charLimit}
+                            draft={selected.draft}
+                            interviewQs={selected.interviewQs.map((q) => ({ question: q.question, msgs: q.msgs }))}
+                            onSelectSubtitle={(s) => applySubtitle(msg, s)}
                           />
                         );
                       }
@@ -1681,7 +1790,7 @@ export default function ChatPage() {
                             style={
                               msg.role === "bot"
                                 ? { background: "#FFFFFF", color: "#111827", borderRadius: "4px 16px 16px 16px", wordBreak: "keep-all", boxShadow: "0 1px 4px rgba(0,0,0,0.07)", border: "1px solid #E5E7EB" }
-                                : { background: ACCENT, color: "#fff", borderRadius: "16px 4px 16px 16px", wordBreak: "keep-all" }
+                                : { background: DS_PRIMARY, color: "#fff", borderRadius: "16px 4px 16px 16px", wordBreak: "keep-all" }
                             }
                           >
                             {msg.role === "bot" && msg.text === "" ? (
@@ -1715,6 +1824,8 @@ export default function ChatPage() {
                             onToggle={() => updateInterviewQ(q.id, { isExpanded: !q.isExpanded })}
                             onInputChange={(text) => updateInterviewQ(q.id, { inputText: text })}
                             onSubmit={() => fetchInterviewFeedback(q.id)}
+                            onRetry={() => retryInterviewAnswer(q.id)}
+                            onFinish={() => finishInterviewQ(q.id)}
                           />
                         ))}
                       </div>
@@ -1731,10 +1842,10 @@ export default function ChatPage() {
                     {revisionReady ? (
                       /* 수정본 작성 요청 버튼 */
                       <button
-                        onClick={handleRevisionRequest}
+                        onClick={requestRevision}
                         disabled={isStreaming}
                         className="w-full py-4 rounded-2xl text-sm font-semibold transition-all hover:scale-[1.015] active:scale-[0.985] disabled:opacity-30 flex items-center justify-center gap-2"
-                        style={{ background: ACCENT, color: "#fff", boxShadow: `0 4px 16px ${ACCENT}28` }}
+                        style={{ background: "linear-gradient(135deg, #1A3461 0%, #312E81 100%)", color: "#fff", boxShadow: "0 10px 28px -10px rgba(49,46,129,0.55)" }}
                       >
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
@@ -1834,7 +1945,7 @@ export default function ChatPage() {
                         <Link
                           href="/"
                           className="w-full py-2.5 rounded-xl text-sm font-medium text-center transition-all hover:opacity-70 flex items-center justify-center gap-2"
-                          style={{ color: "rgba(255,255,255,0.3)", border: "1px solid rgba(255,255,255,0.07)" }}
+                          style={{ color: "#9CA3AF", border: "1px solid #E5E7EB" }}
                         >
                           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
@@ -1847,142 +1958,51 @@ export default function ChatPage() {
                 </div>
               </div>
 
-              {/* ── 오른쪽 분석 보고서 패널 — 데스크탑 ── */}
-              {showAnalysisPanel && (
+              {/* ── 오른쪽 디깅 가이드 패널 — 데스크탑 ── */}
+              {guideOpen ? (
               <div
                 className="hidden lg:flex flex-shrink-0 flex-col border-l overflow-hidden"
-                style={{ width: "clamp(420px, 42vw, 560px)", borderColor: "#E5E7EB", background: "#FAFAFA" }}
+                style={{ width: "300px", borderColor: "#E5E7EB", background: "#FAFAFB" }}
               >
-                {/* 패널 헤더 */}
                 <div className="flex items-center justify-between px-5 py-3 border-b flex-shrink-0" style={{ borderColor: "#E5E7EB", background: "#FFFFFF" }}>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-black tracking-widest uppercase" style={{ color: "#6366F1", letterSpacing: "0.1em" }}>분석 보고서</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      onClick={() => setShowAnalysisPanel(false)}
-                      className="w-6 h-6 flex items-center justify-center rounded-full hover:opacity-60 transition-opacity"
-                      style={{ background: "#F3F4F6", color: "#6B7280" }}
-                    >
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                    </button>
-                  </div>
+                  <span className="text-xs font-bold tracking-widest uppercase" style={{ color: "#312E81", letterSpacing: "0.1em" }}>가이드</span>
+                  <button
+                    onClick={() => setGuideOpen(false)}
+                    className="flex items-center gap-1 text-xs font-medium hover:opacity-70 transition-opacity"
+                    style={{ color: "#9CA3AF" }}
+                  >
+                    접기
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                  </button>
                 </div>
 
-                {/* 콘텐츠 */}
-                <div className="flex-1 overflow-y-auto hide-scrollbar">
-                  {!analysisContent && !isLoadingAnalysis && (
-                    <div className="flex flex-col items-center justify-center gap-3 px-6 pt-16 pb-6 text-center">
-                      <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ background: "#EDE9FE" }}>
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6366F1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                <div className="flex-1 overflow-y-auto hide-scrollbar px-4 py-4 flex flex-col gap-3">
+                  <p className="text-sm font-bold px-1" style={{ color: "#111827" }}>더 좋은 결과를 위한 안내</p>
+                  {[
+                    { icon: "🎤", title: "지금부터 면접이라 생각하세요", body: "여기서 받는 질문은 실제 면접에서 나오는 꼬리질문 수준이에요. 면접 연습이라 생각하고, 면접관 앞에서 답하듯 진지하게 답해주세요. 날것·구어체로 대충 넘기면 완성본도 그대로 거칠어져요.", color: "#312E81" },
+                    { icon: "💬", title: "깊게 답할수록 좋아져요", body: "답변이 얕으면 결과도 얕아져요. 생각이 안 나면 대충 만들어 넘기지 말고, 천천히 떠올려보거나 찾아보고 답해주세요.", color: "#3B62CC" },
+                    { icon: "💾", title: "오늘 다 못 해도 괜찮아요", body: "내일 이어서 할 수 있어요. 대화는 자동으로 저장됩니다.", color: "#7C5CBF" },
+                  ].map((t) => (
+                    <div key={t.title} className="rounded-2xl p-4 flex flex-col gap-1.5" style={{ background: "#FFFFFF", border: "1px solid #EDEFF2", boxShadow: "0 1px 2px rgba(17,24,39,0.03)" }}>
+                      <div className="flex items-center gap-2">
+                        <span className="text-base leading-none">{t.icon}</span>
+                        <span className="text-sm font-bold" style={{ color: t.color }}>{t.title}</span>
                       </div>
-                      <div>
-                        <p className="text-sm font-bold" style={{ color: "#111827" }}>기업·직무 분석 보고서</p>
-                        <p className="text-xs mt-1 leading-relaxed" style={{ color: "#6B7280", wordBreak: "keep-all" }}>회사와 직무를 분석해서 자소서 작성 방향을 잡아드려요</p>
-                      </div>
-                      <button
-                        onClick={() => fetchAnalysisReport()}
-                        className="mt-1 w-full py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-80"
-                        style={{ background: "#312E81" }}
-                      >보고서 생성하기</button>
+                      <p className="text-xs leading-relaxed" style={{ color: "#6B7280", wordBreak: "keep-all" }}>{t.body}</p>
                     </div>
-                  )}
-
-                  {isLoadingAnalysis && !analysisContent && (
-                    <div className="flex flex-col items-center justify-center gap-3 pt-16">
-                      <div className="flex gap-1.5">
-                        {[0, 150, 300].map((d) => (
-                          <span key={d} className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: "#6366F1", animationDelay: `${d}ms` }} />
-                        ))}
-                      </div>
-                      <p className="text-xs" style={{ color: "#6B7280" }}>조사 중...</p>
-                    </div>
-                  )}
-
-                  {analysisContent && (
-                    <div className="flex flex-col">
-                      {/* 문서 헤더 */}
-                      <div className="px-7 pt-7 pb-6" style={{ background: "#FFFFFF", borderBottom: "1px solid #E5E7EB" }}>
-                        <p className="text-[10px] font-black tracking-widest uppercase mb-2" style={{ color: "#A78BFA", letterSpacing: "0.12em" }}>COMPANY · JOB ANALYSIS</p>
-                        <h1 className="text-xl font-black leading-tight" style={{ color: "#111827", letterSpacing: "-0.03em" }}>
-                          {companyName || "기업"}
-                          <span style={{ color: "#6366F1" }}> · </span>
-                          {jobTitle || "직무"}
-                        </h1>
-                        <p className="text-xs mt-1.5" style={{ color: "#9CA3AF" }}>
-                          {new Date().toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric" })} 기준
-                        </p>
-                      </div>
-
-                      {/* 섹션들 */}
-                      <div className="px-7 py-6 flex flex-col gap-8">
-                        {analysisContent.split(/(?=##\s)/).filter(s => s.trim()).map((section, i) => {
-                          const lines = section.trim().split("\n").filter(Boolean);
-                          const rawTitle = lines[0]?.replace(/^##\s*/, "") ?? "";
-                          const bodyLines = lines.slice(1);
-                          const bullets = bodyLines.filter((l) => l.startsWith("- ")).map((l) => l.replace(/^-\s*/, ""));
-                          const paragraphs = bodyLines.filter((l) => !l.startsWith("- "));
-                          const numMatch = rawTitle.match(/^(\S+)\s+(\d+)\.\s*(.+)$/);
-                          const emoji = numMatch ? numMatch[1] : "";
-                          const num = numMatch ? numMatch[2] : String(i + 1);
-                          const sectionTitle = numMatch ? numMatch[3] : rawTitle;
-                          return (
-                            <div key={i} className="flex flex-col gap-4">
-                              {/* 섹션 제목 */}
-                              <div className="flex items-center gap-3">
-                                <div className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black" style={{ background: "#EDE9FE", color: "#4338CA" }}>
-                                  {num}
-                                </div>
-                                <div className="flex items-center gap-1.5 flex-1">
-                                  {emoji && <span className="text-base leading-none">{emoji}</span>}
-                                  <h2 className="text-base font-black" style={{ color: "#111827", letterSpacing: "-0.02em" }}>{sectionTitle}</h2>
-                                </div>
-                              </div>
-
-                              {/* 불릿 항목 */}
-                              {bullets.length > 0 && (
-                              <div className="flex flex-col gap-3 pl-10">
-                                {bullets.map((b, j) => {
-                                  const colonIdx = b.indexOf(": ");
-                                  const label = colonIdx > 0 && colonIdx < 22 ? b.slice(0, colonIdx) : null;
-                                  const body = label ? b.slice(colonIdx + 2) : b;
-                                  return (
-                                    <div key={j} className="flex flex-col gap-1 pl-3" style={{ borderLeft: "2px solid #EDE9FE" }}>
-                                      {label && (
-                                        <p className="text-sm font-bold" style={{ color: "#6366F1" }}>{label}</p>
-                                      )}
-                                      <p className="text-sm leading-relaxed" style={{ color: "#374151", wordBreak: "keep-all" }}>{body}</p>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                              )}
-
-                              {/* 문단 텍스트 (불릿 없는 섹션) */}
-                              {paragraphs.length > 0 && (
-                              <div className="flex flex-col gap-2 pl-10">
-                                {paragraphs.map((p, j) => (
-                                  <p key={j} className="text-sm leading-relaxed" style={{ color: "#374151", wordBreak: "keep-all" }}>{p}</p>
-                                ))}
-                              </div>
-                              )}
-
-                              {i < 5 && <div style={{ height: "1px", background: "#F3F4F6" }} />}
-                            </div>
-                          );
-                        })}
-                        {isLoadingAnalysis && (
-                          <div className="flex gap-1.5 pb-2">
-                            {[0, 150, 300].map((d) => (
-                              <span key={d} className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: "#6366F1", animationDelay: `${d}ms` }} />
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
+                  ))}
                 </div>
               </div>
+              ) : (
+              <button
+                onClick={() => setGuideOpen(true)}
+                className="hidden lg:flex flex-shrink-0 flex-col items-center justify-center gap-3 border-l hover:bg-[#F9FAFB] transition-colors"
+                style={{ width: "44px", borderColor: "#E5E7EB", background: "#FFFFFF" }}
+                title="가이드 펼치기"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                <span className="text-xs font-bold tracking-wide" style={{ color: "#6B7280", writingMode: "vertical-rl" }}>가이드</span>
+              </button>
               )}
 
               </div>
@@ -2001,8 +2021,8 @@ export default function ChatPage() {
           style={{ background: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)" }}
         >
           <div
-            className="w-full flex flex-col gap-5 rounded-2xl p-6"
-            style={{ maxWidth: "360px", background: "#0D0D18", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 24px 60px rgba(0,0,0,0.7)" }}
+            className="w-full flex flex-col gap-5 rounded-3xl p-6"
+            style={{ maxWidth: "360px", background: "#FFFFFF", border: "1px solid #E5E7EB", boxShadow: "0 24px 60px -12px rgba(17,24,39,0.25)" }}
           >
             {(() => {
               const hasBadgeUsed = resumeSession.items.some(i => i.status === "chatting");
@@ -2013,11 +2033,11 @@ export default function ChatPage() {
                   <>
                     <div className="flex flex-col gap-3">
                       <div className="flex items-center gap-2.5">
-                        <span style={{ fontSize: 20 }}>🏅</span>
-                        <p className="text-sm font-semibold" style={{ color: "rgba(255,255,255,0.88)" }}>뱃지가 사용된 문항이 있어요</p>
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#D4920A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>
+                        <p className="text-base font-bold" style={{ color: "#111827" }}>뱃지가 사용된 문항이 있어요</p>
                       </div>
-                      <div className="px-3 py-2.5 rounded-xl" style={{ background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.2)" }}>
-                        <p className="text-xs leading-relaxed" style={{ color: "rgba(248,113,113,0.82)" }}>
+                      <div className="px-3.5 py-2.5 rounded-xl" style={{ background: "#FEF2F2", border: "1px solid #FECACA" }}>
+                        <p className="text-xs leading-relaxed" style={{ color: "#DC2626" }}>
                           분석이 시작된 문항이 있어요. 이어서 진행하면 추가 뱃지 차감 없이 계속할 수 있어요.
                         </p>
                       </div>
@@ -2025,14 +2045,14 @@ export default function ChatPage() {
                         <div className="flex flex-col gap-1.5">
                           {resumeSession.items.slice(0, 3).map((item, i) => (
                             <div key={item.id} className="flex items-start gap-2">
-                              <span className="text-xs font-bold flex-shrink-0 mt-px" style={{ color: `${BLUE}80` }}>{String(i + 1).padStart(2, "0")}</span>
-                              <p className="text-xs truncate" style={{ color: "rgba(255,255,255,0.5)", wordBreak: "keep-all" }}>
+                              <span className="text-xs font-bold flex-shrink-0 mt-px" style={{ color: "#6366F1" }}>{String(i + 1).padStart(2, "0")}</span>
+                              <p className="text-xs truncate" style={{ color: "#6B7280", wordBreak: "keep-all" }}>
                                 {item.question || "문항 미입력"}
                               </p>
                             </div>
                           ))}
                           {resumeSession.items.length > 3 && (
-                            <p className="text-xs pl-5" style={{ color: "rgba(255,255,255,0.25)" }}>외 {resumeSession.items.length - 3}개 항목</p>
+                            <p className="text-xs pl-5" style={{ color: "#9CA3AF" }}>외 {resumeSession.items.length - 3}개 항목</p>
                           )}
                         </div>
                       )}
@@ -2041,16 +2061,16 @@ export default function ChatPage() {
                       <button
                         onClick={loadResumeSession}
                         disabled={isLoadingResume}
-                        className="flex-1 py-3 rounded-xl text-sm font-semibold text-white transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
-                        style={{ background: ACCENT, boxShadow: `0 4px 16px ${ACCENT}30` }}
+                        className="flex-1 py-3.5 rounded-xl text-sm font-bold text-white transition-all hover:opacity-92 active:scale-[0.98] disabled:opacity-50"
+                        style={{ background: "linear-gradient(135deg, #1A3461 0%, #312E81 100%)", boxShadow: "0 10px 28px -10px rgba(49,46,129,0.5)" }}
                       >
                         {isLoadingResume ? "불러오는 중..." : "계속하기"}
                       </button>
                       <button
                         onClick={() => setDiscardConfirmMode(true)}
                         disabled={isLoadingResume}
-                        className="flex-1 py-3 rounded-xl text-sm transition-all hover:opacity-70"
-                        style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.45)", border: "1px solid rgba(255,255,255,0.08)" }}
+                        className="flex-1 py-3.5 rounded-xl text-sm font-semibold transition-all hover:opacity-80"
+                        style={{ background: "#F3F4F6", color: "#6B7280", border: "1px solid #E5E7EB" }}
                       >
                         새로 시작
                       </button>
@@ -2065,10 +2085,10 @@ export default function ChatPage() {
                   <>
                     <div className="flex flex-col gap-1.5">
                       <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full" style={{ background: ACCENT }} />
-                        <p className="text-sm font-semibold text-white">이어서 진행할까요?</p>
+                        <span className="w-2 h-2 rounded-full" style={{ background: "#312E81" }} />
+                        <p className="text-base font-bold" style={{ color: "#111827" }}>이어서 진행할까요?</p>
                       </div>
-                      <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.45)", paddingLeft: "16px" }}>
+                      <p className="text-xs leading-relaxed" style={{ color: "#6B7280", paddingLeft: "16px" }}>
                         {formatRelativeTime(resumeSession.session.created_at)} 작업하던
                         {resumeSession.session.job_title ? ` "${resumeSession.session.job_title}"` : ""} 자소서가 있어요.
                       </p>
@@ -2076,14 +2096,14 @@ export default function ChatPage() {
                         <div className="mt-2 flex flex-col gap-1.5 pl-4">
                           {resumeSession.items.slice(0, 3).map((item, i) => (
                             <div key={item.id} className="flex items-start gap-2">
-                              <span className="text-xs font-bold flex-shrink-0 mt-px" style={{ color: `${BLUE}80` }}>{String(i + 1).padStart(2, "0")}</span>
-                              <p className="text-xs truncate" style={{ color: "rgba(255,255,255,0.5)", wordBreak: "keep-all" }}>
+                              <span className="text-xs font-bold flex-shrink-0 mt-px" style={{ color: "#6366F1" }}>{String(i + 1).padStart(2, "0")}</span>
+                              <p className="text-xs truncate" style={{ color: "#6B7280", wordBreak: "keep-all" }}>
                                 {item.question || "문항 미입력"}
                               </p>
                             </div>
                           ))}
                           {resumeSession.items.length > 3 && (
-                            <p className="text-xs pl-5" style={{ color: "rgba(255,255,255,0.25)" }}>외 {resumeSession.items.length - 3}개 항목</p>
+                            <p className="text-xs pl-5" style={{ color: "#9CA3AF" }}>외 {resumeSession.items.length - 3}개 항목</p>
                           )}
                         </div>
                       )}
@@ -2092,16 +2112,16 @@ export default function ChatPage() {
                       <button
                         onClick={loadResumeSession}
                         disabled={isLoadingResume}
-                        className="flex-1 py-3 rounded-xl text-sm font-semibold text-white transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
-                        style={{ background: ACCENT, boxShadow: `0 4px 16px ${ACCENT}30` }}
+                        className="flex-1 py-3.5 rounded-xl text-sm font-bold text-white transition-all hover:opacity-92 active:scale-[0.98] disabled:opacity-50"
+                        style={{ background: "linear-gradient(135deg, #1A3461 0%, #312E81 100%)", boxShadow: "0 10px 28px -10px rgba(49,46,129,0.5)" }}
                       >
                         {isLoadingResume ? "불러오는 중..." : "이어서 하기"}
                       </button>
                       <button
                         onClick={() => setDiscardConfirmMode(true)}
                         disabled={isLoadingResume}
-                        className="flex-1 py-3 rounded-xl text-sm transition-all hover:opacity-70"
-                        style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.45)", border: "1px solid rgba(255,255,255,0.08)" }}
+                        className="flex-1 py-3.5 rounded-xl text-sm font-semibold transition-all hover:opacity-80"
+                        style={{ background: "#F3F4F6", color: "#6B7280", border: "1px solid #E5E7EB" }}
                       >
                         새로 시작
                       </button>
@@ -2117,20 +2137,20 @@ export default function ChatPage() {
                     {hasBadgeUsed ? (
                       <>
                         <div className="flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full" style={{ background: "rgba(255,255,255,0.25)" }} />
-                          <p className="text-sm font-semibold" style={{ color: "rgba(255,255,255,0.88)" }}>정말 새로 시작할까요?</p>
+                          <span className="w-2 h-2 rounded-full" style={{ background: "#D1D5DB" }} />
+                          <p className="text-base font-bold" style={{ color: "#111827" }}>정말 새로 시작할까요?</p>
                         </div>
-                        <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.4)" }}>
+                        <p className="text-xs leading-relaxed" style={{ color: "#6B7280" }}>
                           차감된 뱃지는 돌아오지 않아요. 이전 작업 내용은 더 이상 불러오지 않아요.
                         </p>
                       </>
                     ) : (
                       <>
                         <div className="flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full" style={{ background: "rgba(255,255,255,0.25)" }} />
-                          <p className="text-sm font-semibold" style={{ color: "rgba(255,255,255,0.88)" }}>새로 시작할까요?</p>
+                          <span className="w-2 h-2 rounded-full" style={{ background: "#D1D5DB" }} />
+                          <p className="text-base font-bold" style={{ color: "#111827" }}>새로 시작할까요?</p>
                         </div>
-                        <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.4)" }}>
+                        <p className="text-xs leading-relaxed" style={{ color: "#6B7280" }}>
                           분석을 시작하지 않은 문항은 뱃지가 차감되지 않았어요. 이전 작업 내용은 더 이상 불러오지 않아요.
                         </p>
                       </>
@@ -2139,8 +2159,8 @@ export default function ChatPage() {
                   <div className="flex gap-2.5">
                     <button
                       onClick={() => setDiscardConfirmMode(false)}
-                      className="flex-1 py-3 rounded-xl text-sm font-semibold text-white transition-all hover:scale-[1.02] active:scale-[0.98]"
-                      style={{ background: ACCENT, boxShadow: `0 4px 16px ${ACCENT}30` }}
+                      className="flex-1 py-3.5 rounded-xl text-sm font-bold text-white transition-all hover:opacity-92 active:scale-[0.98]"
+                      style={{ background: "linear-gradient(135deg, #1A3461 0%, #312E81 100%)", boxShadow: "0 10px 28px -10px rgba(49,46,129,0.5)" }}
                     >
                       돌아가기
                     </button>
@@ -2150,8 +2170,8 @@ export default function ChatPage() {
                         setDiscardConfirmMode(false);
                         setResumeSession(null);
                       }}
-                      className="flex-1 py-3 rounded-xl text-sm transition-all hover:opacity-70"
-                      style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.45)", border: "1px solid rgba(255,255,255,0.08)" }}
+                      className="flex-1 py-3.5 rounded-xl text-sm font-semibold transition-all hover:opacity-80"
+                      style={{ background: "#F3F4F6", color: "#6B7280", border: "1px solid #E5E7EB" }}
                     >
                       새로 시작
                     </button>
@@ -2167,68 +2187,59 @@ export default function ChatPage() {
       {showCreditConfirm && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-5"
-          style={{ background: "rgba(0,0,0,0.8)", backdropFilter: "blur(10px)" }}
+          style={{ background: "rgba(17,24,39,0.5)", backdropFilter: "blur(8px)" }}
         >
           <div
             className="w-full flex flex-col rounded-3xl overflow-hidden"
             style={{
-              maxWidth: "520px",
-              background: "#0E0E1C",
-              border: "1px solid rgba(255,255,255,0.12)",
-              boxShadow: `0 40px 100px rgba(0,0,0,0.8), 0 0 60px ${ACCENT}12`,
+              maxWidth: "420px",
+              background: "#FFFFFF",
+              border: "1px solid #E5E7EB",
+              boxShadow: "0 24px 64px -12px rgba(17,24,39,0.28)",
             }}
           >
-            {/* 상단 강조 영역 */}
-            <div className="px-8 pt-8 pb-6 flex flex-col gap-4" style={{ background: `linear-gradient(to bottom, ${ACCENT}0A, transparent)`, borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
-              <div className="flex items-center gap-3">
-                <span style={{ fontSize: 32, lineHeight: 1 }}>🏅</span>
-                <div>
-                  <p className="text-xl font-bold" style={{ color: "rgba(255,255,255,0.95)" }}>분석을 시작할까요?</p>
-                  <p className="text-sm mt-0.5" style={{ color: "rgba(255,255,255,0.42)" }}>뱃지 1개가 사용돼요</p>
-                </div>
-              </div>
-
-              {userCredits !== null && (
-                <div
-                  className="flex items-center justify-center gap-8 px-5 py-4 rounded-2xl"
-                  style={{ background: "rgba(255,209,102,0.07)", border: "1px solid rgba(255,209,102,0.22)" }}
-                >
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-xs" style={{ color: "rgba(255,255,255,0.38)" }}>현재 잔액</span>
-                    <span className="text-2xl font-bold" style={{ color: GOLD, lineHeight: 1.2 }}>{userCredits}개</span>
-                  </div>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
-                  </svg>
-                  <div className="flex flex-col gap-0.5 items-end">
-                    <span className="text-xs" style={{ color: "rgba(255,255,255,0.38)" }}>분석 후</span>
-                    <span className="text-2xl font-bold" style={{ color: userCredits - 1 > 0 ? GOLD : "rgba(248,113,113,0.85)", lineHeight: 1.2 }}>{userCredits - 1}개</span>
-                  </div>
-                </div>
-              )}
+            <div className="px-7 pt-7 pb-1">
+              <p className="text-xs font-bold tracking-[0.14em] uppercase mb-2" style={{ color: "#A78BFA" }}>CONFIRM</p>
+              <h2 className="text-2xl font-bold" style={{ color: "#111827", letterSpacing: "-0.02em" }}>자소서 분석을 시작할까요?</h2>
             </div>
 
-            {/* 안내 + 버튼 */}
-            <div className="px-8 py-6 flex flex-col gap-5">
-              <p className="text-[15px] leading-relaxed" style={{ color: "rgba(255,255,255,0.52)" }}>
-                중간에 나가도 같은 문항은 <span style={{ color: "rgba(255,255,255,0.8)", fontWeight: 600 }}>추가 차감 없이</span> 이어서 할 수 있어요.
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => { setShowCreditConfirm(false); startAnalysis(); }}
-                  className="flex-1 py-4 rounded-2xl text-base font-bold text-white transition-all hover:scale-[1.02] active:scale-[0.98]"
-                  style={{ background: ACCENT, boxShadow: `0 6px 24px ${ACCENT}35` }}
-                >
-                  시작하기
-                </button>
-                <button
-                  onClick={() => setShowCreditConfirm(false)}
-                  className="flex-1 py-4 rounded-2xl text-base font-semibold transition-all hover:opacity-70"
-                  style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.1)" }}
-                >
-                  취소
-                </button>
+            <div className="px-7 py-5 flex flex-col gap-3.5">
+              <div className="flex items-start gap-3">
+                <span className="flex-shrink-0 mt-[7px] w-1.5 h-1.5 rounded-full" style={{ background: "#312E81" }} />
+                <div className="flex flex-col gap-1">
+                  <p className="text-sm leading-relaxed" style={{ color: "#374151", wordBreak: "keep-all" }}>
+                    이 문항을 분석하면 뱃지 1개가 사용돼요.
+                  </p>
+                  {userCredits !== null && (
+                    <p className="text-sm" style={{ color: "#374151", whiteSpace: "nowrap" }}>
+                      남은 뱃지 <span style={{ color: "#111827", fontWeight: 700 }}>{userCredits}개</span> → <span style={{ color: userCredits - 1 > 0 ? "#111827" : "#DC2626", fontWeight: 700 }}>{userCredits - 1}개</span>
+                    </p>
+                  )}
+                </div>
               </div>
+              <div className="flex items-start gap-3">
+                <span className="flex-shrink-0 mt-[7px] w-1.5 h-1.5 rounded-full" style={{ background: "#312E81" }} />
+                <p className="text-sm leading-relaxed" style={{ color: "#374151", wordBreak: "keep-all" }}>
+                  중간에 나가도 같은 문항은 <span style={{ color: "#111827", fontWeight: 600 }}>추가 차감 없이</span> 이어서 할 수 있어요.
+                </p>
+              </div>
+            </div>
+
+            <div className="px-7 pt-2 pb-6 flex gap-3">
+              <button
+                onClick={() => setShowCreditConfirm(false)}
+                className="flex-1 py-3.5 rounded-xl text-sm font-semibold transition-all hover:opacity-80"
+                style={{ background: "#F3F4F6", color: "#6B7280", border: "1px solid #E5E7EB" }}
+              >
+                취소
+              </button>
+              <button
+                onClick={() => { setShowCreditConfirm(false); startAnalysis(); }}
+                className="flex-1 py-3.5 rounded-xl text-sm font-bold text-white transition-all hover:opacity-92 active:scale-[0.98]"
+                style={{ background: "linear-gradient(135deg, #1A3461 0%, #312E81 100%)", boxShadow: "0 10px 28px -10px rgba(49,46,129,0.55)" }}
+              >
+                시작하기
+              </button>
             </div>
           </div>
         </div>
@@ -2241,29 +2252,29 @@ export default function ChatPage() {
           style={{ background: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)" }}
         >
           <div
-            className="w-full flex flex-col gap-5 rounded-2xl p-6"
-            style={{ maxWidth: "360px", background: "#0D0D18", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 24px 60px rgba(0,0,0,0.7)" }}
+            className="w-full flex flex-col gap-5 rounded-3xl p-6"
+            style={{ maxWidth: "360px", background: "#FFFFFF", border: "1px solid #E5E7EB", boxShadow: "0 24px 60px -12px rgba(17,24,39,0.25)" }}
           >
             <div className="flex flex-col gap-2">
-              <p className="text-sm font-semibold" style={{ color: "rgba(255,255,255,0.88)" }}>
-                면접 답변이 작성되지 않았어요!
+              <p className="text-base font-bold" style={{ color: "#111827" }}>
+                면접 답변이 작성되지 않았어요
               </p>
-              <p className="text-xs leading-relaxed" style={{ color: "rgba(255,255,255,0.45)" }}>
+              <p className="text-sm leading-relaxed" style={{ color: "#6B7280", wordBreak: "keep-all" }}>
                 이대로 완료하면 정리본에 면접 Q&A 내용이 나오지 않아요. 그래도 완료하시겠어요?
               </p>
             </div>
             <div className="flex gap-2.5">
               <button
                 onClick={() => { setShowInterviewWarning(false); setShowSummary(true); }}
-                className="flex-1 py-3 rounded-xl text-sm font-semibold text-white transition-all hover:scale-[1.02] active:scale-[0.98]"
-                style={{ background: ACCENT, boxShadow: `0 4px 16px ${ACCENT}30` }}
+                className="flex-1 py-3.5 rounded-xl text-sm font-bold text-white transition-all hover:opacity-92 active:scale-[0.98]"
+                style={{ background: "linear-gradient(135deg, #1A3461 0%, #312E81 100%)", boxShadow: "0 10px 28px -10px rgba(49,46,129,0.5)" }}
               >
                 그냥 완료
               </button>
               <button
                 onClick={() => setShowInterviewWarning(false)}
-                className="flex-1 py-3 rounded-xl text-sm transition-all hover:opacity-70"
-                style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.45)", border: "1px solid rgba(255,255,255,0.08)" }}
+                className="flex-1 py-3.5 rounded-xl text-sm font-semibold transition-all hover:opacity-80"
+                style={{ background: "#F3F4F6", color: "#6B7280", border: "1px solid #E5E7EB" }}
               >
                 돌아가기
               </button>
@@ -2278,26 +2289,26 @@ export default function ChatPage() {
           className="fixed bottom-6 left-1/2 z-50 flex flex-col items-center gap-3 px-6 py-5 rounded-2xl text-center"
           style={{
             transform: "translateX(-50%)",
-            background: "rgba(10,10,22,0.96)",
-            border: "1px solid rgba(255,255,255,0.12)",
-            boxShadow: "0 8px 40px rgba(0,0,0,0.7)",
+            background: "rgba(255,255,255,0.98)",
+            border: "1px solid #E5E7EB",
+            boxShadow: "0 12px 40px -8px rgba(17,24,39,0.22)",
             backdropFilter: "blur(20px)",
             minWidth: "260px",
           }}
         >
           <div className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: ACCENT }} />
-            <p className="text-sm font-semibold" style={{ color: "rgba(255,255,255,0.88)" }}>잠시 자리를 비우셨나요?</p>
+            <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: "#312E81" }} />
+            <p className="text-sm font-bold" style={{ color: "#111827" }}>잠시 자리를 비우셨나요?</p>
           </div>
-          <p className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>
+          <p className="text-xs" style={{ color: "#6B7280" }}>
             {Math.floor(idleCountdown / 60) > 0
               ? `${Math.floor(idleCountdown / 60)}분 ${idleCountdown % 60}초`
               : `${idleCountdown}초`} 후 자동 로그아웃됩니다
           </p>
           <button
             onClick={extendSession}
-            className="px-5 py-2 rounded-xl text-xs font-semibold text-white transition-all hover:scale-[1.03] active:scale-[0.97]"
-            style={{ background: ACCENT, boxShadow: `0 2px 12px ${ACCENT}35` }}
+            className="px-5 py-2 rounded-xl text-xs font-bold text-white transition-all hover:opacity-92 active:scale-[0.97]"
+            style={{ background: "linear-gradient(135deg, #1A3461 0%, #312E81 100%)", boxShadow: "0 6px 18px -6px rgba(49,46,129,0.5)" }}
           >
             계속 사용하기
           </button>
@@ -2314,26 +2325,98 @@ export default function ChatPage() {
           interviewQs={selected.interviewQs.map(q => ({ question: q.question, msgs: q.msgs }))}
           analysisContent={analysisContent}
           onClose={() => setShowSummary(false)}
-          onNextItem={() => { setShowSummary(false); addItem(); }}
+          onNextItem={() => { setShowSummary(false); setShowModeSelect(true); }}
         />
+      )}
+
+      {/* 새 문항 유형 선택 모달 */}
+      {showModeSelect && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(6px)" }}
+          onClick={() => setShowModeSelect(false)}>
+          <div style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: 24, padding: "26px 24px", maxWidth: 420, width: "100%", boxShadow: "0 24px 64px -12px rgba(17,24,39,0.25)" }}
+            onClick={e => e.stopPropagation()}>
+            <p style={{ fontSize: 16, fontWeight: 800, color: "#111827", marginBottom: 4 }}>어떤 자소서를 쓸까요?</p>
+            <p style={{ fontSize: 12.5, color: "#6B7280", marginBottom: 18, lineHeight: 1.6 }}>
+              {jobTitle ? `${jobTitle} ` : ""}같은 회사·직무로 새 문항을 시작해요. 유형을 골라주세요.
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {([
+                { key: "analyze",     label: "직무 역량",      desc: "경험으로 직무 적합성을 보여주고 싶다면",  color: BLUE,   emoji: "💼" },
+                { key: "motivation",  label: "지원 동기·포부", desc: "왜 이 회사·직무인지, 포부를 쓴다면",     color: GOLD,   emoji: "✨" },
+                { key: "personality", label: "성격·인성",      desc: "성격 장단점·가치관, 갈등·협업·도전 경험",  color: VIOLET, emoji: "🌱" },
+              ] as { key: typeof chatMode; label: string; desc: string; color: string; emoji: string }[]).map(({ key, label, desc, color, emoji }) => (
+                <button key={key}
+                  onClick={() => {
+                    if (key === "personality" && process.env.NODE_ENV === "production") { setShowModeSelect(false); setShowPersonalityBlock(true); return; }
+                    setChatMode(key);
+                    setShowModeSelect(false);
+                    addItem(key);
+                  }}
+                  style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", borderRadius: 14, border: "1.5px solid #E5E7EB", background: "#FFFFFF", textAlign: "left", cursor: "pointer", transition: "all 0.15s" }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = color; e.currentTarget.style.background = `${color}0A`; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = "#E5E7EB"; e.currentTarget.style.background = "#FFFFFF"; }}>
+                  <span style={{ fontSize: 22, lineHeight: 1 }}>{emoji}</span>
+                  <span style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{label}</span>
+                    <span style={{ fontSize: 12, color: "#6B7280" }}>{desc}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+            <button onClick={() => setShowModeSelect(false)}
+              style={{ marginTop: 16, width: "100%", padding: "11px", borderRadius: 12, background: "#F3F4F6", color: "#6B7280", fontSize: 13, fontWeight: 600, border: "none", cursor: "pointer" }}>
+              취소
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 완성본 직전 후기 게이트 */}
+      {showReviewGate && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, background: "rgba(17,24,39,0.6)", backdropFilter: "blur(6px)" }}
+          onClick={() => { if (!reviewSubmitting) setShowReviewGate(false); }}>
+          <div style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: 24, padding: "26px 24px", maxWidth: 400, width: "100%", boxShadow: "0 24px 64px -12px rgba(17,24,39,0.3)" }}
+            onClick={e => e.stopPropagation()}>
+            <p style={{ fontSize: 17, fontWeight: 800, color: "#111827", marginBottom: 6 }}>잠깐, 후기 한 줄만 부탁드려요 🙏</p>
+            <p style={{ fontSize: 13, color: "#6B7280", lineHeight: 1.6, marginBottom: 16 }}>완성본과 면접 예상질문까지 열어드릴게요. 디깅, <b style={{ color: "#4C3F99" }}>어떤 부분이 좋았어요?</b></p>
+            <textarea
+              value={reviewText}
+              onChange={e => setReviewText(e.target.value.slice(0, 100))}
+              placeholder="예: 질문이 날카로워서 생각이 정리됐어요"
+              rows={3}
+              autoFocus
+              style={{ width: "100%", border: "1px solid #E5E7EB", borderRadius: 12, padding: "12px 14px", fontSize: 14, color: "#111827", outline: "none", resize: "none", boxSizing: "border-box", lineHeight: 1.6 }}
+            />
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 4, marginBottom: 14 }}>
+              <span style={{ fontSize: 12, color: reviewText.length >= 90 ? "#DC2626" : "#9CA3AF" }}>{reviewText.length}/100</span>
+            </div>
+            <button
+              onClick={submitReviewAndProceed}
+              disabled={!reviewText.trim() || reviewSubmitting}
+              style={{ width: "100%", padding: "13px", borderRadius: 14, background: "linear-gradient(135deg, #1A3461 0%, #312E81 100%)", color: "#fff", fontSize: 15, fontWeight: 700, border: "none", cursor: (!reviewText.trim() || reviewSubmitting) ? "default" : "pointer", opacity: (!reviewText.trim() || reviewSubmitting) ? 0.5 : 1, boxShadow: "0 10px 28px -10px rgba(49,46,129,0.55)" }}
+            >
+              {reviewSubmitting ? "저장 중..." : "후기 남기고 완성본 보기 →"}
+            </button>
+          </div>
+        </div>
       )}
 
       {/* 로그아웃 확인 모달 */}
       {showGoBackConfirm && (
         <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(6px)" }}
           onClick={() => setShowGoBackConfirm(false)}>
-          <div style={{ background: "#18182A", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 20, padding: "28px 24px", maxWidth: 320, width: "100%", textAlign: "center", boxShadow: "0 24px 80px rgba(0,0,0,0.6)" }}
+          <div style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: 24, padding: "28px 24px", maxWidth: 340, width: "100%", textAlign: "center", boxShadow: "0 24px 64px -12px rgba(17,24,39,0.25)" }}
             onClick={e => e.stopPropagation()}>
-            <p style={{ fontSize: 15, fontWeight: 700, color: "rgba(255,255,255,0.9)", marginBottom: 8 }}>공고 화면으로 이동할까요?</p>
-            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", marginBottom: 22, lineHeight: 1.75, wordBreak: "keep-all" }}>지금까지 나눈 대화는 저장돼 있어요.<br />돌아오면 이어서 진행할 수 있고,<br />새로 시작하면 뱃지가 차감됩니다.</p>
+            <p style={{ fontSize: 16, fontWeight: 700, color: "#111827", marginBottom: 8 }}>나가시겠어요?</p>
+            <p style={{ fontSize: 13, color: "#6B7280", marginBottom: 22, lineHeight: 1.75, wordBreak: "keep-all" }}>지금까지 나눈 대화는 자동으로 저장돼 있어요.<br />언제든 다시 들어와서 이어서 할 수 있어요.</p>
             <div style={{ display: "flex", gap: 10 }}>
               <button onClick={() => setShowGoBackConfirm(false)}
-                style={{ flex: 1, padding: "11px 0", borderRadius: 12, background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.65)", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
-                대화 계속하기
+                style={{ flex: 1, padding: "12px 0", borderRadius: 12, background: "#F3F4F6", border: "1px solid #E5E7EB", color: "#6B7280", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
+                계속하기
               </button>
-              <button onClick={() => { setShowGoBackConfirm(false); setStage("info"); setShowAnalysisPanel(false); setAnalysisContent(""); }}
-                style={{ flex: 1, padding: "11px 0", borderRadius: 12, background: "rgba(99,102,241,0.15)", border: "1px solid rgba(99,102,241,0.35)", color: "#818CF8", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
-                공고로 이동
+              <button onClick={() => { window.location.href = "/"; }}
+                style={{ flex: 1, padding: "12px 0", borderRadius: 12, background: "linear-gradient(135deg, #1A3461 0%, #312E81 100%)", border: "none", color: "#FFFFFF", fontSize: 14, fontWeight: 700, cursor: "pointer", boxShadow: "0 10px 24px -10px rgba(49,46,129,0.55)" }}>
+                홈으로 나가기
               </button>
             </div>
           </div>
@@ -2343,13 +2426,13 @@ export default function ChatPage() {
       {showResumeItemModal && (
         <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(6px)" }}
           onClick={() => setShowResumeItemModal(false)}>
-          <div style={{ background: "#18182A", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 20, padding: "28px 24px", maxWidth: 320, width: "100%", textAlign: "center", boxShadow: "0 24px 80px rgba(0,0,0,0.6)" }}
+          <div style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: 24, padding: "28px 24px", maxWidth: 340, width: "100%", textAlign: "center", boxShadow: "0 24px 64px -12px rgba(17,24,39,0.25)" }}
             onClick={e => e.stopPropagation()}>
-            <p style={{ fontSize: 15, fontWeight: 700, color: "rgba(255,255,255,0.9)", marginBottom: 8 }}>이어서 할까요, 새로 시작할까요?</p>
-            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", marginBottom: 22, lineHeight: 1.75, wordBreak: "keep-all" }}>이전에 나눈 대화가 있어요.<br />이어서 진행하면 추가 뱃지가 차감되지 않아요.</p>
+            <p style={{ fontSize: 16, fontWeight: 700, color: "#111827", marginBottom: 8 }}>이어서 할까요, 새로 시작할까요?</p>
+            <p style={{ fontSize: 13, color: "#6B7280", marginBottom: 22, lineHeight: 1.75, wordBreak: "keep-all" }}>이전에 나눈 대화가 있어요.<br />이어서 진행하면 추가 뱃지가 차감되지 않아요.</p>
             <div style={{ display: "flex", gap: 10 }}>
               <button onClick={() => { setShowResumeItemModal(false); setStage("chat"); setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 100); }}
-                style={{ flex: 1, padding: "11px 0", borderRadius: 12, background: "rgba(99,102,241,0.15)", border: "1px solid rgba(99,102,241,0.35)", color: "#818CF8", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
+                style={{ flex: 1, padding: "12px 0", borderRadius: 12, background: "linear-gradient(135deg, #1A3461 0%, #312E81 100%)", border: "none", color: "#FFFFFF", fontSize: 14, fontWeight: 700, cursor: "pointer", boxShadow: "0 10px 24px -10px rgba(49,46,129,0.55)" }}>
                 이어서 하기
               </button>
               <button onClick={() => {
@@ -2362,7 +2445,7 @@ export default function ChatPage() {
                 }
                 proceedWithAnalysis();
               }}
-                style={{ flex: 1, padding: "11px 0", borderRadius: 12, background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.65)", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
+                style={{ flex: 1, padding: "12px 0", borderRadius: 12, background: "#F3F4F6", border: "1px solid #E5E7EB", color: "#6B7280", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
                 새로 시작
               </button>
             </div>
@@ -2373,12 +2456,12 @@ export default function ChatPage() {
       {showPersonalityBlock && (
         <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(6px)" }}
           onClick={() => setShowPersonalityBlock(false)}>
-          <div style={{ background: "#18182A", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 20, padding: "32px 24px", maxWidth: 300, width: "100%", textAlign: "center", boxShadow: "0 24px 80px rgba(0,0,0,0.6)" }}
+          <div style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: 24, padding: "32px 24px", maxWidth: 320, width: "100%", textAlign: "center", boxShadow: "0 24px 64px -12px rgba(17,24,39,0.25)" }}
             onClick={e => e.stopPropagation()}>
-            <p style={{ fontSize: 28, marginBottom: 12 }}>🌱</p>
-            <p style={{ fontSize: 15, fontWeight: 700, color: "#fff", marginBottom: 8 }}>업데이트 중이에요</p>
-            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", lineHeight: 1.7, wordBreak: "keep-all" }}>성격 장단점 기능을 더 잘 만들고 있어요. 조금만 기다려주세요!</p>
-            <button onClick={() => setShowPersonalityBlock(false)} style={{ marginTop: 20, width: "100%", padding: "12px 0", borderRadius: 12, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.6)", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>확인</button>
+            <p style={{ fontSize: 32, marginBottom: 12 }}>🌱</p>
+            <p style={{ fontSize: 16, fontWeight: 700, color: "#111827", marginBottom: 8 }}>업데이트 예정이에요 🙏</p>
+            <p style={{ fontSize: 13, color: "#6B7280", lineHeight: 1.7, wordBreak: "keep-all" }}>성격·인성 기능을 더 잘 만들고 있어요. 잠시만 기다려주세요!</p>
+            <button onClick={() => setShowPersonalityBlock(false)} style={{ marginTop: 20, width: "100%", padding: "13px 0", borderRadius: 12, background: "#F3F4F6", border: "1px solid #E5E7EB", color: "#6B7280", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>확인</button>
           </div>
         </div>
       )}
@@ -2386,17 +2469,17 @@ export default function ChatPage() {
       {showLogoutConfirm && (
         <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(6px)" }}
           onClick={() => setShowLogoutConfirm(false)}>
-          <div style={{ background: "#18182A", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 20, padding: "28px 24px", maxWidth: 300, width: "100%", textAlign: "center", boxShadow: "0 24px 80px rgba(0,0,0,0.6)" }}
+          <div style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: 24, padding: "28px 24px", maxWidth: 320, width: "100%", textAlign: "center", boxShadow: "0 24px 64px -12px rgba(17,24,39,0.25)" }}
             onClick={e => e.stopPropagation()}>
-            <p style={{ fontSize: 15, fontWeight: 700, color: "rgba(255,255,255,0.9)", marginBottom: 8 }}>로그아웃 하시겠어요?</p>
-            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.38)", marginBottom: 22, wordBreak: "keep-all" }}>대화 내용은 자동 저장돼 있어요.</p>
+            <p style={{ fontSize: 16, fontWeight: 700, color: "#111827", marginBottom: 8 }}>로그아웃 하시겠어요?</p>
+            <p style={{ fontSize: 13, color: "#6B7280", marginBottom: 22, wordBreak: "keep-all" }}>대화 내용은 자동 저장돼 있어요.</p>
             <div style={{ display: "flex", gap: 10 }}>
               <button onClick={() => setShowLogoutConfirm(false)}
-                style={{ flex: 1, padding: "11px 0", borderRadius: 12, background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.65)", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
+                style={{ flex: 1, padding: "12px 0", borderRadius: 12, background: "#F3F4F6", border: "1px solid #E5E7EB", color: "#6B7280", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
                 취소
               </button>
               <button onClick={async () => { await supabase.auth.signOut(); window.location.href = "/"; }}
-                style={{ flex: 1, padding: "11px 0", borderRadius: 12, background: "rgba(201,100,66,0.15)", border: "1px solid rgba(201,100,66,0.4)", color: "#C96442", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
+                style={{ flex: 1, padding: "12px 0", borderRadius: 12, background: "#FEF2F2", border: "1px solid #FECACA", color: "#DC2626", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
                 로그아웃
               </button>
             </div>
@@ -2411,26 +2494,26 @@ export default function ChatPage() {
           style={{ background: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)" }}
         >
           <div
-            className="w-full flex flex-col gap-5 rounded-2xl p-6"
-            style={{ maxWidth: "380px", background: "#0D0D18", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 24px 60px rgba(0,0,0,0.7)" }}
+            className="w-full flex flex-col gap-5 rounded-3xl p-6"
+            style={{ maxWidth: "380px", background: "#FFFFFF", border: "1px solid #E5E7EB", boxShadow: "0 24px 60px -12px rgba(17,24,39,0.25)" }}
           >
             <div className="flex flex-col gap-3">
               <div className="flex items-center gap-2.5">
                 <span style={{ fontSize: 20 }}>📋</span>
-                <p className="text-sm font-semibold" style={{ color: "rgba(255,255,255,0.88)" }}>이전에 같은 초안을 분석한 기록이 있어요</p>
+                <p className="text-base font-bold" style={{ color: "#111827" }}>이전에 같은 초안을 분석한 기록이 있어요</p>
               </div>
-              <div className="px-3 py-2.5 rounded-xl" style={{ background: "rgba(107,142,255,0.08)", border: "1px solid rgba(107,142,255,0.2)" }}>
-                <p className="text-xs leading-relaxed" style={{ color: "rgba(107,142,255,0.85)" }}>
+              <div className="px-3.5 py-2.5 rounded-xl" style={{ background: "#F5F3FF", border: "1px solid #E9E4FB" }}>
+                <p className="text-xs leading-relaxed" style={{ color: "#4C3F99" }}>
                   새로 분석하면 질문이 완전히 달라질 수 있어요.
                 </p>
               </div>
               <div className="flex flex-col gap-1 px-1">
-                <p className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>이전 분석</p>
-                <p className="text-sm font-medium" style={{ color: "rgba(255,255,255,0.75)", wordBreak: "keep-all" }}>
-                  {duplicateDraftInfo.jobTitle && <span style={{ color: ACCENT }}>【{duplicateDraftInfo.jobTitle}】</span>}{" "}
+                <p className="text-xs" style={{ color: "#9CA3AF" }}>이전 분석</p>
+                <p className="text-sm font-medium" style={{ color: "#374151", wordBreak: "keep-all" }}>
+                  {duplicateDraftInfo.jobTitle && <span style={{ color: "#312E81", fontWeight: 700 }}>【{duplicateDraftInfo.jobTitle}】</span>}{" "}
                   {duplicateDraftInfo.question || "문항 미입력"}
                 </p>
-                <p className="text-xs" style={{ color: "rgba(255,255,255,0.25)" }}>{formatRelativeTime(duplicateDraftInfo.createdAt)}</p>
+                <p className="text-xs" style={{ color: "#B6BCC6" }}>{formatRelativeTime(duplicateDraftInfo.createdAt)}</p>
               </div>
             </div>
             <div className="flex gap-2.5">
@@ -2439,15 +2522,15 @@ export default function ChatPage() {
                   setShowDuplicateDraft(false);
                   await loadSessionById(duplicateDraftInfo.sessionId, duplicateDraftInfo.jobTitle);
                 }}
-                className="flex-1 py-3 rounded-xl text-sm font-semibold text-white transition-all hover:scale-[1.02] active:scale-[0.98]"
-                style={{ background: ACCENT, boxShadow: `0 4px 16px ${ACCENT}30` }}
+                className="flex-1 py-3.5 rounded-xl text-sm font-bold text-white transition-all hover:opacity-92 active:scale-[0.98]"
+                style={{ background: "linear-gradient(135deg, #1A3461 0%, #312E81 100%)", boxShadow: "0 10px 28px -10px rgba(49,46,129,0.5)" }}
               >
                 이전 기록 보기
               </button>
               <button
                 onClick={() => { setShowDuplicateDraft(false); proceedWithAnalysis(); }}
-                className="flex-1 py-3 rounded-xl text-sm transition-all hover:opacity-70"
-                style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.45)", border: "1px solid rgba(255,255,255,0.08)" }}
+                className="flex-1 py-3.5 rounded-xl text-sm font-semibold transition-all hover:opacity-80"
+                style={{ background: "#F3F4F6", color: "#6B7280", border: "1px solid #E5E7EB" }}
               >
                 새로 분석하기
               </button>
@@ -2482,8 +2565,8 @@ export default function ChatPage() {
 
             {/* 탭 */}
             <div className="flex gap-1 px-5 pb-3 flex-shrink-0">
-              {(["link", "text", "image"] as const).map((tab) => {
-                const labels = { link: "🔗 링크", text: "📝 텍스트", image: "🖼️ 이미지" };
+              {(["text", "image"] as const).map((tab) => {
+                const labels = { text: "📝 텍스트", image: "🖼️ 이미지" };
                 const isActive = jobPostTab === tab;
                 return (
                   <button
@@ -2504,22 +2587,6 @@ export default function ChatPage() {
 
             {/* 탭 콘텐츠 */}
             <div className="flex-1 overflow-y-auto px-5 pb-5">
-              {/* 링크 탭 */}
-              {jobPostTab === "link" && (
-                <div className="flex flex-col gap-2">
-                  <p className="text-xs" style={{ color: "#6B7280" }}>
-                    여러 지원 직무가 있을 경우를 대비해 채용공고와 동일한 직무명으로 입력해주세요.
-                  </p>
-                  <input
-                    value={jobLink}
-                    onChange={(e) => setJobLink(e.target.value)}
-                    placeholder="https://..."
-                    className="ds-input w-full px-4 py-3.5 rounded-2xl text-sm placeholder:text-[#6B7280]"
-                    style={{ background: "#F9FAFB", border: "1.5px solid #E5E7EB", color: "#111827", outline: "none" }}
-                  />
-                </div>
-              )}
-
               {/* 텍스트 탭 */}
               {jobPostTab === "text" && (
                 <textarea
@@ -2577,8 +2644,8 @@ export default function ChatPage() {
             <div className="px-5 pb-6 pt-2 flex-shrink-0">
               <button
                 onClick={() => setShowJobPostModal(false)}
-                className="w-full py-3.5 rounded-2xl text-sm font-semibold text-white transition-all hover:scale-[1.01] active:scale-[0.99]"
-                style={{ background: "#312E81" }}
+                className="w-full py-4 rounded-xl text-[15px] font-bold text-white transition-all hover:opacity-92 active:scale-[0.98]"
+                style={{ background: "linear-gradient(135deg, #1A3461 0%, #312E81 100%)", boxShadow: "0 10px 28px -10px rgba(49,46,129,0.55)", letterSpacing: "-0.01em" }}
               >
                 확인
               </button>

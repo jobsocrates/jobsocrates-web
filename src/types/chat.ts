@@ -2,6 +2,7 @@ export interface ChatMsg {
   id: number;
   role: "bot" | "user";
   text: string;
+  dbId?: string;
 }
 
 export interface InterviewQItem {
@@ -12,6 +13,7 @@ export interface InterviewQItem {
   msgs: ChatMsg[];
   isLoadingFeedback: boolean;
   inputText: string;
+  phase: "initial" | "feedback" | "retrying" | "polished" | "done";
 }
 
 export interface SetupMsg {
