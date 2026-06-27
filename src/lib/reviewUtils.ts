@@ -1,9 +1,11 @@
-// 이메일 마스킹: ijhan6403@gmail.com -> i***@gmail.com
+// 이메일 마스킹: 첫 글자만 남기고 나머지를 실제 길이만큼 별로
+// ijhan6403@gmail.com -> i********@gmail.com
 export function maskEmail(email: string | null | undefined): string {
   if (!email || !email.includes("@")) return email || "익명";
   const [local, domain] = email.split("@");
   const first = local.slice(0, 1) || "";
-  return `${first}***@${domain}`;
+  const stars = "*".repeat(Math.max(2, local.length - 1));
+  return `${first}${stars}@${domain}`;
 }
 
 // 관리자 이메일 (이 계정만 어드민 페이지·시딩·승인 가능)

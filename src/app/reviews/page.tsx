@@ -77,8 +77,7 @@ export default function ReviewsPage() {
     }
   }
 
-  const textReviews = reviews.filter(r => r.type === "digging" && r.content);
-  const photoReviews = reviews.filter(r => r.type === "photo" && r.photo_url);
+  const visible = reviews.filter(r => (r.type === "photo" && r.photo_url) || (r.type === "digging" && r.content));
 
   return (
     <div style={{ background: PAGE_BG, minHeight: "100vh", color: INK }}>
@@ -126,51 +125,42 @@ export default function ReviewsPage() {
           <div style={{ display: "flex", justifyContent: "center", padding: "60px 0" }}>
             <div style={{ width: 22, height: 22, borderRadius: "50%", border: "2px solid rgba(49,46,129,0.18)", borderTopColor: INDIGO, animation: "spin 0.8s linear infinite" }} />
           </div>
-        ) : reviews.length === 0 ? (
+        ) : visible.length === 0 ? (
           <p style={{ textAlign: "center", color: FAINT, fontSize: 15, padding: "60px 0" }}>아직 등록된 후기가 없어요.</p>
         ) : (
-          <>
-            {/* 사진 후기 */}
-            {photoReviews.length > 0 && (
-              <div style={{ marginBottom: 40 }}>
-                <p style={{ fontSize: 13, fontWeight: 700, color: SUB, marginBottom: 14 }}>✍️ 손글씨 후기</p>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 14 }}>
-                  {photoReviews.map(r => (
-                    <div key={r.id} style={{ borderRadius: 14, overflow: "hidden", border: `1px solid ${BORDER}`, background: CARD, boxShadow: "0 4px 16px -12px rgba(17,24,39,0.15)" }}>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={r.photo_url!} alt="손글씨 후기" style={{ width: "100%", display: "block", objectFit: "cover" }} />
-                      <div style={{ padding: "10px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <span style={{ fontSize: 12, color: SUB }}>{maskEmail(r.email)}</span>
-                        <span style={{ fontSize: 11, color: FAINT }}>{formatReviewDate(r.created_at)}</span>
-                      </div>
-                    </div>
-                  ))}
+          <div style={{ columnCount: 3, columnGap: 16 }} className="review-cols">
+            {visible.map(r => (
+              r.type === "photo" ? (
+                <div key={r.id} className="rv-card" style={{ breakInside: "avoid", marginBottom: 16, borderRadius: 16, overflow: "hidden", border: `1px solid ${BORDER}`, background: CARD, boxShadow: "0 6px 20px -14px rgba(17,24,39,0.2)" }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={r.photo_url!} alt="손글씨 후기" style={{ width: "100%", display: "block", objectFit: "cover" }} />
+                  <div style={{ padding: "12px 14px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: SUB, minWidth: 0 }}>
+                      <span style={{ flexShrink: 0, fontSize: 10, fontWeight: 700, color: GOLD, background: "rgba(201,151,0,0.1)", padding: "2px 7px", borderRadius: 999 }}>✍️ 손글씨</span>
+                      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{maskEmail(r.email)}</span>
+                    </span>
+                    <span style={{ flexShrink: 0, fontSize: 11, color: FAINT }}>{formatReviewDate(r.created_at)}</span>
+                  </div>
                 </div>
-              </div>
-            )}
-
-            {/* 디깅 후기 */}
-            {textReviews.length > 0 && (
-              <div>
-                <p style={{ fontSize: 13, fontWeight: 700, color: SUB, marginBottom: 14 }}>💬 디깅 후기</p>
-                <div style={{ columnCount: 3, columnGap: 14 }} className="review-cols">
-                  {textReviews.map(r => (
-                    <div key={r.id} style={{ breakInside: "avoid", marginBottom: 14, borderRadius: 14, border: `1px solid ${BORDER}`, background: CARD, padding: "16px 18px", boxShadow: "0 4px 16px -12px rgba(17,24,39,0.15)" }}>
-                      <p style={{ fontSize: 14, color: INK, lineHeight: 1.7, wordBreak: "keep-all", marginBottom: 12 }}>{r.content}</p>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: `1px solid #F3F4F6`, paddingTop: 10 }}>
-                        <span style={{ fontSize: 12, color: SUB }}>{maskEmail(r.email)}{r.job_title ? ` · ${r.job_title}` : ""}</span>
-                        <span style={{ fontSize: 11, color: FAINT }}>{formatReviewDate(r.created_at)}</span>
-                      </div>
-                    </div>
-                  ))}
+              ) : (
+                <div key={r.id} className="rv-card" style={{ breakInside: "avoid", marginBottom: 16, borderRadius: 16, border: `1px solid ${BORDER}`, background: CARD, padding: "18px 20px", boxShadow: "0 6px 20px -14px rgba(17,24,39,0.2)" }}>
+                  <span style={{ display: "block", fontSize: 30, lineHeight: 1, fontWeight: 800, color: VIOLET, opacity: 0.5, marginBottom: 4 }}>&ldquo;</span>
+                  <p style={{ fontSize: 14.5, color: INK, lineHeight: 1.75, wordBreak: "keep-all", marginBottom: 14 }}>{r.content}</p>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, borderTop: "1px solid #F3F4F6", paddingTop: 11 }}>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: SUB, minWidth: 0 }}>
+                      <span style={{ flexShrink: 0, fontSize: 10, fontWeight: 700, color: INDIGO_LT, background: "rgba(99,102,241,0.1)", padding: "2px 7px", borderRadius: 999 }}>💬 디깅</span>
+                      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{maskEmail(r.email)}{r.job_title ? ` · ${r.job_title}` : ""}</span>
+                    </span>
+                    <span style={{ flexShrink: 0, fontSize: 11, color: FAINT }}>{formatReviewDate(r.created_at)}</span>
+                  </div>
                 </div>
-              </div>
-            )}
-          </>
+              )
+            ))}
+          </div>
         )}
       </div>
 
-      <style>{`@media (max-width: 760px){ .review-cols{ column-count: 1 !important; } } @media (min-width: 761px) and (max-width: 1024px){ .review-cols{ column-count: 2 !important; } }`}</style>
+      <style>{`.rv-card{ transition: transform .18s ease, box-shadow .18s ease; } .rv-card:hover{ transform: translateY(-3px); box-shadow: 0 16px 32px -16px rgba(17,24,39,0.3); } @media (max-width: 760px){ .review-cols{ column-count: 1 !important; } } @media (min-width: 761px) and (max-width: 1024px){ .review-cols{ column-count: 2 !important; } }`}</style>
     </div>
   );
 }

@@ -1230,6 +1230,10 @@ export default function ChatPage() {
                 <img src="/ai-avatar.webp" alt="" className="w-6 h-6 rounded-full object-cover" />
                 <span className="text-sm font-bold" style={{ color: "#111827" }}>취업소크라테스</span>
               </div>
+              <Link href="/" className="hidden lg:flex items-center gap-1.5 text-sm font-semibold hover:opacity-80 transition-opacity px-3.5 py-2 rounded-[10px]" style={{ color: "#374151", background: "#FFFFFF", border: "1px solid #E5E7EB" }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></svg>
+                홈으로
+              </Link>
             </div>
 
             <div className="flex-1 flex items-center justify-center px-6 pb-8 overflow-y-auto">
