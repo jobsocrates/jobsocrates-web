@@ -687,6 +687,9 @@ export default function AdminPage() {
           <a href="/admin/reviews" style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.8)", textDecoration: "none", display: "flex", alignItems: "center", padding: "6px 12px", borderRadius: 8, background: "rgba(201,100,66,0.15)", border: "1px solid rgba(201,100,66,0.3)" }}>
             후기 관리
           </a>
+          <a href="/reviews" target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, fontWeight: 700, color: "#fff", textDecoration: "none", display: "flex", alignItems: "center", padding: "6px 12px", borderRadius: 8, background: "rgba(201,100,66,0.85)", border: "1px solid rgba(201,100,66,0.5)" }}>
+            실제 게시판 ↗
+          </a>
           <a className="admin-header-home" href="/" style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.55)", textDecoration: "none", display: "flex", alignItems: "center", gap: 5 }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
