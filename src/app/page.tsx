@@ -423,9 +423,6 @@ export default function Home() {
               <h2 className="text-3xl sm:text-4xl font-bold" style={{ color: TEXT, letterSpacing: "-0.02em", lineHeight: 1.15 }}>
                 직접 써본 분들의 이야기
               </h2>
-              <p className="mt-3 text-base" style={{ color: "rgba(10,22,40,0.45)", wordBreak: "keep-all" }}>
-                편집하지 않은, 카카오톡으로 받은 실제 후기예요.
-              </p>
             </div>
             <div className="anim" style={{ columnCount: 3, columnGap: "12px" }}>
               {([

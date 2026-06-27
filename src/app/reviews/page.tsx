@@ -97,8 +97,7 @@ export default function ReviewsPage() {
         {/* 헤더 */}
         <div style={{ textAlign: "center", marginBottom: 36 }}>
           <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: INDIGO_LT, marginBottom: 12 }}>REVIEW</p>
-          <h1 style={{ fontSize: 30, fontWeight: 800, color: INK, letterSpacing: "-0.02em", marginBottom: 10 }}>직접 써본 분들의 이야기</h1>
-          <p style={{ fontSize: 15, color: SUB, wordBreak: "keep-all" }}>편집하지 않은, 진짜 후기예요.</p>
+          <h1 style={{ fontSize: 30, fontWeight: 800, color: INK, letterSpacing: "-0.02em" }}>직접 써본 분들의 이야기</h1>
         </div>
 
         {/* 손글씨 후기 CTA */}
