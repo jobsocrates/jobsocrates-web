@@ -504,10 +504,10 @@ export default function Home() {
         </section>
 
         {/* ── 우리가 믿는 것 (manifesto) ── */}
-        <section className="relative overflow-hidden" style={{ background: "radial-gradient(ellipse 85% 62% at 50% 34%, #16294D 0%, #0A1228 68%)" }}>
-          <style>{`@keyframes mani-breathe { 0%,100% { transform: translateX(-50%) scale(1); opacity: 0.5; } 50% { transform: translateX(-50%) scale(1.1); opacity: 0.85; } }`}</style>
+        <section className="relative overflow-hidden" style={{ background: "radial-gradient(ellipse 85% 62% at 50% 50%, #16294D 0%, #0A1228 68%)" }}>
+          <style>{`@keyframes mani-breathe { 0%,100% { transform: translate(-50%,-50%) scale(1); opacity: 0.5; } 50% { transform: translate(-50%,-50%) scale(1.1); opacity: 0.85; } }`}</style>
           <div className="absolute inset-0 pointer-events-none overflow-hidden">
-            <div style={{ position: "absolute", top: "8%", left: "50%", width: "560px", height: "360px", borderRadius: "50%", background: "#5EEAD4", filter: "blur(175px)", opacity: 0.07, animation: "mani-breathe 13s ease-in-out infinite" }} />
+            <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: "560px", height: "360px", borderRadius: "50%", background: "#5EEAD4", filter: "blur(175px)", opacity: 0.07, animation: "mani-breathe 13s ease-in-out infinite" }} />
             <div style={{ position: "absolute", bottom: "-12%", left: "50%", transform: "translateX(-50%)", width: "660px", height: "320px", borderRadius: "50%", background: "#E8945E", filter: "blur(185px)", opacity: 0.05 }} />
           </div>
           <div className="relative max-w-[720px] mx-auto px-6 sm:px-8 py-40 text-center">
@@ -515,7 +515,7 @@ export default function Home() {
               생각이 부족했던 게 아니에요.<br />
               <span style={{ color: "#7FF0DC", textShadow: "0 0 28px rgba(94,234,212,0.45)" }}>방향</span>을 몰랐을 뿐.
             </h2>
-            <p className="anim anim-delay-2 text-[15px] sm:text-[17px] leading-[2.05] mt-9" style={{ color: "rgba(255,255,255,0.45)", wordBreak: "keep-all" }}>
+            <p className="anim anim-delay-2 text-[15px] sm:text-[17px] leading-[1.9] mt-7" style={{ color: "rgba(255,255,255,0.45)", wordBreak: "keep-all" }}>
               면접에서 진짜 통하는 건 직접 고민하다 나온<br className="hidden sm:block" /> <span style={{ color: "rgba(255,255,255,0.9)", fontWeight: 600 }}>당신의 한마디</span>예요.
             </p>
           </div>
