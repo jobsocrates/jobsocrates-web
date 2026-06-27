@@ -121,7 +121,7 @@ export default function AdminReviewsPage() {
         <span style={{ fontSize: 13, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(255,255,255,0.7)" }}>Admin · 후기</span>
         <div style={{ display: "flex", gap: 8 }}>
           <Link href="/admin" style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.5)", textDecoration: "none", padding: "7px 14px", borderRadius: 9, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)" }}>관리자 홈</Link>
-          <Link href="/reviews" style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.5)", textDecoration: "none", padding: "7px 14px", borderRadius: 9, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)" }}>게시판</Link>
+          <Link href="/reviews" target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, fontWeight: 600, color: "#fff", textDecoration: "none", padding: "7px 14px", borderRadius: 9, background: "rgba(201,100,66,0.85)", border: "1px solid rgba(201,100,66,0.5)" }}>실제 게시판 보기 ↗</Link>
         </div>
       </header>
 

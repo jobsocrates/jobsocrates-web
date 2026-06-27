@@ -107,11 +107,11 @@ export default function ReviewsPage() {
             <p style={{ fontSize: 15.5, fontWeight: 800, color: INK, marginBottom: 5 }}>✍️ 손글씨 후기 남기고 20% 할인받기</p>
             <p style={{ fontSize: 13, color: SUB, wordBreak: "keep-all", lineHeight: 1.6 }}>
               종이에 취업 목표나 짧은 후기를 손으로 적어 사진으로 올려주세요.{" "}
-              <span style={{ color: GOLD, fontWeight: 600 }}>확인을 위해 관리자 승인 후 쿠폰이 지급됩니다.</span>
+              <span style={{ color: GOLD, fontWeight: 600 }}>확인을 위해 관리자 승인 후 게시판에 노출되고 쿠폰이 지급됩니다.</span>
             </p>
           </div>
           {uploadDone ? (
-            <span style={{ fontSize: 13, fontWeight: 700, color: "#16A34A", background: "rgba(22,163,74,0.1)", padding: "10px 18px", borderRadius: 12, flexShrink: 0 }}>접수 완료 · 승인 대기 중</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: "#16A34A", background: "rgba(22,163,74,0.1)", padding: "10px 18px", borderRadius: 12, flexShrink: 0, textAlign: "center", lineHeight: 1.5 }}>접수 완료! 🙌<br />관리자 승인 후 게시판에 노출돼요</span>
           ) : (
             <label style={{ fontSize: 14, fontWeight: 700, color: "#fff", background: GRAD, padding: "11px 22px", borderRadius: 12, cursor: uploading ? "default" : "pointer", flexShrink: 0, opacity: uploading ? 0.6 : 1, boxShadow: "0 8px 22px -10px rgba(49,46,129,0.5)" }}>
               {uploading ? "올리는 중..." : "사진 올리기"}
