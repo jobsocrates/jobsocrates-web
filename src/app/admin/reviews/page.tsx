@@ -28,12 +28,17 @@ export default function AdminReviewsPage() {
   const [loading, setLoading] = useState(true);
   const [allowed, setAllowed] = useState(false);
   const [token, setToken] = useState("");
+  const [uid, setUid] = useState("");
   const [reviews, setReviews] = useState<Review[]>([]);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [sEmail, setSEmail] = useState("");
   const [sJob, setSJob] = useState("");
   const [sContent, setSContent] = useState("");
   const [seeding, setSeeding] = useState(false);
+  const [pEmail, setPEmail] = useState("");
+  const [pJob, setPJob] = useState("");
+  const [pUploading, setPUploading] = useState(false);
+  const [pErr, setPErr] = useState("");
 
   const callApi = useCallback(async (payload: Record<string, unknown>, accessToken: string) => {
     const res = await fetch("/api/admin-reviews", {
@@ -55,6 +60,7 @@ export default function AdminReviewsPage() {
       if (!session || session.user?.email !== ADMIN_EMAIL) { setLoading(false); return; }
       setAllowed(true);
       setToken(session.access_token);
+      setUid(session.user.id);
       await refresh(session.access_token);
       setLoading(false);
     })();
@@ -67,6 +73,26 @@ export default function AdminReviewsPage() {
     setSEmail(""); setSJob(""); setSContent("");
     await refresh(token);
     setSeeding(false);
+  }
+  async function handleSeedPhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (file.size > 6 * 1024 * 1024) { setPErr("이미지는 6MB 이하로 올려주세요."); return; }
+    setPUploading(true);
+    setPErr("");
+    try {
+      const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+      const path = `${uid}/${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("review-photos").upload(path, file, { upsert: false });
+      if (upErr) { setPErr("업로드에 실패했어요. 다시 시도해주세요."); return; }
+      const { data: pub } = supabase.storage.from("review-photos").getPublicUrl(path);
+      await callApi({ action: "seedPhoto", email: pEmail.trim() || null, job_title: pJob.trim() || null, photo_url: pub.publicUrl }, token);
+      setPEmail(""); setPJob("");
+      await refresh(token);
+    } finally {
+      setPUploading(false);
+    }
   }
   async function handleApprove(id: string) { setBusyId(id); await callApi({ action: "approve", id }, token); await refresh(token); setBusyId(null); }
   async function handleDelete(id: string) { if (!confirm("이 후기를 삭제할까요?")) return; setBusyId(id); await callApi({ action: "delete", id }, token); await refresh(token); setBusyId(null); }
@@ -110,6 +136,23 @@ export default function AdminReviewsPage() {
             </div>
             <textarea value={sContent} onChange={e => setSContent(e.target.value)} placeholder="후기 내용" rows={3} style={{ ...inputStyle, resize: "vertical" }} />
             <button onClick={handleSeed} disabled={seeding || !sContent.trim()} style={{ alignSelf: "flex-start", fontSize: 13, fontWeight: 700, color: "#fff", background: ACCENT, border: "none", borderRadius: 10, padding: "9px 20px", cursor: "pointer", opacity: seeding || !sContent.trim() ? 0.5 : 1 }}>{seeding ? "등록 중..." : "등록"}</button>
+          </div>
+        </div>
+
+        {/* 사진 후기 시딩 */}
+        <div style={{ borderRadius: 16, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.025)", padding: 20 }}>
+          <p style={{ fontSize: 14, fontWeight: 700, color: "rgba(255,255,255,0.85)", marginBottom: 4 }}>사진 후기 직접 등록</p>
+          <p style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginBottom: 14 }}>사진을 선택하면 바로 공개(승인 완료) 상태로 게시돼요.</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <input value={pEmail} onChange={e => setPEmail(e.target.value)} placeholder="이메일 (예: hong@gmail.com)" style={{ ...inputStyle, flex: "1 1 180px" }} />
+              <input value={pJob} onChange={e => setPJob(e.target.value)} placeholder="직무 (선택)" style={{ ...inputStyle, flex: "1 1 120px" }} />
+            </div>
+            <label style={{ alignSelf: "flex-start", fontSize: 13, fontWeight: 700, color: "#fff", background: ACCENT, border: "none", borderRadius: 10, padding: "9px 20px", cursor: pUploading ? "default" : "pointer", opacity: pUploading ? 0.5 : 1 }}>
+              {pUploading ? "올리는 중..." : "사진 선택 후 등록"}
+              <input type="file" accept="image/*" onChange={handleSeedPhoto} disabled={pUploading} style={{ display: "none" }} />
+            </label>
+            {pErr && <p style={{ fontSize: 12, color: RED }}>{pErr}</p>}
           </div>
         </div>
 

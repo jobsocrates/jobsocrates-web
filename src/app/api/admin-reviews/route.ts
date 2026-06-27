@@ -40,6 +40,17 @@ export async function POST(req: Request) {
       if (error) return Response.json({ error: error.message }, { status: 500 });
       return Response.json({ ok: true });
     }
+    case "seedPhoto": {
+      const { error } = await admin.from("reviews").insert({
+        email: body.email || null,
+        type: "photo",
+        photo_url: body.photo_url,
+        job_title: body.job_title || null,
+        status: "approved",
+      });
+      if (error) return Response.json({ error: error.message }, { status: 500 });
+      return Response.json({ ok: true });
+    }
     default:
       return Response.json({ error: "알 수 없는 요청" }, { status: 400 });
   }
