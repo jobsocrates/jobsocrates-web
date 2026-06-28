@@ -17,6 +17,13 @@ export interface SummaryInterviewQ {
   msgs: SummaryMsg[];
 }
 
+export interface FinalAnalysis {
+  companyJob: string;
+  weapons: { title: string; competency?: string; detail: string }[];
+  interviewKeys: { q: string; a: string }[];
+  insight: { edge: string; caution: string; direction: string };
+}
+
 interface Props {
   jobTitle: string;
   question: string;
@@ -24,6 +31,8 @@ interface Props {
   msgs: SummaryMsg[];
   interviewQs?: SummaryInterviewQ[];
   analysisContent?: string;
+  finalAnalysis?: FinalAnalysis | null;
+  finalAnalysisLoading?: boolean;
   onClose: () => void;
   onNextItem?: () => void;
 }
@@ -81,7 +90,8 @@ export function buildPrintHtml(
   interviewQs: SummaryInterviewQ[],
   baseUrl = "",
   analysisContent = "",
-  subtitle = ""
+  subtitle = "",
+  finalAnalysis: FinalAnalysis | null = null
 ): string {
   const changeItems = changes
     .split("\n")
@@ -178,6 +188,23 @@ hr{border:none;border-top:1px solid #d1d5db;margin:40px 0}
 .interview-q-num{font-size:10px;font-weight:800;color:#4338ca;letter-spacing:.1em;margin-bottom:6px;text-transform:uppercase}
 .interview-q-text{font-size:13.5px;font-weight:600;color:#111827;line-height:1.65;word-break:keep-all;padding:12px 16px;background:#eef2ff;border-radius:0 10px 10px 10px;border-left:4px solid #4338ca;margin-bottom:10px}
 .no-answer{font-size:12px;color:#9ca3af;font-style:italic;margin-left:4px}
+.op-block{margin-bottom:12px;padding:14px 16px;border:1px solid #e5e7eb;border-radius:10px;background:#fafafa;break-inside:avoid}
+.op-company{background:#eff6ff;border-color:#bfdbfe}
+.op-label{font-size:11px;font-weight:700;color:#4338ca;margin-bottom:8px}
+.op-text{font-size:13px;line-height:1.7;color:#111827;word-break:keep-all}
+.op-note{font-size:11px;color:#6b7280;margin-top:7px;word-break:keep-all}
+.op-item{font-size:12.5px;line-height:1.6;color:#374151;margin-bottom:6px;word-break:keep-all}
+.op-item-t{font-weight:700;color:#111827}
+.op-wp{padding:11px 13px;border:1px solid #d1fae5;background:#f0fdf4;border-radius:10px;margin-bottom:8px;break-inside:avoid}
+.op-wp-t{font-size:13px;font-weight:700;color:#111827;margin-bottom:5px}
+.op-wp-n{display:inline-block;font-size:10px;font-weight:800;color:#15803d;background:#dcfce7;border-radius:5px;padding:1px 5px;margin-right:5px}
+.op-wp-row{font-size:12px;color:#374151;line-height:1.6;word-break:keep-all;margin-top:3px}
+.op-wp-lab{font-size:10px;font-weight:700;color:#9ca3af;margin-right:5px}
+.op-ins{margin-bottom:11px}
+.op-ins-t{font-size:12px;font-weight:700;margin-bottom:3px}
+.op-qa{margin-bottom:9px}
+.op-q{font-size:12.5px;font-weight:700;color:#b45309;word-break:keep-all}
+.op-a{font-size:12.5px;color:#374151;line-height:1.6;word-break:keep-all;margin-top:2px}
 @media print{body{padding:20px 24px}}
 </style>
 </head>
@@ -187,6 +214,20 @@ hr{border:none;border-top:1px solid #d1d5db;margin:40px 0}
   <h1>취업소크라테스 — 첨삭 리포트</h1>
   <p class="meta">${escHtml(jobTitle)}${jobTitle && question ? " &nbsp;·&nbsp; " : ""}${escHtml(question)}</p>
 </div>
+
+${finalAnalysis ? `
+<div class="section">
+  <div class="section-header">
+    <span class="section-num">★</span>
+    <span class="section-title">면접 한 장 — 면접장에 들고 가세요</span>
+  </div>
+  ${finalAnalysis.companyJob ? `<div class="op-block op-company"><p class="op-label">🏢 이 회사·직무 (이건 말할 수 있어야 해요)</p><p class="op-text">${escHtml(finalAnalysis.companyJob)}</p><p class="op-note">취업소크라테스가 정리한 초안이에요. 맞는지 확인하고 본인 말로 다시 정리해보세요.</p></div>` : ""}
+  ${finalAnalysis.weapons?.length ? `<div class="op-block"><p class="op-label">💪 내 무기</p>${finalAnalysis.weapons.map((w, i) => `<div class="op-wp"><p class="op-wp-t"><span class="op-wp-n">${String(i + 1).padStart(2, "0")}</span> ${escHtml(w.title)}</p>${w.competency ? `<p class="op-wp-row"><span class="op-wp-lab">역량</span> ${escHtml(w.competency)}</p>` : ""}<p class="op-wp-row"><span class="op-wp-lab">근거</span> ${escHtml(w.detail)}</p></div>`).join("")}</div>` : ""}
+  ${finalAnalysis.interviewKeys?.length ? `<div class="op-block"><p class="op-label">🎤 이 질문엔 이렇게</p>${finalAnalysis.interviewKeys.map(k => `<div class="op-qa"><p class="op-q">Q. ${escHtml(k.q)}</p><p class="op-a">→ ${escHtml(k.a)}</p></div>`).join("")}</div>` : ""}
+  ${finalAnalysis.insight ? `<div class="op-block"><p class="op-label">👀 취업소크라테스가 본 당신</p>${finalAnalysis.insight.edge ? `<div class="op-ins"><p class="op-ins-t" style="color:#15803d">✨ 이게 진짜 강점이에요</p><p class="op-text">${escHtml(finalAnalysis.insight.edge)}</p></div>` : ""}${finalAnalysis.insight.caution ? `<div class="op-ins"><p class="op-ins-t" style="color:#b45309">⚠️ 이건 조심하면 좋아요</p><p class="op-text">${escHtml(finalAnalysis.insight.caution)}</p></div>` : ""}${finalAnalysis.insight.direction ? `<div class="op-ins"><p class="op-ins-t" style="color:#c2410c">🎯 그래서 면접에선</p><p class="op-text">${escHtml(finalAnalysis.insight.direction)}</p></div>` : ""}</div>` : ""}
+</div>
+<hr>
+` : ""}
 
 ${analysisContent?.trim() ? (() => {
   const blocks = analysisContent.split(/(?=##\s)/).filter(s => s.trim());
@@ -276,7 +317,7 @@ ${interviewQs.length > 0 ? `
 }
 
 /* ── 메인 컴포넌트 ── */
-export function CoverLetterSummary({ jobTitle, question, draft, msgs, interviewQs = [], analysisContent, onClose, onNextItem }: Props) {
+export function CoverLetterSummary({ jobTitle, question, draft, msgs, interviewQs = [], analysisContent, finalAnalysis, finalAnalysisLoading, onClose, onNextItem }: Props) {
   useEffect(() => {
     document.body.style.overflow = "hidden";
     return () => { document.body.style.overflow = ""; };
@@ -295,7 +336,7 @@ export function CoverLetterSummary({ jobTitle, question, draft, msgs, interviewQ
 
   function handlePdf() {
     const html = buildPrintHtml(
-      jobTitle, question, revision, changes, diagMsgs, interviewQs, window.location.origin, analysisContent, subtitle
+      jobTitle, question, revision, changes, diagMsgs, interviewQs, window.location.origin, analysisContent, subtitle, finalAnalysis
     );
     const win = window.open("", "_blank");
     if (!win) return;
@@ -345,6 +386,104 @@ export function CoverLetterSummary({ jobTitle, question, draft, msgs, interviewQ
       {/* 본문 */}
       <div className="flex-1 overflow-y-auto px-6 py-7">
         <div className="max-w-4xl mx-auto flex flex-col gap-12">
+
+          {/* ★ 당신 분석 (자기이해 리포트) */}
+          {(finalAnalysis || finalAnalysisLoading) && (
+            <section>
+              <style>{`@keyframes revealUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+              <div style={{ animation: "revealUp .5s ease both" }}>
+                <p style={{ fontSize: 21, fontWeight: 800, color: "#fff", letterSpacing: "-0.02em", wordBreak: "keep-all" }}>
+                  🎉 {jobTitle ? `${jobTitle} ` : ""}면접, 이렇게 준비됐어요
+                </p>
+                <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginTop: 6, lineHeight: 1.6, wordBreak: "keep-all" }}>면접장에 들고 갈 한 장이에요. 외워서 읽지 말고, 사실을 확인한 뒤 본인 말로 다시 정리해보세요.</p>
+              </div>
+
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 16, animation: "revealUp .5s ease .08s both" }}>
+                <Stat label="완성본" value={`${revision.length}자`} />
+                <Stat label="면접 대비" value={`${interviewQs.length}문항`} />
+                {finalAnalysis && finalAnalysis.weapons?.length > 0 && <Stat label="내 무기" value={`${finalAnalysis.weapons.length}개`} />}
+                {draft?.trim() && <Stat label="초안 → 완성" value="한 단계 ↑" />}
+              </div>
+
+              {finalAnalysisLoading && !finalAnalysis ? (
+                <div style={{ marginTop: 18, display: "flex", alignItems: "center", gap: 10, color: "rgba(255,255,255,0.45)", fontSize: 13 }}>
+                  <span style={{ width: 16, height: 16, borderRadius: "50%", border: "2px solid rgba(255,255,255,0.2)", borderTopColor: "#A78BFA", display: "inline-block", animation: "spin .8s linear infinite" }} />
+                  면접 한 장을 정리하고 있어요…
+                </div>
+              ) : finalAnalysis ? (
+                <div style={{ marginTop: 18, display: "flex", flexDirection: "column", gap: 14 }}>
+                  {finalAnalysis.companyJob && (
+                    <div style={{ animation: "revealUp .5s ease .16s both", padding: "16px 18px", borderRadius: 16, background: "rgba(96,165,250,0.08)", border: "1px solid rgba(96,165,250,0.22)" }}>
+                      <p style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.1em", color: "#60A5FA", marginBottom: 7 }}>🏢 이 회사·직무 (이건 말할 수 있어야 해요)</p>
+                      <p style={{ fontSize: 14.5, lineHeight: 1.7, color: "rgba(255,255,255,0.92)", wordBreak: "keep-all" }}>{finalAnalysis.companyJob}</p>
+                      <p style={{ fontSize: 12, lineHeight: 1.6, color: "rgba(255,255,255,0.42)", marginTop: 9, wordBreak: "keep-all" }}>👉 취업소크라테스가 정리한 초안이에요. 맞는지 확인하고, 본인 말로 다시 정리해보세요.</p>
+                    </div>
+                  )}
+                  {finalAnalysis.weapons?.length > 0 && (
+                    <div style={{ animation: "revealUp .5s ease .24s both" }}>
+                      <p style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.1em", color: "rgb(74,222,128)", marginBottom: 10 }}>💪 내 무기</p>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                        {finalAnalysis.weapons.map((s, i) => (
+                          <div key={i} style={{ padding: "14px 16px", borderRadius: 14, background: "rgba(74,222,128,0.05)", border: "1px solid rgba(74,222,128,0.18)" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 8 }}>
+                              <span style={{ flexShrink: 0, width: 22, height: 22, borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, color: "rgb(74,222,128)", background: "rgba(74,222,128,0.14)" }}>{String(i + 1).padStart(2, "0")}</span>
+                              <p style={{ fontSize: 14, fontWeight: 700, color: "#fff", wordBreak: "keep-all" }}>{s.title}</p>
+                            </div>
+                            {s.competency && (
+                              <div style={{ display: "flex", gap: 8, marginBottom: 7, paddingLeft: 31 }}>
+                                <span style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.38)", flexShrink: 0, marginTop: 2 }}>역량</span>
+                                <span style={{ fontSize: 12.5, fontWeight: 600, color: "rgb(134,239,172)", wordBreak: "keep-all" }}>{s.competency}</span>
+                              </div>
+                            )}
+                            <div style={{ display: "flex", gap: 8, paddingLeft: 31 }}>
+                              <span style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.38)", flexShrink: 0, marginTop: 3 }}>근거</span>
+                              <p style={{ fontSize: 13, lineHeight: 1.65, color: "rgba(255,255,255,0.82)", wordBreak: "keep-all" }}>{s.detail}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {finalAnalysis.interviewKeys?.length > 0 && (
+                    <div style={{ animation: "revealUp .5s ease .32s both" }}>
+                      <p style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.1em", color: "#FF8A65", marginBottom: 10 }}>🎤 이 질문엔 이렇게</p>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                        {finalAnalysis.interviewKeys.map((k, i) => (
+                          <div key={i} style={{ padding: "13px 16px", borderRadius: 14, background: "rgba(255,138,101,0.06)", border: "1px solid rgba(255,138,101,0.2)" }}>
+                            <p style={{ fontSize: 13, fontWeight: 700, color: "#FFB59B", marginBottom: 5, wordBreak: "keep-all" }}>Q. {k.q}</p>
+                            <p style={{ fontSize: 13, lineHeight: 1.65, color: "rgba(255,255,255,0.82)", wordBreak: "keep-all" }}>→ {k.a}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {finalAnalysis.insight && (
+                    <div style={{ animation: "revealUp .5s ease .4s both", padding: "16px 18px", borderRadius: 16, background: "rgba(167,139,250,0.08)", border: "1px solid rgba(167,139,250,0.22)", display: "flex", flexDirection: "column", gap: 13 }}>
+                      <p style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.1em", color: "#A78BFA" }}>👀 취업소크라테스가 본 당신</p>
+                      {finalAnalysis.insight.edge && (
+                        <div>
+                          <p style={{ fontSize: 12.5, fontWeight: 700, color: "rgb(134,239,172)", marginBottom: 4 }}>✨ 이게 진짜 강점이에요</p>
+                          <p style={{ fontSize: 13.5, lineHeight: 1.7, color: "rgba(255,255,255,0.9)", wordBreak: "keep-all" }}>{finalAnalysis.insight.edge}</p>
+                        </div>
+                      )}
+                      {finalAnalysis.insight.caution && (
+                        <div>
+                          <p style={{ fontSize: 12.5, fontWeight: 700, color: "#FFD166", marginBottom: 4 }}>⚠️ 이건 조심하면 좋아요</p>
+                          <p style={{ fontSize: 13.5, lineHeight: 1.7, color: "rgba(255,255,255,0.9)", wordBreak: "keep-all" }}>{finalAnalysis.insight.caution}</p>
+                        </div>
+                      )}
+                      {finalAnalysis.insight.direction && (
+                        <div>
+                          <p style={{ fontSize: 12.5, fontWeight: 700, color: "#FF8A65", marginBottom: 4 }}>🎯 그래서 면접에선</p>
+                          <p style={{ fontSize: 13.5, lineHeight: 1.7, color: "rgba(255,255,255,0.9)", wordBreak: "keep-all" }}>{finalAnalysis.insight.direction}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ) : null}
+            </section>
+          )}
 
           {/* 00 · 기업·직무 분석 보고서 */}
           {analysisContent?.trim() && (
@@ -528,6 +667,15 @@ export function CoverLetterSummary({ jobTitle, question, draft, msgs, interviewQ
 }
 
 /* ── 하위 컴포넌트 ── */
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={{ flex: "1 1 120px", minWidth: 110, padding: "12px 14px", borderRadius: 13, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
+      <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginBottom: 4 }}>{label}</p>
+      <p style={{ fontSize: 18, fontWeight: 800, color: "#fff", letterSpacing: "-0.02em" }}>{value}</p>
+    </div>
+  );
+}
 
 function Section({ number, title, numColor, children }: { number: string; title: string; numColor: string; children: ReactNode }) {
   return (

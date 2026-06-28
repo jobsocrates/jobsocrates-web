@@ -160,7 +160,7 @@ export async function POST(req: Request) {
 
     case "personality": {
       const sys: Anthropic.Messages.TextBlockParam[] = [
-        { type: "text", text: prompt("common") + "\n\n" + prompt("personality"), cache_control: { type: "ephemeral" } },
+        { type: "text", text: prompt("common") + "\n\n" + prompt("personality_v2"), cache_control: { type: "ephemeral" } },
         { type: "text", text: `## 세션 정보\n직무: ${body.jobTitle || "미입력"}\n회사: ${body.companyInfo || "미입력"}\n글자 수 제한: ${body.charLimit ? `${body.charLimit}자 (수정본 작성 시 이 글자 수에 맞춰야 함)` : "미입력"}${body.jobPostText ? `\n\n## 채용공고(JD)\n${body.jobPostText}` : ""}\n\n## 자소서 초안\n${body.draft}`, cache_control: { type: "ephemeral" } },
       ];
       const baseMsgs: MsgParam[] = body.messages?.length > 0
@@ -310,7 +310,7 @@ export async function POST(req: Request) {
       const sys =
         `면접 코치. 직무: ${body.jobTitle || "미입력"}. 자소서 문항: ${body.question || "미입력"}.\n` +
         `면접 질문: "${body.interviewQuestion}".\n` +
-        "학생 답변에 피드백을 줘라. 잘한 점과 보완할 점을 구체적으로 짚어줘. \"~요\" 체로 따뜻하게. 4~5문장 이내. 마크다운 볼드(**) 절대 금지. 쉼표(,) 남발 금지. 명사·항목 나열 외에는 쓰지 마라.";
+        "학생 답변에 피드백을 줘라. 잘한 점과 보완할 점을 구체적으로 짚어줘. 답변 길이·글자수는 지적하지 마라(50초 안내는 입력창에서 이미 주고 있다). \"~요\" 체로 따뜻하게. 4~5문장 이내. 마크다운 볼드(**) 절대 금지. 쉼표(,) 남발 금지. 명사·항목 나열 외에는 쓰지 마라.";
       const messages: MsgParam[] = [{ role: "user", content: body.answer }];
       return stream(sys, messages);
     }
@@ -321,6 +321,7 @@ export async function POST(req: Request) {
         "학생이 앞선 피드백을 반영해 다시 쓴 답변이다. 새로 피드백하거나 평가하지 마라. 이 답변의 '문장만' 다듬어, 면접에서 말하기 좋은 정돈된 답변으로 만들어줘라.\n" +
         "- 내용·논점·구조는 학생 것 그대로 둬라. 없는 내용을 더하거나 성과·규모를 부풀리지 마라.\n" +
         "- 구어체·군더더기를 정리하고 문장을 매끄럽게. 면접에서 말하듯 자연스럽게(합니다체 중심).\n" +
+        "- 면접에서 말하기 자연스러운 길이로. 지나치게 길면 핵심만 남겨 줄여도 좋다(글자수에 집착하진 마라). 짧으면 억지로 늘리지 마라.\n" +
         "- 다듬은 답변 본문만 출력해라. 말머리·설명·따옴표 없이. 마크다운 볼드(**) 금지.";
       const messages: MsgParam[] = [{ role: "user", content: body.answer }];
       return stream(sys, messages);
@@ -337,11 +338,11 @@ export async function POST(req: Request) {
         "- 길이는 8~22자 내외로 짧고 강하게.\n" +
         "- 3개는 서로 다른 각도로 만들어라(예: 하나는 결과·성과 중심, 하나는 일하는 방식·태도 중심, 하나는 핵심을 압축한 비유·이미지).\n" +
         "- 따옴표·마침표·이모지 없이 제목 텍스트만. 소제목 안에 쉼표(,)를 쓰지 마라.\n" +
-        "반드시 JSON 배열만 출력하세요. 다른 텍스트 없이: [\"소제목1\",\"소제목2\",\"소제목3\"]";
+        "출력은 실제 소제목 3개를 담은 JSON 배열 하나뿐. 다른 텍스트·설명·코드블록 없이. 형식은 [\"...\", \"...\", \"...\"] 이고 점 자리에 이 글에서 뽑은 진짜 소제목을 넣어라(자리표시자를 그대로 출력하지 마라).";
       const messages: MsgParam[] = [
         { role: "user", content: `직무: ${body.jobTitle || "미입력"}\n자소서 문항: ${body.question || "미입력"}\n\n완성된 자소서:\n${body.coverLetter}\n\n위 글에 어울리는 소제목 3개를 JSON 배열로만 추천해줘.` },
       ];
-      return generate(sys, messages, "claude-haiku-4-5-20251001");
+      return generate(sys, messages);
     }
 
     case "update-message": {
@@ -534,6 +535,30 @@ ${COMMON_PRINCIPLES}
 단일 예시: {"type": "motivation"}
 복합 예시: {"type": "composite", "parts": [{"type": "analyze", "text": "직무 강점 서술"}, {"type": "motivation", "text": "이루고 싶은 목표"}]}`;
       const messages: MsgParam[] = [{ role: "user", content: `문항:\n${body.question}` }];
+      return generate(sys, messages);
+    }
+
+    case "final-analysis": {
+      const sys =
+        "당신은 면접 코치입니다. 학생이 이 회사 면접에 들고 갈 '면접 한 장'을 만듭니다. 디깅·완성본·면접 답변·기업 분석을 바탕으로 면접장에서 바로 꺼내 말할 수 있게 핵심을 추리고, 마지막엔 학생이 스스로 못 보는 '외부 전문가의 시선'을 더합니다.\n" +
+        "규칙:\n" +
+        "- 반드시 이 학생·이 회사의 실제 내용에서만. 일반론·뻔한 말(성실함·열정·소통능력 등) 금지.\n" +
+        "- companyJob: 이 회사가 무엇을 하는 곳이고 이 직무가 무엇을 하는 자리인지 한두 문장으로. 면접관이 '우리 회사 아세요?'라고 물으면 답할 핵심. 학생이 이걸 보고 사실 확인 후 본인 말로 다시 정리할 것이므로, 외운 듯한 미사여구 말고 핵심만 담백하게.\n" +
+        "- weapons: 이 직무에 맞는 학생의 핵심 무기(강점) 2~3개. 각 항목은 title·competency·detail 세 가지.\n" +
+        "  · title: 강점 이름 2~12자, 명사 나열 말고 자연스럽게.\n" +
+        "  · competency: 이 강점이 직무 역량으로 무엇인지 6~14자로 분류(예: 데이터 기반 의사결정 / 신뢰성 중심 사고). 한 개만.\n" +
+        "  · detail: 그 강점이 드러난 근거를 한 문장으로, '무엇을 했고 → 그래서 어떻게 됐다' 흐름으로. ※'~에서 드러납니다/확인됩니다/보입니다' 같은 기계적·번역투 종결 절대 금지.\n" +
+        "- interviewKeys: 학생이 연습한 면접 질문마다 '면접에서 이것만 기억하면 되는 핵심 한 줄'. q는 질문을 짧게. a는 전체 답변을 옮기지 말고 그 답의 핵심 포인트만 짧게(외우기 쉽게 한 줄). 답변이 없거나 부실하면 디깅·완성본에서 끌어와 채워라. 질문이 없으면 빈 배열.\n" +
+        "- insight: 학생이 스스로 못 보는 '취업소크라테스의 외부 시선'. 세 항목 모두 제안형으로 써라(\"~로 보여요\", \"~인 것 같아요\", \"조심하면 좋아요\"). 면접관의 속마음을 단정하거나(\"면접관은 ~를 본다\") 사람을 단정(\"~한 사람입니다\")하지 마라.\n" +
+        "  · edge: 밖에서 봤을 때 이 학생의 진짜 강점·남다른 한 끗. 학생이 당연하게 여기거나 과소평가했지만 신입 중엔 드문 것을, 이 경험의 어디서 그게 보이는지 구체적으로 짚어라.\n" +
+        "  · caution: 이 학생의 강점·답변이 자칫 이렇게 비칠 수 있으니 조심하라는 점 하나 + 대신 이렇게 하면 좋다. 약점 지적이 아니라 '이렇게 보일 위험'과 방향이다.\n" +
+        "  · direction: 그래서 이 회사 면접에서 무엇을 앞세우고 어떻게 풀면 좋을지 종합 방향 하나.\n" +
+        "- 과장 금지. 담백하게. 쉼표 남발 금지. 번역투 금지 — 사람이 말하듯 능동적이고 자연스러운 한국어로.\n" +
+        "반드시 JSON만 출력하세요. 다른 텍스트 없이: {\"companyJob\":\"...\",\"weapons\":[{\"title\":\"...\",\"competency\":\"...\",\"detail\":\"...\"}],\"interviewKeys\":[{\"q\":\"...\",\"a\":\"...\"}],\"insight\":{\"edge\":\"...\",\"caution\":\"...\",\"direction\":\"...\"}}";
+      const messages: MsgParam[] = [
+        { role: "user", content:
+          `직무: ${body.jobTitle || "미입력"}\n회사: ${body.companyInfo || "미입력"}\n문항: ${body.question || "미입력"}\n\n[기업·직무 이해 분석]\n${body.analysisContent || "없음"}\n\n[완성본]\n${body.coverLetter || "없음"}\n\n[디깅 대화]\n${body.digging || "없음"}\n\n[면접 질문·답변]\n${body.interviewAnswers || "없음"}\n\n위를 바탕으로 '면접 한 장' JSON만 출력해줘.` },
+      ];
       return generate(sys, messages);
     }
 

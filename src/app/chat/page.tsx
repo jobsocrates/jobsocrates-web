@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { CoverLetterSummary } from "@/components/CoverLetterSummary";
+import { CoverLetterSummary, type FinalAnalysis } from "@/components/CoverLetterSummary";
 import { TutorialModal } from "@/components/TutorialModal";
 import { supabase } from "@/lib/supabase";
 import { trackVisitor } from "@/lib/track";
@@ -100,6 +100,9 @@ export default function ChatPage() {
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
+  const [finalAnalysis, setFinalAnalysis] = useState<FinalAnalysis | null>(null);
+  const [finalAnalysisLoading, setFinalAnalysisLoading] = useState(false);
+  const [finalAnalysisFor, setFinalAnalysisFor] = useState<number | null>(null);
   const [showModeSelect, setShowModeSelect] = useState(false);
   const [showReviewGate, setShowReviewGate] = useState(false);
   const [reviewText, setReviewText] = useState("");
@@ -166,7 +169,13 @@ export default function ChatPage() {
           { id: session.user.id, email: session.user.email ?? "" },
           { onConflict: "id" }
         );
-        checkResumeSession(session.user.id);
+        const resumeId = new URLSearchParams(window.location.search).get("resume");
+        if (resumeId && !resumeCheckedRef.current) {
+          resumeCheckedRef.current = true;
+          loadSessionById(resumeId, "");
+        } else if (!resumeId) {
+          checkResumeSession(session.user.id);
+        }
         fetchCredits(session.user.id);
       }
     });
@@ -481,8 +490,8 @@ export default function ChatPage() {
   async function loadSessionById(sessionId: string, sessionJobTitle: string) {
     try {
       dbSessionIdRef.current = sessionId;
-      setJobTitle(sessionJobTitle);
-      const { data: sessionData } = await supabase.from("sessions").select("analysis_report").eq("id", sessionId).single();
+      const { data: sessionData } = await supabase.from("sessions").select("analysis_report, job_title").eq("id", sessionId).single();
+      setJobTitle(sessionJobTitle || sessionData?.job_title || "");
       if (sessionData?.analysis_report) { setAnalysisContent(sessionData.analysis_report); analysisContentRef.current = sessionData.analysis_report; }
 
       const { data: allItems } = await supabase
@@ -510,6 +519,21 @@ export default function ChatPage() {
             role: m.role === "user" ? "user" : "assistant",
             content: m.content,
           }));
+
+          // 완성본 복원 — 완성본 메시지가 msgs에 없으면 revisions에서 재구성해 넣어야 면접 단계가 살아난다
+          const { data: revRows } = await supabase
+            .from("revisions")
+            .select("content, changes, created_at")
+            .eq("cover_item_id", ci.id)
+            .order("created_at", { ascending: true });
+          const lastRev = revRows && revRows.length ? revRows[revRows.length - 1] : null;
+          const hasRevMsg = msgs.some(m => m.role === "bot" && (m.text.includes("[수정본]") || m.text.includes("[지원동기]")));
+          if (lastRev?.content && !hasRevMsg) {
+            const changesArr: string[] = Array.isArray(lastRev.changes) ? (lastRev.changes as string[]) : [];
+            const revText = `[수정본]\n${lastRev.content}\n[/수정본]\n[변경사항]\n${changesArr.map(c => `- ${c}`).join("\n")}\n[/변경사항]`;
+            msgs.push({ id: uid(), role: "bot", text: revText });
+            apiHistory.push({ role: "assistant", content: revText });
+          }
 
           const { data: iqs } = await supabase
             .from("interview_questions")
@@ -596,6 +620,21 @@ export default function ChatPage() {
             role: m.role === "user" ? "user" : "assistant",
             content: m.content,
           }));
+
+          // 완성본 복원 — 완성본 메시지가 msgs에 없으면 revisions에서 재구성해 넣어야 면접 단계가 살아난다
+          const { data: revRows } = await supabase
+            .from("revisions")
+            .select("content, changes, created_at")
+            .eq("cover_item_id", ci.id)
+            .order("created_at", { ascending: true });
+          const lastRev = revRows && revRows.length ? revRows[revRows.length - 1] : null;
+          const hasRevMsg = msgs.some(m => m.role === "bot" && (m.text.includes("[수정본]") || m.text.includes("[지원동기]")));
+          if (lastRev?.content && !hasRevMsg) {
+            const changesArr: string[] = Array.isArray(lastRev.changes) ? (lastRev.changes as string[]) : [];
+            const revText = `[수정본]\n${lastRev.content}\n[/수정본]\n[변경사항]\n${changesArr.map(c => `- ${c}`).join("\n")}\n[/변경사항]`;
+            msgs.push({ id: uid(), role: "bot", text: revText });
+            apiHistory.push({ role: "assistant", content: revText });
+          }
 
           const { data: iqs } = await supabase
             .from("interview_questions")
@@ -945,6 +984,42 @@ export default function ChatPage() {
     setShowReviewGate(false);
     setReviewText("");
     handleRevisionRequest();
+  }
+
+  // 정리 모달 열기 + 종합 분석(자기이해 리포트) 생성
+  async function openSummary() {
+    setShowSummary(true);
+    if (!selected) return;
+    if (finalAnalysisFor === selected.id && (finalAnalysis || finalAnalysisLoading)) return;
+    const revMsg = selected.msgs.find(
+      (m) => m.role === "bot" && (m.text.includes("[수정본]") || m.text.includes("[지원동기]"))
+    );
+    const coverLetter = revMsg ? parseRevisionMsg(revMsg.text).revision : "";
+    if (!coverLetter) return;
+    const revIdx = revMsg ? selected.msgs.indexOf(revMsg) : -1;
+    const diggingMsgs = revIdx >= 0 ? selected.msgs.slice(0, revIdx + 1) : selected.msgs;
+    const digging = diggingMsgs
+      .map((m) => `${m.role === "bot" ? "코치" : "학생"}: ${stripMd(m.text)}`)
+      .filter((l) => l.replace(/^(코치|학생): /, "").trim())
+      .join("\n")
+      .slice(0, 6000);
+    const interviewAnswers = selected.interviewQs
+      .map((q) => `Q: ${q.question}\nA: ${q.msgs.filter((m) => m.role === "user").map((m) => m.text).join(" / ") || "(미답변)"}`)
+      .join("\n\n");
+    setFinalAnalysis(null);
+    setFinalAnalysisFor(selected.id);
+    setFinalAnalysisLoading(true);
+    try {
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "final-analysis", jobTitle, companyInfo: companyName, question: selected.question, coverLetter, draft: selected.draft, digging, interviewAnswers, analysisContent }),
+      });
+      const data = await res.json();
+      if (data && Array.isArray(data.weapons)) setFinalAnalysis(data as FinalAnalysis);
+    } catch { /* 무시 */ } finally {
+      setFinalAnalysisLoading(false);
+    }
   }
 
   async function handleAdminRegenerate() {
@@ -1861,9 +1936,9 @@ export default function ChatPage() {
                       <button
                         onClick={fetchInterviewQuestions}
                         className="w-full py-4 rounded-2xl text-sm font-semibold transition-all hover:scale-[1.015] active:scale-[0.985] flex items-center justify-center gap-2"
-                        style={{ background: VIOLET, color: "#fff", boxShadow: `0 4px 16px ${VIOLET}35` }}
+                        style={{ background: "linear-gradient(135deg, #1A3461 0%, #312E81 100%)", color: "#fff", boxShadow: "0 10px 28px -10px rgba(49,46,129,0.55)" }}
                       >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={VIOLET} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                           <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
                         </svg>
                         면접 예상질문 확인하기
@@ -1928,7 +2003,7 @@ export default function ChatPage() {
                         <button
                           onClick={() => {
                             const allAnswered = interviewQs.every(q => q.msgs.length > 0);
-                            if (!allAnswered) { setShowInterviewWarning(true); } else { setShowSummary(true); }
+                            if (!allAnswered) { setShowInterviewWarning(true); } else { openSummary(); }
                           }}
                           className="w-full py-3 rounded-xl text-sm font-semibold transition-all hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-2"
                           style={{
@@ -1944,7 +2019,7 @@ export default function ChatPage() {
                             <line x1="16" y1="17" x2="8" y2="17"/>
                             <polyline points="10 9 9 9 8 9"/>
                           </svg>
-                          대화 내용 정리하기
+                          내 경험 전체 분석 보기
                         </button>
                         <Link
                           href="/"
@@ -2269,7 +2344,7 @@ export default function ChatPage() {
             </div>
             <div className="flex gap-2.5">
               <button
-                onClick={() => { setShowInterviewWarning(false); setShowSummary(true); }}
+                onClick={() => { setShowInterviewWarning(false); openSummary(); }}
                 className="flex-1 py-3.5 rounded-xl text-sm font-bold text-white transition-all hover:opacity-92 active:scale-[0.98]"
                 style={{ background: "linear-gradient(135deg, #1A3461 0%, #312E81 100%)", boxShadow: "0 10px 28px -10px rgba(49,46,129,0.5)" }}
               >
@@ -2328,6 +2403,8 @@ export default function ChatPage() {
           msgs={selected.msgs}
           interviewQs={selected.interviewQs.map(q => ({ question: q.question, msgs: q.msgs }))}
           analysisContent={analysisContent}
+          finalAnalysis={finalAnalysis}
+          finalAnalysisLoading={finalAnalysisLoading}
           onClose={() => setShowSummary(false)}
           onNextItem={() => { setShowSummary(false); setShowModeSelect(true); }}
         />
@@ -2381,8 +2458,8 @@ export default function ChatPage() {
           onClick={() => { if (!reviewSubmitting) setShowReviewGate(false); }}>
           <div style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: 24, padding: "26px 24px", maxWidth: 400, width: "100%", boxShadow: "0 24px 64px -12px rgba(17,24,39,0.3)" }}
             onClick={e => e.stopPropagation()}>
-            <p style={{ fontSize: 17, fontWeight: 800, color: "#111827", marginBottom: 6 }}>잠깐, 후기 한 줄만 부탁드려요 🙏</p>
-            <p style={{ fontSize: 13, color: "#6B7280", lineHeight: 1.6, marginBottom: 16 }}>완성본과 면접 예상질문까지 열어드릴게요. 디깅, <b style={{ color: "#4C3F99" }}>어떤 부분이 좋았어요?</b></p>
+            <p style={{ fontSize: 17, fontWeight: 800, color: "#111827", marginBottom: 6 }}>디깅은 잘 해보셨나요? 🎉</p>
+            <p style={{ fontSize: 13, color: "#6B7280", lineHeight: 1.65, marginBottom: 16 }}>지금 <b style={{ color: "#4C3F99" }}>리뷰 이벤트</b> 중이에요. 한 줄 남겨주시면 <b style={{ color: "#4C3F99" }}>완성본·면접 예상질문·답변 연습</b>이 바로 열려요. 디깅에서 어떤 부분이 좋았어요?</p>
             <textarea
               value={reviewText}
               onChange={e => setReviewText(e.target.value.slice(0, 100))}
@@ -2399,7 +2476,7 @@ export default function ChatPage() {
               disabled={!reviewText.trim() || reviewSubmitting}
               style={{ width: "100%", padding: "13px", borderRadius: 14, background: "linear-gradient(135deg, #1A3461 0%, #312E81 100%)", color: "#fff", fontSize: 15, fontWeight: 700, border: "none", cursor: (!reviewText.trim() || reviewSubmitting) ? "default" : "pointer", opacity: (!reviewText.trim() || reviewSubmitting) ? 0.5 : 1, boxShadow: "0 10px 28px -10px rgba(49,46,129,0.55)" }}
             >
-              {reviewSubmitting ? "저장 중..." : "후기 남기고 완성본 보기 →"}
+              {reviewSubmitting ? "저장 중..." : "리뷰 남기고 완성본 받기 →"}
             </button>
           </div>
         </div>

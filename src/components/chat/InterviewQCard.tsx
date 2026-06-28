@@ -97,9 +97,9 @@ export function InterviewQCard({ item, index, onToggle, onInputChange, onSubmit,
                     el.style.height = Math.min(el.scrollHeight, 200) + "px";
                   }}
                   disabled={item.isLoadingFeedback}
-                  placeholder={item.phase === "retrying" ? "피드백을 반영해서 다시 답변해보세요" : "답변을 입력하세요"}
+                  placeholder={item.phase === "retrying" ? "피드백을 반영해 다시 답해보세요\n실전처럼, 50초 분량(약 300자)으로 정리해보세요" : "실제 면접이라 생각하고 말하듯 답해보세요\n50초 분량(약 300자)이 면접에서 가장 좋아요"}
                   rows={2}
-                  className="flex-1 focus:outline-none disabled:opacity-30 resize-none placeholder:opacity-35"
+                  className="flex-1 focus:outline-none disabled:opacity-30 resize-none placeholder:opacity-60"
                   style={{
                     background: "#FFFFFF",
                     border: "1.5px solid rgba(0,0,0,0.12)",
@@ -124,7 +124,7 @@ export function InterviewQCard({ item, index, onToggle, onInputChange, onSubmit,
               </div>
               <div className="flex justify-end">
                 <span className="text-xs tabular-nums" style={{ color: item.inputText.length >= 270 ? "rgba(239,68,68,0.8)" : "#6B7280" }}>
-                  {item.inputText.length}/300
+                  {item.inputText.length}/300자 · 약 50초
                 </span>
               </div>
             </div>

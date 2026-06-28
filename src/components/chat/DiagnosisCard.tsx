@@ -2,6 +2,7 @@
 
 import { DOTS } from "@/lib/chatConstants";
 import { stripMd } from "@/lib/chatUtils";
+import { StreamingLoadingMsg } from "./StreamingLoadingMsg";
 
 export function DiagnosisCard({ text, streaming }: { text: string; streaming: boolean }) {
   const stripped = stripMd(text);
@@ -15,10 +16,13 @@ export function DiagnosisCard({ text, streaming }: { text: string; streaming: bo
       </div>
       <div className="px-5 py-4">
         {streaming && text === "" ? (
-          <div className="flex gap-1.5 items-center h-5">
-            {DOTS.map(({ delay, color }) => (
-              <span key={delay} className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: color, animationDelay: `${delay}ms` }} />
-            ))}
+          <div className="flex items-center gap-2.5 min-h-6">
+            <div className="flex gap-1.5 items-center flex-shrink-0">
+              {DOTS.map(({ delay, color }) => (
+                <span key={delay} className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: color, animationDelay: `${delay}ms` }} />
+              ))}
+            </div>
+            <StreamingLoadingMsg />
           </div>
         ) : (
           <div className="flex flex-col gap-0">

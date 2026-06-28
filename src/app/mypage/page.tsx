@@ -437,6 +437,11 @@ export default function MyPage() {
                             <div style={{ display: "flex", gap: 5, flexShrink: 0 }}>
                               {hasRevision ? (
                                 <>
+                                  {!(interviewTotal > 0 && interviewDone === interviewTotal) && (
+                                    <Link href={`/chat?resume=${session.id}`} style={{ ...btnStyle(INDIGO_LT, true), textDecoration: "none" }}>
+                                      이어서 하기 →
+                                    </Link>
+                                  )}
                                   <button onClick={() => handleToggleExpand(item)} style={btnStyle(expanded ? INDIGO_LT : SUB, expanded)}>
                                     {previewLoading === item.id ? "..." : expanded ? "닫기" : "미리보기"}
                                   </button>
@@ -452,7 +457,7 @@ export default function MyPage() {
                                   </button>
                                 </>
                               ) : (
-                                <Link href="/chat" style={{ ...btnStyle(INDIGO_LT, true), textDecoration: "none" }}>
+                                <Link href={`/chat?resume=${session.id}`} style={{ ...btnStyle(INDIGO_LT, true), textDecoration: "none" }}>
                                   이어서 하기 →
                                 </Link>
                               )}

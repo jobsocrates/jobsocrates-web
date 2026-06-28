@@ -89,11 +89,11 @@ export function RevisionMessage({ text, companyName, jobTitle, question, charLim
                 <button
                   onClick={fetchSubtitles}
                   disabled={loadingSub}
-                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all hover:opacity-70 disabled:opacity-50"
-                  style={{ background: "#E0E7FF", color: "#3730A3", border: "none" }}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all hover:opacity-85 disabled:opacity-50"
+                  style={{ background: "#6366F1", color: "#fff", border: "none", boxShadow: "0 2px 8px rgba(99,102,241,0.35)" }}
                 >
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
-                  {loadingSub ? "추천 중" : "소제목"}
+                  {loadingSub ? "추천 중" : "✨ 소제목"}
                 </button>
               )}
               {isComplete && (
