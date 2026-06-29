@@ -434,7 +434,7 @@ export default function MyPage() {
                               {hasRevision && <span style={{ fontSize: 11, color: GREEN, fontWeight: 600 }}>✏️ 완성본</span>}
                               {interviewTotal > 0 && <span style={{ fontSize: 11, color: interviewDone === interviewTotal ? GREEN : GOLD, fontWeight: 600 }}>🎤 {interviewDone}/{interviewTotal}</span>}
                             </div>
-                            <div style={{ display: "flex", gap: 5, flexShrink: 0 }}>
+                            <div style={{ display: "flex", gap: 5, flexWrap: "wrap", justifyContent: "flex-end" }}>
                               {hasRevision ? (
                                 <>
                                   {!(interviewTotal > 0 && interviewDone === interviewTotal) && (
