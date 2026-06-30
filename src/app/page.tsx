@@ -412,6 +412,51 @@ export default function Home() {
           </div>
         </section>
 
+        {/* ── 취업소크라테스 특징 (FEATURES) ── */}
+        <section className="py-28 px-6 sm:px-8" style={{ background: "linear-gradient(180deg, #F7F8FB 0%, #FFFFFF 100%)" }}>
+          <div className="max-w-[1000px] mx-auto">
+            <div className="mb-14 anim">
+              <p className="text-xs font-semibold tracking-[0.22em] uppercase mb-4" style={{ color: BLUE }}>FEATURES</p>
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-6" style={{ color: TEXT, letterSpacing: "-0.02em", lineHeight: 1.18, wordBreak: "keep-all" }}>
+                마케팅은 빼고,<br /><span style={{ color: BLUE }}>오직 여러분의 합격만 생각했습니다.</span>
+              </h2>
+              <p className="text-base sm:text-lg leading-[1.9] max-w-xl" style={{ color: "rgba(10,22,40,0.50)", wordBreak: "keep-all" }}>
+                화려한 포장 대신, 합격에 필요한 곳에만 기술을 쏟았습니다.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* 분석량 — 네이비 강조 카드 (전체 폭) */}
+              <div className="sm:col-span-2 anim anim-delay-1 rounded-2xl p-8 relative overflow-hidden" style={{ background: "linear-gradient(160deg, #0D1B3E 0%, #1A3461 100%)", border: `1px solid ${BLUE}` }}>
+                <div style={{ position: "absolute", top: "-30%", right: "-5%", width: "300px", height: "300px", borderRadius: "50%", background: BLUE, filter: "blur(100px)", opacity: 0.25 }} />
+                <div className="relative flex flex-col sm:flex-row sm:items-center gap-5 sm:gap-9">
+                  <div className="flex-shrink-0">
+                    <p className="text-4xl sm:text-5xl font-bold" style={{ color: "#fff", letterSpacing: "-0.02em" }}>20~30만 자</p>
+                    <p className="text-sm mt-1.5" style={{ color: BLUE }}>1,000자 한 편을 위한 평균 분석량</p>
+                  </div>
+                  <p className="text-sm sm:text-base leading-[1.8]" style={{ color: "rgba(255,255,255,0.82)", wordBreak: "keep-all" }}>
+                    여러분이 받는 1,000자 뒤에는 평균 <b style={{ color: "#fff" }}>그 200~300배</b>의 분석이 숨어 있습니다. 디깅 대화부터 완성본, 면접 준비까지, 보이지 않는 곳에서 더 깊이 파고듭니다.
+                  </p>
+                </div>
+              </div>
+
+              {/* 나머지 특징 카드 */}
+              {[
+                { icon: "💸", title: "문항당 초저가", desc: "지갑 사정이 가벼운 취준생 분들을 위해, 부담 없는 가격으로 만들었습니다." },
+                { icon: "🛠️", title: "타협 없는 구현", desc: "분석·디깅·검증을 잇는 파이프라인을 직접 설계해 품질을 끌어올렸습니다." },
+                { icon: "🔁", title: "최대 3개 완성본", desc: "최대 3개의 완성본 중 나에게 가장 잘 맞는 하나를 선택합니다." },
+                { icon: "🎤", title: "면접까지 한 번에", desc: "압박형 예상질문, 답변, 피드백, 보강, 문장 첨삭. 면접 방향성 제시와 PDF 출력까지." },
+              ].map((f, i) => (
+                <div key={f.title} className={`anim anim-delay-${(i % 2) + 1} rounded-2xl p-7 flex flex-col`} style={{ background: "#F6F7F9", border: "1px solid rgba(10,22,40,0.06)" }}>
+                  <span className="text-2xl mb-4">{f.icon}</span>
+                  <p className="text-lg font-bold mb-2.5" style={{ color: TEXT, letterSpacing: "-0.01em" }}>{f.title}</p>
+                  <p className="text-sm leading-[1.75]" style={{ color: "rgba(10,22,40,0.55)", wordBreak: "keep-all" }}>{f.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
         {/* ── 프로세스 쇼케이스 (왜+이득 / 실제화면) ── */}
         <ProcessShowcase />
 

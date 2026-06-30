@@ -96,6 +96,8 @@ export default function ChatPage() {
   const [companyInfo, setCompanyInfo] = useState("");
 
   const [items, setItems] = useState<CoverItem[]>([initItem]);
+  const [showRegenModal, setShowRegenModal] = useState(false);
+  const [regenDontShow, setRegenDontShow] = useState(false);
   const [selectedId, setSelectedId] = useState<number>(initItem.id);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
@@ -305,6 +307,28 @@ export default function ChatPage() {
 
   // ─────────────────────────────────────────────────────────────────
 
+  // 문장 경계로 하드컷 (트림 후에도 넘으면 마지막 안전장치 — 100% 보장)
+  function hardCut(text: string, limit: number): string {
+    if (text.length <= limit) return text;
+    const slice = text.slice(0, limit);
+    const cut = Math.max(slice.lastIndexOf("다."), slice.lastIndexOf("요."), slice.lastIndexOf("다!"), slice.lastIndexOf(". "));
+    return (cut > limit * 0.6 ? slice.slice(0, cut + 1) : slice).trim();
+  }
+  // 완성본이 글자수 제한 넘으면 Haiku로 줄이고, 그래도 넘으면 하드컷
+  async function trimToLimit(text: string, limit: number): Promise<string> {
+    let out = text;
+    try {
+      const res = await fetch("/api/generate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "trim", content: text, charLimit: limit }) });
+      if (res.body) {
+        const reader = res.body.getReader(); const dec = new TextDecoder(); let acc = "";
+        while (true) { const { done, value } = await reader.read(); if (done) break; acc += dec.decode(value, { stream: true }); }
+        if (acc.trim().length > 20) out = acc.trim();
+      }
+    } catch { /* 무시 */ }
+    if (out.trim().length > limit) out = hardCut(out.trim(), limit);
+    return out.trim();
+  }
+
   async function fetchBotReply(
     history: { role: string; content: string }[],
     itemId: number,
@@ -353,6 +377,20 @@ export default function ChatPage() {
         );
         bottomRef.current?.scrollIntoView({ behavior: "smooth" });
       }
+
+      // ── 글자수 강제: 완성본이 제한 넘으면 트림 + 하드컷 ──
+      const limitNum = charLimit ? parseInt(charLimit, 10) : 0;
+      const rMatch0 = chatMode === "motivation"
+        ? full.match(/\[지원동기\]([\s\S]*?)\[\/지원동기\]/)
+        : full.match(/\[수정본\]([\s\S]*?)\[\/수정본\]/);
+      if (limitNum && rMatch0 && rMatch0[1].trim().length > limitNum) {
+        const trimmed = await trimToLimit(rMatch0[1].trim(), limitNum);
+        if (trimmed && trimmed.length <= rMatch0[1].trim().length) {
+          full = full.replace(rMatch0[1], "\n" + trimmed + "\n");
+          setItems((prev) => prev.map((it) => it.id === itemId ? { ...it, msgs: it.msgs.map((m) => m.id === msgId ? { ...m, text: full } : m) } : it));
+        }
+      }
+
       setItems((prev) =>
         prev.map((it) =>
           it.id === itemId
@@ -366,6 +404,13 @@ export default function ChatPage() {
         ? full.match(/\[지원동기\]([\s\S]*?)\[\/지원동기\]/)
         : full.match(/\[수정본\]([\s\S]*?)\[\/수정본\]/);
       const chgMatch = full.match(/\[변경사항\]([\s\S]*?)\[\/변경사항\]/);
+      if (revMatch) {
+        setItems((prev) => prev.map((it) => {
+          if (it.id !== itemId) return it;
+          const vers = [...(it.versions ?? []), full];
+          return { ...it, revCount: (it.revCount ?? 0) + 1, versions: vers, activeVersion: vers.length - 1 };
+        }));
+      }
       let assistantMsgDbId: string | null = null;
       if (itemDbId) {
         const userMsg = history[history.length - 1];
@@ -567,6 +612,7 @@ export default function ChatPage() {
             apiHistory,
             interviewQs: loadedInterviewQs,
             isLoadingQs: false,
+            revCount: revRows?.length ?? 0,
             setupStep: "ready" as const,
             setupMsgs: [] as SetupMsg[],
           };
@@ -668,6 +714,7 @@ export default function ChatPage() {
             apiHistory,
             interviewQs: loadedInterviewQs,
             isLoadingQs: false,
+            revCount: revRows?.length ?? 0,
             setupStep: "ready" as const,
             setupMsgs: [] as SetupMsg[],
           };
@@ -1022,19 +1069,40 @@ export default function ChatPage() {
     }
   }
 
+  // 완성본 버전 토글 — 선택한 버전을 화면 완성본 메시지로 교체 (면접·정리도 이 버전 기준)
+  function selectVersion(idx: number) {
+    setItems((prev) => prev.map((it) => {
+      if (it.id !== selectedId) return it;
+      const vers = it.versions ?? [];
+      if (idx < 0 || idx >= vers.length) return it;
+      const newMsgs = it.msgs.map((m) =>
+        m.role === "bot" && (m.text.includes("[수정본]") || m.text.includes("[지원동기]"))
+          ? { ...m, text: vers[idx] } : m
+      );
+      const newHistory = it.apiHistory.map((h) =>
+        h.role === "assistant" && (h.content.includes("[수정본]") || h.content.includes("[지원동기]"))
+          ? { ...h, content: vers[idx] } : h
+      );
+      return { ...it, activeVersion: idx, msgs: newMsgs, apiHistory: newHistory };
+    }));
+  }
+
   async function handleAdminRegenerate() {
     if (!selected || isStreaming) return;
     // 완성본(수정본) 봇 메시지 기준으로 그 앞까지만 남긴다 — resume 세션(완성본 재구성)에서도 안전
     const revMsgIdx = selected.msgs.findIndex(m => m.role === "bot" && (m.text.includes("[수정본]") || m.text.includes("[지원동기]")));
     let newMsgs = revMsgIdx !== -1 ? selected.msgs.slice(0, revMsgIdx) : selected.msgs;
-    if (newMsgs.length && newMsgs[newMsgs.length - 1].role === "user" && newMsgs[newMsgs.length - 1].text === "완성본을 작성해줘.") newMsgs = newMsgs.slice(0, -1);
+    if (newMsgs.length && newMsgs[newMsgs.length - 1].role === "user" && newMsgs[newMsgs.length - 1].text.includes("완성본을 작성해줘")) newMsgs = newMsgs.slice(0, -1);
     const revHistIdx = selected.apiHistory.findIndex(h => h.role === "assistant" && (h.content.includes("[수정본]") || h.content.includes("[지원동기]")));
     let newHistory = revHistIdx !== -1 ? selected.apiHistory.slice(0, revHistIdx) : selected.apiHistory;
-    if (newHistory.length && newHistory[newHistory.length - 1].role === "user" && newHistory[newHistory.length - 1].content === "완성본을 작성해줘.") newHistory = newHistory.slice(0, -1);
-    const t = "완성본을 작성해줘.";
-    const newHistoryWithReq = [...newHistory, { role: "user", content: t }];
+    if (newHistory.length && newHistory[newHistory.length - 1].role === "user" && newHistory[newHistory.length - 1].content.includes("완성본을 작성해줘")) newHistory = newHistory.slice(0, -1);
+    const displayT = "완성본을 작성해줘.";
+    // 직전 완성본을 참고로 줘서 "이것과 다르게" 쓰게 한다(변형 유도 + 거절 방지). 톤은 합니다체 명시(요청 문구의 반말 톤이 출력에 새지 않게). "완성본을 작성해줘" 문구 유지해야 완성본 모델 분기를 탐.
+    const priorText = revMsgIdx !== -1 ? selected.msgs[revMsgIdx].text : "";
+    const apiT = `완성본을 작성해줘. 아래는 직전에 만든 완성본이다. 핵심 내용과 메시지는 그대로 두되, 첫 문장과 표현·문장 구조는 완전히 다르게 새 버전으로 다시 작성하라. '단순히 ~가 아니라' 같은 상투구나 직전 버전에서 쓴 표현·맺음말을 반복하지 마라. '이미 작성했다'는 거절 없이, 완성본 본문만 합니다체(했습니다·합니다·입니다)로 출력하라.${priorText ? `\n\n[직전 완성본]\n${priorText}` : ""}`;
+    const newHistoryWithReq = [...newHistory, { role: "user", content: apiT }];
     setItems(prev => prev.map(it => it.id === selectedId
-      ? { ...it, msgs: [...newMsgs, { id: uid(), role: "user" as const, text: t }], apiHistory: newHistoryWithReq, interviewQs: [] }
+      ? { ...it, msgs: [...newMsgs, { id: uid(), role: "user" as const, text: displayT }], apiHistory: newHistoryWithReq, interviewQs: [] }
       : it
     ));
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 0);
@@ -1182,8 +1250,8 @@ export default function ChatPage() {
 
   const hasAnyRevision = !isStreaming && (selected?.msgs.some(
     (m) => m.role === "bot" && (
-      (chatMode === "motivation" && m.text.includes("[지원동기]") && m.text.includes("[/지원동기]")) ||
-      (chatMode !== "motivation" && m.text.includes("[수정본]") && m.text.includes("[/수정본]") && m.text.includes("[변경사항]") && m.text.includes("[/변경사항]"))
+      (m.text.includes("[지원동기]") && m.text.includes("[/지원동기]")) ||
+      (m.text.includes("[수정본]") && m.text.includes("[/수정본]"))
     )
   ) ?? false);
 
@@ -1193,6 +1261,12 @@ export default function ChatPage() {
 
   const interviewQs = selected?.interviewQs ?? [];
   const isLoadingQs = selected?.isLoadingQs ?? false;
+  const isLocalhost = typeof window !== "undefined" && (
+    ["localhost", "127.0.0.1", "0.0.0.0"].includes(window.location.hostname) ||
+    window.location.hostname.startsWith("192.168.") ||
+    window.location.hostname.startsWith("10.") ||
+    window.location.hostname.endsWith(".local")
+  );
   const showInterviewButton = !isStreaming && hasAnyRevision && interviewQs.length === 0 && !isLoadingQs;
   const showSummaryButton = hasAnyRevision && interviewQs.length > 0;
 
@@ -1988,16 +2062,78 @@ export default function ChatPage() {
                       </div>
                     ) : null}
 
-                    {/* 어드민 전용: 완성본 재생성 (localhost에선 로컬 테스트용으로 항상 노출) */}
-                    {((currentUser?.email === ADMIN_EMAIL) || (typeof window !== "undefined" && window.location.hostname === "localhost")) && hasAnyRevision && (
-                      <button
-                        onClick={handleAdminRegenerate}
-                        disabled={isStreaming}
-                        className="w-full py-3 rounded-xl text-sm font-semibold transition-all hover:opacity-90 disabled:opacity-30 flex items-center justify-center gap-1.5"
-                        style={{ background: "#FFF7ED", border: "1.5px solid #FDBA74", color: "#C2410C" }}
-                      >
-                        🔄 완성본 재생성 (어드민)
-                      </button>
+                    {/* 완성본 버전 토글 — 여러 개 만들었으면 골라쓰기 (면접 전까지) */}
+                    {(selected?.versions?.length ?? 0) > 1 && (interviewQs.length === 0 || isLocalhost) && (
+                      <div className="flex flex-col gap-1.5">
+                        <div className="flex gap-1.5">
+                          {(selected?.versions ?? []).map((_, i) => (
+                            <button
+                              key={i}
+                              onClick={() => selectVersion(i)}
+                              className="flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all"
+                              style={(selected?.activeVersion ?? 0) === i
+                                ? { background: "linear-gradient(135deg, #1A3461 0%, #312E81 100%)", color: "#fff" }
+                                : { background: "#F3F4F6", color: "#6B7280" }}
+                            >
+                              완성본 {i + 1}
+                            </button>
+                          ))}
+                        </div>
+                        <p className="text-xs text-center" style={{ color: "#9CA3AF" }}>선택한 완성본을 기준으로 면접 예상질문이 만들어져요</p>
+                      </div>
+                    )}
+
+                    {/* 완성본 재생성. 프로덕션=어드민+면접 전+최대 3개 / localhost=테스트용 항상(면접 후·3개 넘어도) */}
+                    {(currentUser?.email === ADMIN_EMAIL || isLocalhost) && hasAnyRevision && (interviewQs.length === 0 || isLocalhost) && (
+                      ((selected?.revCount ?? 0) >= 3 && !isLocalhost) ? (
+                        <div className="w-full py-3 rounded-xl text-xs text-center" style={{ background: "#F9FAFB", border: "1px solid #E5E7EB", color: "#9CA3AF" }}>
+                          완성본은 최대 3개까지 만들 수 있어요 · 마이페이지에서 모두 확인
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            if (typeof window !== "undefined" && localStorage.getItem("regenModalDismissed") === "1") handleAdminRegenerate();
+                            else { setRegenDontShow(false); setShowRegenModal(true); }
+                          }}
+                          disabled={isStreaming}
+                          className="w-full py-3 rounded-xl text-sm font-semibold transition-all hover:opacity-90 disabled:opacity-30 flex items-center justify-center gap-1.5"
+                          style={{ background: "#FFF7ED", border: "1.5px solid #FDBA74", color: "#C2410C" }}
+                        >
+                          🔄 완성본 재생성 ({selected?.revCount ?? 0}{isLocalhost ? "" : "/3"})
+                        </button>
+                      )
+                    )}
+
+                    {/* 완성본 재생성 안내 모달 */}
+                    {showRegenModal && (
+                      <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.45)" }} onClick={() => setShowRegenModal(false)}>
+                        <div className="w-full max-w-sm rounded-2xl p-6 flex flex-col gap-4" style={{ background: "#fff", boxShadow: "0 20px 50px -12px rgba(0,0,0,0.35)" }} onClick={(e) => e.stopPropagation()}>
+                          <div className="text-base font-bold" style={{ color: "#111827" }}>완성본 재생성 안내</div>
+                          <div className="text-sm flex flex-col gap-2" style={{ color: "#374151", lineHeight: 1.65 }}>
+                            <p>· 완성본은 <b>최대 3개까지</b> 만들 수 있어요.</p>
+                            <p>· 생성된 완성본은 <b>마이페이지</b>에서 모두 확인할 수 있어요.</p>
+                            <p>· <b>면접 예상질문을 뽑으면 더 이상 재생성할 수 없어요.</b> 마음에 드는 완성본을 먼저 정해주세요.</p>
+                          </div>
+                          <label className="flex items-center gap-2 text-xs cursor-pointer select-none" style={{ color: "#6B7280" }}>
+                            <input type="checkbox" checked={regenDontShow} onChange={(e) => setRegenDontShow(e.target.checked)} />
+                            다시 보지 않기
+                          </label>
+                          <div className="flex gap-2 mt-1">
+                            <button onClick={() => setShowRegenModal(false)} className="flex-1 py-3 rounded-xl text-sm font-semibold" style={{ background: "#F3F4F6", color: "#6B7280" }}>닫기</button>
+                            <button
+                              onClick={() => {
+                                if (regenDontShow && typeof window !== "undefined") localStorage.setItem("regenModalDismissed", "1");
+                                setShowRegenModal(false);
+                                handleAdminRegenerate();
+                              }}
+                              className="flex-1 py-3 rounded-xl text-sm font-semibold text-white"
+                              style={{ background: "linear-gradient(135deg, #1A3461 0%, #312E81 100%)" }}
+                            >
+                              재생성하기
+                            </button>
+                          </div>
+                        </div>
+                      </div>
                     )}
 
                     {/* 대화 정리하기 + 홈 — 면접 Q&A 완료 후에만 노출 */}

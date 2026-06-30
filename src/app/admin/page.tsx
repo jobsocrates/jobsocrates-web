@@ -148,6 +148,7 @@ export default function AdminPage() {
   const [editSaving, setEditSaving] = useState(false);
   const [deletePostTarget, setDeletePostTarget] = useState<PostItem | null>(null);
   const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
+  const [adminRevVersion, setAdminRevVersion] = useState<Record<string, number>>({});
   const [viewPostComments, setViewPostComments] = useState<{ id: string; parent_id: string | null; nickname: string; content: string; created_at: string }[]>([]);
 
 
@@ -946,6 +947,32 @@ export default function AdminPage() {
                           </div>
                         ))}
 
+
+                      {/* 완성본 버전 1·2·3 */}
+                      {(item.revisions || []).length > 0 && (() => {
+                        const revs = [...item.revisions].sort((a, b) => a.created_at.localeCompare(b.created_at));
+                        const vi = Math.min(adminRevVersion[item.id] ?? (revs.length - 1), revs.length - 1);
+                        const shown = revs[vi];
+                        const charLimit = item.char_limit;
+                        return (
+                          <div style={{ marginTop: 16, borderRadius: 12, border: "1px solid rgba(255,255,255,0.08)", overflow: "hidden" }}>
+                            <div style={{ padding: "8px 14px", background: "rgba(255,255,255,0.04)", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                              <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "rgba(255,255,255,0.35)" }}>완성본 ({revs.length}개)</span>
+                              {revs.length > 1 && revs.map((_, k) => {
+                                const sel = vi === k;
+                                return (
+                                  <button key={k} onClick={() => setAdminRevVersion(p => ({ ...p, [item.id]: k }))}
+                                    style={{ padding: "3px 10px", borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: "pointer", border: `1px solid ${sel ? BLUE : "rgba(255,255,255,0.12)"}`, background: sel ? "rgba(107,142,255,0.15)" : "transparent", color: sel ? BLUE : "rgba(255,255,255,0.4)" }}>
+                                    완성본 {k + 1}
+                                  </button>
+                                );
+                              })}
+                              {charLimit && <span style={{ fontSize: 10, color: shown.content.trim().length > charLimit ? "rgb(248,113,113)" : "rgba(255,255,255,0.2)", marginLeft: "auto" }}>{shown.content.trim().length}자 / {charLimit}</span>}
+                            </div>
+                            <p style={{ fontSize: 12, lineHeight: 1.75, color: "rgba(255,255,255,0.7)", whiteSpace: "pre-wrap", wordBreak: "keep-all", margin: 0, padding: "12px 14px", maxHeight: 320, overflowY: "auto" }}>{shown.content}</p>
+                          </div>
+                        );
+                      })()}
 
                       {/* 소넷 원본 vs 미니 다듬기 비교 */}
                       {(() => {

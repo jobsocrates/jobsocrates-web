@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 import { readFileSync } from "fs";
 import { join } from "path";
 import type { DiggingContext } from "@/types";
@@ -64,6 +65,47 @@ async function stream(system: SystemParam, messages: MsgParam[], maxTokens = 204
   );
 }
 
+// 완성본 출력용 GPT(OpenAI) 스트리밍. Anthropic stream과 동일하게 raw 텍스트 스트림 Response를 돌려준다.
+async function streamOpenAI(system: SystemParam, messages: MsgParam[], maxTokens = 2048, model = "gpt-4o-mini") {
+  const enc = new TextEncoder();
+  const systemText = typeof system === "string" ? system : system.map((b) => ("text" in b ? b.text : "")).join("\n\n");
+  const oaMessages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+    { role: "system", content: systemText },
+    ...messages.map((m) => ({
+      role: (m.role === "assistant" ? "assistant" : "user") as "user" | "assistant",
+      content: typeof m.content === "string"
+        ? m.content
+        : (m.content as Array<{ text?: string }>).map((c) => c.text || "").join(""),
+    })),
+  ];
+  const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  let s: Awaited<ReturnType<typeof client.chat.completions.create>> & AsyncIterable<OpenAI.Chat.Completions.ChatCompletionChunk>;
+  try {
+    s = (await client.chat.completions.create({ model, messages: oaMessages, stream: true, max_tokens: maxTokens })) as typeof s;
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "API 연결 오류";
+    return new Response(enc.encode(`오류가 발생했어요. 다시 시도해주세요.\n(${msg})`), { headers: { "Content-Type": "text/plain; charset=utf-8" } });
+  }
+  return new Response(
+    new ReadableStream({
+      async start(ctrl) {
+        try {
+          for await (const chunk of s) {
+            const delta = chunk.choices[0]?.delta?.content;
+            if (delta) ctrl.enqueue(enc.encode(delta));
+          }
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : "스트리밍 오류";
+          try { ctrl.enqueue(enc.encode(`\n오류가 발생했어요. 다시 시도해주세요.\n(${msg})`)); } catch { /* 무시 */ }
+        } finally {
+          try { ctrl.close(); } catch { /* 무시 */ }
+        }
+      },
+    }),
+    { headers: { "Content-Type": "text/plain; charset=utf-8" } }
+  );
+}
+
 async function generate(system: string, messages: MsgParam[], model = "claude-sonnet-4-6") {
   const client = getClient();
   const res = await client.messages.create({
@@ -73,6 +115,26 @@ async function generate(system: string, messages: MsgParam[], model = "claude-so
     messages,
   });
   const text = res.content[0].type === "text" ? res.content[0].text : "";
+  const match = text.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
+  try {
+    return Response.json(match ? JSON.parse(match[0]) : { raw: text });
+  } catch {
+    return Response.json({ raw: text });
+  }
+}
+
+// generate의 OpenAI 버전 (JSON 추출해 반환). 소제목 등 비스트리밍 JSON 응답용.
+async function generateOpenAI(system: string, messages: MsgParam[], model = "gpt-4o-mini") {
+  const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  const oaMessages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+    { role: "system", content: system },
+    ...messages.map((m) => ({
+      role: (m.role === "assistant" ? "assistant" : "user") as "user" | "assistant",
+      content: typeof m.content === "string" ? m.content : (m.content as Array<{ text?: string }>).map((c) => c.text || "").join(""),
+    })),
+  ];
+  const res = await client.chat.completions.create({ model, messages: oaMessages });
+  const text = res.choices[0]?.message?.content || "";
   const match = text.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
   try {
     return Response.json(match ? JSON.parse(match[0]) : { raw: text });
@@ -183,7 +245,7 @@ export async function POST(req: Request) {
       // 완성본(수정본) 작성 단계만 Haiku로 (디깅은 Sonnet). 트리거: 마지막 user 메시지 "완성본을 작성해줘."
       const lastMsgP = body.messages?.[body.messages.length - 1];
       const isCompletionP = typeof lastMsgP?.content === "string" && lastMsgP.content.includes("완성본을 작성해줘");
-      return stream(sys, msgs, 2048, isCompletionP ? "claude-haiku-4-5-20251001" : "claude-sonnet-4-6");
+      return isCompletionP ? streamOpenAI(sys, msgs, 2048, "gpt-4o-mini") : stream(sys, msgs);
     }
 
     case "motivation": {
@@ -211,8 +273,8 @@ export async function POST(req: Request) {
       // 완성본 작성 단계만 모델 분기 (디깅은 Sonnet 유지). 완성본은 마지막 user 메시지가 "완성본을 작성해줘."일 때 생성됨.
       const lastMsg = body.messages?.[body.messages.length - 1];
       const isCompletion = typeof lastMsg?.content === "string" && lastMsg.content.includes("완성본을 작성해줘");
-      const motivationModel = isCompletion ? "claude-haiku-4-5-20251001" : "claude-sonnet-4-6";
-      return stream(sys, msgs, 2048, motivationModel);
+      // 완성본 출력은 GPT mini, 디깅은 Sonnet
+      return isCompletion ? streamOpenAI(sys, msgs, 2048, "gpt-4o-mini") : stream(sys, msgs);
     }
 
     case "analyze": {
@@ -241,7 +303,7 @@ export async function POST(req: Request) {
       // 수정본(완성본) 작성 단계만 Opus로 (디깅은 Sonnet). 트리거: 마지막 user 메시지 "완성본을 작성해줘."
       const lastMsgA = body.messages?.[body.messages.length - 1];
       const isCompletionA = typeof lastMsgA?.content === "string" && lastMsgA.content.includes("완성본을 작성해줘");
-      return stream(sys, msgs, 2048, isCompletionA ? "claude-haiku-4-5-20251001" : "claude-sonnet-4-6");
+      return isCompletionA ? streamOpenAI(sys, msgs, 2048, "gpt-4o-mini") : stream(sys, msgs);
     }
 
     case "interview-questions": {
@@ -334,25 +396,51 @@ export async function POST(req: Request) {
         "- 면접에서 말하기 자연스러운 길이로. 지나치게 길면 핵심만 남겨 줄여도 좋다(글자수에 집착하진 마라). 짧으면 억지로 늘리지 마라.\n" +
         "- 다듬은 답변 본문만 출력해라. 말머리·설명·따옴표 없이. 마크다운 볼드(**) 금지.";
       const messages: MsgParam[] = [{ role: "user", content: body.answer }];
-      return stream(sys, messages, 2048, "claude-haiku-4-5-20251001");
+      return streamOpenAI(sys, messages, 2048, "gpt-4o-mini");
+    }
+
+    case "trim": {
+      const lim = parseInt(String(body.charLimit || 0), 10) || 0;
+      const sys =
+        `다음 자소서가 글자수 제한(${lim}자)을 약간 넘었다. 딱 초과한 만큼만 최소로 줄여라.\n` +
+        "- ★문단이나 문장, 내용을 통째로 빼지 마라. 모든 문단과 핵심 내용·구조·순서는 그대로 유지한다.\n" +
+        "- 군더더기 수식어·중복되는 말·늘어지는 어구만 다듬어 문장을 조금씩 압축해 줄인다. 줄인 티가 거의 안 나야 한다.\n" +
+        `- 목표 분량은 ${Math.round(lim * 0.93)}~${lim}자다. 이보다 더 줄이지 마라(너무 짧아지면 안 된다). 단 ${lim}자는 넘기지 마라.\n` +
+        "- 새 내용 추가·표현 변경 금지. 합니다체 유지. 줄인 본문만 출력(설명·마커·따옴표·제목 없이).";
+      return streamOpenAI(sys, [{ role: "user", content: body.content as string }], 2048, "gpt-4o-mini");
     }
 
     case "subtitle": {
-      const sys =
-        "당신은 자소서 소제목(헤드라인) 카피라이터입니다. 완성된 자소서를 읽고 그 글에 어울리는 소제목 3개를 추천하세요.\n" +
-        "소제목은 글 맨 위에 붙는 짧은 제목으로, 채용담당자가 첫눈에 '이 글이 무엇을 말하는지'를 잡게 합니다.\n" +
-        "규칙:\n" +
-        "- ★소제목은 글 전체의 핵심 메시지를 한 문장으로 압축한 것이다. 특정 장면·사례의 디테일(고유명사·특정 사물·사건·인물)을 제목으로 쓰지 마라 — 그건 본문 일부만 대표할 뿐 글 전체를 설명하지 못한다. (장면 요약 '~를 먼저 봤다' 식 ❌ → 그 장면이 말하는 태도·메시지 '~를 먼저 확인하는 태도' 식 ⭕)\n" +
-        "- '이 경험을 통해 전달하려는 메시지'(일하는 태도·관점·깨달음)를 압축해라. 글을 다 읽고 남는 한 마디.\n" +
-        "- 글에 없는 내용을 지어내지 말고, 이 글만의 메시지여야 한다. 어느 자소서에나 붙는 범용·클리셰 절대 금지('도전하는 인재', '열정과 책임감', '소통의 달인', '함께 성장', '끊임없는 노력' 류).\n" +
-        "- 길이는 8~22자 내외로 짧고 강하게.\n" +
-        "- 3개는 서로 다른 각도로 만들어라(예: 하나는 태도·관점, 하나는 그 태도가 지키는 가치, 하나는 핵심을 압축한 표현). 셋 다 글 전체 메시지 수준이어야 한다.\n" +
-        "- 따옴표·마침표·이모지 없이 제목 텍스트만. 소제목 안에 쉼표(,)를 쓰지 마라.\n" +
-        "출력은 실제 소제목 3개를 담은 JSON 배열 하나뿐. 다른 텍스트·설명·코드블록 없이. 형식은 [\"...\", \"...\", \"...\"] 이고 점 자리에 이 글에서 뽑은 진짜 소제목을 넣어라(자리표시자를 그대로 출력하지 마라).";
+      const sys = `# 소제목 생성 원칙
+소제목은 사례를 요약하거나 핵심 키워드를 나열하는 게 아니다. 지원자의 사고방식과 일하는 방식을 한 문장으로 압축하는 것이 목적이다. 기준 질문: "이 지원자를 한 문장으로 표현하면?"
+
+## 생성 순서 (1~2단계는 내부 추론, 출력하지 않는다)
+1단계. 핵심 판단 찾기: 이 사례에서 지원자가 가장 먼저 내린 판단이 무엇인지 찾는다.
+2단계. 차이 찾기: 대부분의 사람이라면 어떻게 했을까? 지원자는 왜 다른 선택을 했나? 그 선택에서 드러난 사고방식은 무엇인가? (소제목은 대부분 여기서 나온다.)
+3단계. 사람을 표현: 사건·결과를 제목으로 만들지 말고, 그 사례로 드러난 '일하는 방식'을 판단·행동이 담긴 동사형으로 표현한다.
+4단계. 압축: 10~18자 내외의 자연스러운 문장으로. 책의 챕터 제목처럼 읽혀야 하고, 자소서 키워드처럼 보이면 안 된다.
+
+# 반드시 지킬 원칙
+- 사례를 요약하지도, 결과를 설명하지도 않는다. 지원자의 사고방식·판단 기준을 표현한다.
+- '무엇을 했는가'보다 '어떻게 판단하는 사람인가'가 드러나야 한다.
+- 추상적 단어 대신 이 사례에서만 나올 수 있는 표현을 쓴다. 사례를 읽기 전에도 어떤 사람인지 상상되어야 한다.
+- 3개는 서로 다른 각도 + 같은 문장 구조를 반복하지 않는다.
+
+# 절대 쓰지 않는 형태
+'OO의 리더십·OO 역량·OO 능력·OO 태도·OO 접근법·OO 감각·OO 정신·OO하기·문제 해결·협업·실행력·성장·도전·적극성·책임감·소통 능력·위기 속의 OO·성공을 위한 OO' 처럼 대부분의 지원자에게 그대로 붙는 추상 표현. ('협상 경험'·'문제 해결 능력'·'실행력'·'예측과 조율의 리더십'이 그 나쁜 예다.)
+
+# 최종 검증 (통과한 것만 출력)
+1. 이 소제목을 다른 사례에도 그대로 붙일 수 있나? → YES면 다시 작성.
+2. 사례의 결과를 제목으로 만든 건 아닌가? → 판단·사고방식이 드러나게 수정.
+3. 사례를 안 읽어도 어떤 사람인지 떠오르나? → 아니면 다시 작성.
+4. 이 사례에서만 나올 수 있는 표현인가? → 아니면 더 구체적인 사고방식으로 수정.
+
+# 출력
+위 4가지를 모두 통과한 소제목 3개만 JSON 배열로 출력한다. 따옴표·마침표·이모지·쉼표 없이, 형식 ["...", "...", "..."], 점 자리에 진짜 소제목을 넣고 자리표시자는 출력하지 않는다.`;
       const messages: MsgParam[] = [
         { role: "user", content: `직무: ${body.jobTitle || "미입력"}\n자소서 문항: ${body.question || "미입력"}\n\n완성된 자소서:\n${body.coverLetter}\n\n위 글에 어울리는 소제목 3개를 JSON 배열로만 추천해줘.` },
       ];
-      return generate(sys, messages, "claude-haiku-4-5-20251001");
+      return generateOpenAI(sys, messages, "gpt-4o-mini");
     }
 
     case "update-message": {

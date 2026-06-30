@@ -35,6 +35,9 @@ export interface CoverItem {
   isLoadingQs: boolean;
   setupStep: "question" | "charLimit" | "draft" | "ready";
   setupMsgs: SetupMsg[];
+  revCount?: number; // 완성본 생성 횟수 (재생성 3회 제한용)
+  versions?: string[]; // 생성된 완성본들(마커 포함 전체 텍스트). 토글로 선택
+  activeVersion?: number; // 현재 선택된 완성본 인덱스
 }
 
 export interface ResumeSession {

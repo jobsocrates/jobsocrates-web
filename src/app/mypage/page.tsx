@@ -76,7 +76,8 @@ export default function MyPage() {
   // 검색 + 인라인 미리보기 + 복사
   const [search, setSearch] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [previews, setPreviews] = useState<Record<string, { revision: string; subtitle: string }>>({});
+  const [previews, setPreviews] = useState<Record<string, { revision: string; subtitle: string; versions: string[] }>>({});
+  const [previewVersion, setPreviewVersion] = useState<Record<string, number>>({});
   const [previewLoading, setPreviewLoading] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
@@ -224,15 +225,16 @@ export default function MyPage() {
     window.location.href = "/";
   }
 
-  async function loadPreview(item: CoverItemRecord): Promise<{ revision: string; subtitle: string } | null> {
+  async function loadPreview(item: CoverItemRecord): Promise<{ revision: string; subtitle: string; versions: string[] } | null> {
     if (previews[item.id]) return previews[item.id];
     setPreviewLoading(item.id);
     try {
-      const [{ data: revRow }, { data: msgRows }] = await Promise.all([
-        supabase.from("revisions").select("content").eq("cover_item_id", item.id).limit(1).maybeSingle(),
+      const [{ data: revRows }, { data: msgRows }] = await Promise.all([
+        supabase.from("revisions").select("content, created_at").eq("cover_item_id", item.id).order("created_at", { ascending: true }),
         supabase.from("messages").select("content, role, created_at").eq("cover_item_id", item.id).order("created_at", { ascending: true }),
       ]);
-      let revision = (revRow?.content as string) || "";
+      const versions: string[] = (revRows || []).map(r => (r.content as string) || "").filter(Boolean);
+      let revision = versions.length ? versions[versions.length - 1] : "";
       let subtitle = "";
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const revMsg = (msgRows || []).find((m: any) => m.role === "assistant" && (String(m.content).includes("[수정본]") || String(m.content).includes("[지원동기]")));
@@ -241,8 +243,10 @@ export default function MyPage() {
         subtitle = parsed.subtitle;
         if (!revision) revision = parsed.revision;
       }
-      const data = { revision, subtitle };
+      if (!versions.length && revision) versions.push(revision);
+      const data = { revision, subtitle, versions };
       setPreviews(p => ({ ...p, [item.id]: data }));
+      setPreviewVersion(p => ({ ...p, [item.id]: Math.max(0, versions.length - 1) }));
       return data;
     } finally { setPreviewLoading(null); }
   }
@@ -471,13 +475,33 @@ export default function MyPage() {
                               {previewLoading === item.id && !preview ? (
                                 <p style={{ fontSize: 12.5, color: FAINT }}>불러오는 중...</p>
                               ) : preview?.revision ? (
-                                <>
-                                  {preview.subtitle && (
-                                    <p style={{ fontSize: 14, fontWeight: 800, color: "#4C3F99", marginBottom: 8, wordBreak: "keep-all" }}>{preview.subtitle}</p>
-                                  )}
-                                  <p style={{ fontSize: 13, color: INK, lineHeight: 1.85, whiteSpace: "pre-wrap", wordBreak: "keep-all", maxHeight: 280, overflowY: "auto" }}>{preview.revision}</p>
-                                  <p style={{ fontSize: 11.5, color: FAINT, marginTop: 10, textAlign: "right" }}>{preview.revision.trim().length}자</p>
-                                </>
+                                (() => {
+                                  const vers = preview.versions ?? [];
+                                  const vi = previewVersion[item.id] ?? Math.max(0, vers.length - 1);
+                                  const shownRev = vers[vi] ?? preview.revision;
+                                  return (
+                                    <>
+                                      {vers.length > 1 && (
+                                        <div style={{ display: "flex", gap: 6, marginBottom: 10, flexWrap: "wrap" }}>
+                                          {vers.map((_, k) => {
+                                            const sel = vi === k;
+                                            return (
+                                              <button key={k} onClick={() => setPreviewVersion(p => ({ ...p, [item.id]: k }))}
+                                                style={{ padding: "5px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer", border: `1px solid ${sel ? INDIGO : BORDER}`, background: sel ? INDIGO : "#fff", color: sel ? "#fff" : SUB }}>
+                                                완성본 {k + 1}
+                                              </button>
+                                            );
+                                          })}
+                                        </div>
+                                      )}
+                                      {preview.subtitle && (
+                                        <p style={{ fontSize: 14, fontWeight: 800, color: "#4C3F99", marginBottom: 8, wordBreak: "keep-all" }}>{preview.subtitle}</p>
+                                      )}
+                                      <p style={{ fontSize: 13, color: INK, lineHeight: 1.85, whiteSpace: "pre-wrap", wordBreak: "keep-all", maxHeight: 280, overflowY: "auto" }}>{shownRev}</p>
+                                      <p style={{ fontSize: 11.5, color: FAINT, marginTop: 10, textAlign: "right" }}>{shownRev.trim().length}자</p>
+                                    </>
+                                  );
+                                })()
                               ) : (
                                 <p style={{ fontSize: 12.5, color: FAINT }}>완성본을 불러올 수 없어요.</p>
                               )}
