@@ -1988,13 +1988,13 @@ export default function ChatPage() {
                       </div>
                     ) : null}
 
-                    {/* 어드민 전용: 완성본 재생성 */}
-                    {currentUser?.email === ADMIN_EMAIL && hasAnyRevision && (
+                    {/* 어드민 전용: 완성본 재생성 (localhost에선 로컬 테스트용으로 항상 노출) */}
+                    {((currentUser?.email === ADMIN_EMAIL) || (typeof window !== "undefined" && window.location.hostname === "localhost")) && hasAnyRevision && (
                       <button
                         onClick={handleAdminRegenerate}
                         disabled={isStreaming}
-                        className="w-full py-2.5 rounded-xl text-xs font-semibold transition-all hover:opacity-80 disabled:opacity-30 flex items-center justify-center gap-1.5"
-                        style={{ background: "rgba(255,209,102,0.08)", border: "1px solid rgba(255,209,102,0.25)", color: "rgba(255,209,102,0.7)" }}
+                        className="w-full py-3 rounded-xl text-sm font-semibold transition-all hover:opacity-90 disabled:opacity-30 flex items-center justify-center gap-1.5"
+                        style={{ background: "#FFF7ED", border: "1.5px solid #FDBA74", color: "#C2410C" }}
                       >
                         🔄 완성본 재생성 (어드민)
                       </button>
