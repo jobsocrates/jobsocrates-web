@@ -221,12 +221,23 @@ export function AuthModal({ tab: initialTab, onClose }: Props) {
   function openInExternalBrowser() {
     const url = window.location.href;
     const ua = navigator.userAgent;
+    // 카카오톡 인앱: 카톡 전용 스킴이 iOS·Android 모두에서 기본 브라우저로 띄워줌 (가장 확실한 우회)
+    if (/KAKAOTALK/i.test(ua)) {
+      window.location.href = `kakaotalk://web/openExternal?url=${encodeURIComponent(url)}`;
+      return;
+    }
+    // 네이버/라인 인앱도 전용 스킴 지원
+    if (/NAVER\(inapp/i.test(ua) || /Line\//i.test(ua)) {
+      window.location.href = url + (url.includes("?") ? "&" : "?") + "openExternalBrowser=1";
+      return;
+    }
     if (/Android/i.test(ua)) {
       const host = url.replace(/^https?:\/\//, "");
       window.location.href = `intent://${host}#Intent;scheme=https;package=com.android.chrome;end`;
-    } else {
-      navigator.clipboard.writeText(url).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2500); });
+      return;
     }
+    // iOS 기타 인앱(인스타·스레드 등)은 강제로 못 띄움 → 주소 복사 안내
+    navigator.clipboard.writeText(url).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2500); });
   }
 
   function copyUrl() {

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { buildPrintHtml, stripMd, parseRevisionMsg, type SummaryMsg, type SummaryInterviewQ } from "@/components/CoverLetterSummary";
 import { TutorialModal } from "@/components/TutorialModal";
+import { ADMIN_EMAIL } from "@/lib/reviewUtils";
 
 const PAGE_BG = "#F5F6F8";
 const CARD = "#FFFFFF";
@@ -437,9 +438,9 @@ export default function MyPage() {
                             <div style={{ display: "flex", gap: 5, flexWrap: "wrap", justifyContent: "flex-end" }}>
                               {hasRevision ? (
                                 <>
-                                  {!(interviewTotal > 0 && interviewDone === interviewTotal) && (
+                                  {(user?.email === ADMIN_EMAIL || !(interviewTotal > 0 && interviewDone === interviewTotal)) && (
                                     <Link href={`/chat?resume=${session.id}`} style={{ ...btnStyle(INDIGO_LT, true), textDecoration: "none" }}>
-                                      이어서 하기 →
+                                      {user?.email === ADMIN_EMAIL ? "열기 →" : "이어서 하기 →"}
                                     </Link>
                                   )}
                                   <button onClick={() => handleToggleExpand(item)} style={btnStyle(expanded ? INDIGO_LT : SUB, expanded)}>

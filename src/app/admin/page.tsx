@@ -788,7 +788,7 @@ export default function AdminPage() {
                 const isSelected = s.id === selectedId;
                 return (
                   <div key={s.id} style={{ position: "relative", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-                    <div onClick={() => selectSession(s.id)} style={{ padding: "11px 14px", paddingRight: 34, cursor: "pointer", background: isSelected ? "rgba(255,255,255,0.07)" : "transparent", transition: "background 0.12s" }}>
+                    <div onClick={() => selectSession(s.id)} style={{ padding: "11px 14px", paddingRight: 60, cursor: "pointer", background: isSelected ? "rgba(255,255,255,0.07)" : "transparent", transition: "background 0.12s" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
                         {rev?.rating === "good" && (
                           <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 5, background: "rgba(74,222,128,0.15)", border: "1px solid rgba(74,222,128,0.3)", color: "rgba(74,222,128,0.9)", flexShrink: 0 }}>👍 Good</span>
@@ -812,6 +812,16 @@ export default function AdminPage() {
                         {s.created_at.slice(0, 10)}
                       </p>
                     </div>
+                    <a
+                      href={`/chat?resume=${s.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      title="챗에서 열기 (완성본 재생성용)"
+                      style={{ position: "absolute", top: 10, right: 34, width: 22, height: 22, borderRadius: 6, border: "1px solid rgba(107,142,255,0.25)", background: "transparent", color: "rgba(107,142,255,0.65)", fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", textDecoration: "none" }}
+                    >
+                      ↗
+                    </a>
                     <button
                       onClick={(e) => { e.stopPropagation(); setDeleteSessionTarget({ id: s.id, jobTitle: s.job_title || "직무 미입력" }); }}
                       title="세션 삭제"

@@ -180,7 +180,10 @@ export async function POST(req: Request) {
           }];
         }
       }
-      return stream(sys, msgs);
+      // 완성본(수정본) 작성 단계만 Haiku로 (디깅은 Sonnet). 트리거: 마지막 user 메시지 "완성본을 작성해줘."
+      const lastMsgP = body.messages?.[body.messages.length - 1];
+      const isCompletionP = typeof lastMsgP?.content === "string" && lastMsgP.content.includes("완성본을 작성해줘");
+      return stream(sys, msgs, 2048, isCompletionP ? "claude-haiku-4-5-20251001" : "claude-sonnet-4-6");
     }
 
     case "motivation": {
@@ -205,7 +208,11 @@ export async function POST(req: Request) {
           }];
         }
       }
-      return stream(sys, msgs);
+      // 완성본 작성 단계만 모델 분기 (디깅은 Sonnet 유지). 완성본은 마지막 user 메시지가 "완성본을 작성해줘."일 때 생성됨.
+      const lastMsg = body.messages?.[body.messages.length - 1];
+      const isCompletion = typeof lastMsg?.content === "string" && lastMsg.content.includes("완성본을 작성해줘");
+      const motivationModel = isCompletion ? "claude-haiku-4-5-20251001" : "claude-sonnet-4-6";
+      return stream(sys, msgs, 2048, motivationModel);
     }
 
     case "analyze": {
@@ -231,7 +238,10 @@ export async function POST(req: Request) {
           }];
         }
       }
-      return stream(sys, msgs);
+      // 수정본(완성본) 작성 단계만 Opus로 (디깅은 Sonnet). 트리거: 마지막 user 메시지 "완성본을 작성해줘."
+      const lastMsgA = body.messages?.[body.messages.length - 1];
+      const isCompletionA = typeof lastMsgA?.content === "string" && lastMsgA.content.includes("완성본을 작성해줘");
+      return stream(sys, msgs, 2048, isCompletionA ? "claude-haiku-4-5-20251001" : "claude-sonnet-4-6");
     }
 
     case "interview-questions": {
@@ -324,7 +334,7 @@ export async function POST(req: Request) {
         "- 면접에서 말하기 자연스러운 길이로. 지나치게 길면 핵심만 남겨 줄여도 좋다(글자수에 집착하진 마라). 짧으면 억지로 늘리지 마라.\n" +
         "- 다듬은 답변 본문만 출력해라. 말머리·설명·따옴표 없이. 마크다운 볼드(**) 금지.";
       const messages: MsgParam[] = [{ role: "user", content: body.answer }];
-      return stream(sys, messages);
+      return stream(sys, messages, 2048, "claude-haiku-4-5-20251001");
     }
 
     case "subtitle": {
@@ -332,17 +342,17 @@ export async function POST(req: Request) {
         "당신은 자소서 소제목(헤드라인) 카피라이터입니다. 완성된 자소서를 읽고 그 글에 어울리는 소제목 3개를 추천하세요.\n" +
         "소제목은 글 맨 위에 붙는 짧은 제목으로, 채용담당자가 첫눈에 '이 글이 무엇을 말하는지'를 잡게 합니다.\n" +
         "규칙:\n" +
-        "- 반드시 이 글의 핵심(구체적 경험·결과·판단·행동)에서 뽑아라. 글에 없는 내용을 지어내지 마라.\n" +
-        "- 뻔한 클리셰 절대 금지: '도전하는 인재', '열정과 책임감', '소통의 달인', 'OO의 달인', '함께 성장', '끊임없는 노력'처럼 어느 자소서에나 붙는 말은 쓰지 마라.\n" +
-        "- 이 글만의 것이어야 한다. 가능하면 글 속 구체적 장면·핵심 행동·결과를 담아라.\n" +
+        "- ★소제목은 글 전체의 핵심 메시지를 한 문장으로 압축한 것이다. 특정 장면·사례의 디테일(고유명사·특정 사물·사건·인물)을 제목으로 쓰지 마라 — 그건 본문 일부만 대표할 뿐 글 전체를 설명하지 못한다. (장면 요약 '~를 먼저 봤다' 식 ❌ → 그 장면이 말하는 태도·메시지 '~를 먼저 확인하는 태도' 식 ⭕)\n" +
+        "- '이 경험을 통해 전달하려는 메시지'(일하는 태도·관점·깨달음)를 압축해라. 글을 다 읽고 남는 한 마디.\n" +
+        "- 글에 없는 내용을 지어내지 말고, 이 글만의 메시지여야 한다. 어느 자소서에나 붙는 범용·클리셰 절대 금지('도전하는 인재', '열정과 책임감', '소통의 달인', '함께 성장', '끊임없는 노력' 류).\n" +
         "- 길이는 8~22자 내외로 짧고 강하게.\n" +
-        "- 3개는 서로 다른 각도로 만들어라(예: 하나는 결과·성과 중심, 하나는 일하는 방식·태도 중심, 하나는 핵심을 압축한 비유·이미지).\n" +
+        "- 3개는 서로 다른 각도로 만들어라(예: 하나는 태도·관점, 하나는 그 태도가 지키는 가치, 하나는 핵심을 압축한 표현). 셋 다 글 전체 메시지 수준이어야 한다.\n" +
         "- 따옴표·마침표·이모지 없이 제목 텍스트만. 소제목 안에 쉼표(,)를 쓰지 마라.\n" +
         "출력은 실제 소제목 3개를 담은 JSON 배열 하나뿐. 다른 텍스트·설명·코드블록 없이. 형식은 [\"...\", \"...\", \"...\"] 이고 점 자리에 이 글에서 뽑은 진짜 소제목을 넣어라(자리표시자를 그대로 출력하지 마라).";
       const messages: MsgParam[] = [
         { role: "user", content: `직무: ${body.jobTitle || "미입력"}\n자소서 문항: ${body.question || "미입력"}\n\n완성된 자소서:\n${body.coverLetter}\n\n위 글에 어울리는 소제목 3개를 JSON 배열로만 추천해줘.` },
       ];
-      return generate(sys, messages);
+      return generate(sys, messages, "claude-haiku-4-5-20251001");
     }
 
     case "update-message": {

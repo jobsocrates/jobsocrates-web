@@ -424,7 +424,7 @@ export default function Home() {
                 직접 써본 분들의 이야기
               </h2>
             </div>
-            <div className="anim" style={{ columnCount: 3, columnGap: "12px" }}>
+            <div className="anim columns-1 sm:columns-2 lg:columns-3" style={{ columnGap: "12px" }}>
               {([
                 { src: "/review1.png" },
                 { src: "/review2.png" },

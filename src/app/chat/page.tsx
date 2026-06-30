@@ -1024,10 +1024,13 @@ export default function ChatPage() {
 
   async function handleAdminRegenerate() {
     if (!selected || isStreaming) return;
-    const revIdx = selected.msgs.findIndex(m => m.role === "user" && m.text === "완성본을 작성해줘.");
-    const histIdx = selected.apiHistory.findIndex(h => h.role === "user" && h.content === "완성본을 작성해줘.");
-    const newMsgs = revIdx !== -1 ? selected.msgs.slice(0, revIdx) : selected.msgs;
-    const newHistory = histIdx !== -1 ? selected.apiHistory.slice(0, histIdx) : selected.apiHistory;
+    // 완성본(수정본) 봇 메시지 기준으로 그 앞까지만 남긴다 — resume 세션(완성본 재구성)에서도 안전
+    const revMsgIdx = selected.msgs.findIndex(m => m.role === "bot" && (m.text.includes("[수정본]") || m.text.includes("[지원동기]")));
+    let newMsgs = revMsgIdx !== -1 ? selected.msgs.slice(0, revMsgIdx) : selected.msgs;
+    if (newMsgs.length && newMsgs[newMsgs.length - 1].role === "user" && newMsgs[newMsgs.length - 1].text === "완성본을 작성해줘.") newMsgs = newMsgs.slice(0, -1);
+    const revHistIdx = selected.apiHistory.findIndex(h => h.role === "assistant" && (h.content.includes("[수정본]") || h.content.includes("[지원동기]")));
+    let newHistory = revHistIdx !== -1 ? selected.apiHistory.slice(0, revHistIdx) : selected.apiHistory;
+    if (newHistory.length && newHistory[newHistory.length - 1].role === "user" && newHistory[newHistory.length - 1].content === "완성본을 작성해줘.") newHistory = newHistory.slice(0, -1);
     const t = "완성본을 작성해줘.";
     const newHistoryWithReq = [...newHistory, { role: "user", content: t }];
     setItems(prev => prev.map(it => it.id === selectedId
