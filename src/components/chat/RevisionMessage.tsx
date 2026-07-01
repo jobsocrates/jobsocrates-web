@@ -4,7 +4,6 @@ import { useState } from "react";
 import { parseRevisionMsg } from "@/lib/chatUtils";
 import { exportCoverLetterPDF } from "@/lib/pdfExport";
 import { BotBubbleAvatar } from "./BotBubbleAvatar";
-import { ChangesCard } from "./ChangesCard";
 
 interface Props {
   text: string;
@@ -18,9 +17,9 @@ interface Props {
 }
 
 export function RevisionMessage({ text, companyName, jobTitle, question, charLimit, draft = "", interviewQs = [], onSelectSubtitle }: Props) {
-  const { revision, changes, partialChanges, rest, subtitle } = parseRevisionMsg(text);
-  const displayChanges = changes || partialChanges;
-  const isComplete = !!revision && !!changes;
+  const { revision, rest, subtitle } = parseRevisionMsg(text);
+  // 완성본은 완성됐을 때만 이 컴포넌트가 렌더되므로(로딩→통으로), revision 존재 = 완성.
+  const isComplete = !!revision;
   const [copied, setCopied] = useState(false);
   const [view, setView] = useState<"after" | "before">("after");
   const [subtitles, setSubtitles] = useState<string[]>([]);
@@ -91,7 +90,7 @@ export function RevisionMessage({ text, companyName, jobTitle, question, charLim
               )}
               {isComplete && (
                 <button
-                  onClick={() => exportCoverLetterPDF(companyName, jobTitle, question, charLimit, revision, changes, draft, interviewQs, activeSub)}
+                  onClick={() => exportCoverLetterPDF(companyName, jobTitle, question, charLimit, revision, "", draft, interviewQs, activeSub)}
                   className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all hover:opacity-70"
                   style={{ background: "#DDD6FE", color: "#4C3F99", border: "none" }}
                 >
@@ -161,7 +160,6 @@ export function RevisionMessage({ text, companyName, jobTitle, question, charLim
           )}
         </div>
       )}
-      {displayChanges && <ChangesCard text={displayChanges} />}
     </div>
   );
 }

@@ -208,12 +208,12 @@ export default function ChatPage() {
 
   function addItem(mode: typeof chatMode = chatMode) {
     const id = uid();
-    const firstText = mode === "analyze"
-      ? "📝 분석할 자소서 문항을 알려주세요.\n예: '팀 프로젝트에서 발휘한 리더십 경험을 서술하시오.'"
+    const askText = mode === "analyze"
+      ? "새 문항이네요! 📝 분석할 자소서 문항을 입력해주세요.\n예: '팀 프로젝트에서 발휘한 리더십 경험을 서술하시오.'"
       : mode === "motivation"
-      ? "📝 어떤 문항인가요?\n예: '지원 동기와 입사 후 포부를 서술하시오.'"
-      : "📝 어떤 문항인가요?\n예: '본인의 성격 장단점을 서술하시오.'";
-    const item: CoverItem = { id, dbId: null, question: "", draft: "", charLimit: "", status: "idle", msgs: [], apiHistory: [], interviewQs: [], isLoadingQs: false, setupStep: "question", setupMsgs: [{ id: uid(), role: "bot", text: firstText }] };
+      ? "새 문항이네요! 📝 작성할 자소서 문항을 입력해주세요.\n예: '지원 동기와 입사 후 포부를 서술하시오.'"
+      : "새 문항이네요! 📝 작성할 자소서 문항을 입력해주세요.\n예: '본인의 성격 장단점을 서술하시오.'";
+    const item: CoverItem = { id, dbId: null, question: "", draft: "", charLimit: "", status: "idle", msgs: [], apiHistory: [], interviewQs: [], isLoadingQs: false, setupStep: "question", setupMsgs: [{ id: uid(), role: "bot", text: askText }] };
     setItems((prev) => [...prev, item]);
     setSelectedId(id);
   }
@@ -744,12 +744,17 @@ export default function ChatPage() {
   function handleGoToChat() {
     if (!jobTitle.trim()) { showToast("지원 직무를 입력해주세요", "jobTitle"); return; }
     setCompanyInfo(companyName.trim());
-    const firstText = chatMode === "analyze"
-      ? "📝 분석할 자소서 문항을 알려주세요.\n예: '팀 프로젝트에서 발휘한 리더십 경험을 서술하시오.'"
+    const introText =
+      "안녕하세요! 🙌 취업소크라테스예요.\n\n" +
+      "저희는 일반 사이트와 달리 초안·기업·직무를 함께 분석하고 추론해서 자소서를 만들어요. 그래서 고성능 모델을 쓰는데, 분석·추론엔 강하지만 한국어 문장을 매끄럽게 다듬는 건 후처리가 더 잘해서 완성본 어휘가 다소 딱딱하게 느껴질 수 있어요. ✍️\n\n" +
+      "그래서 마음에 들 때까지 완성본을 최대 3번까지 새로 뽑아볼 수 있게 해뒀어요! 🔄\n\n" +
+      "그래도 조금 딱딱하다 싶으면, 한국어 문장을 자연스럽게 다듬는 데 좋은 ChatGPT에 \"내용은 그대로 살리고 문장만 깔끔하게 다듬어줘\"라고 해보세요 — 훨씬 정제된 흐름으로 보실 수 있어요. 😊";
+    const askText = chatMode === "analyze"
+      ? "준비되셨으면, 분석할 자소서 문항을 입력해주세요! 📝\n예: '팀 프로젝트에서 발휘한 리더십 경험을 서술하시오.'"
       : chatMode === "motivation"
-      ? "📝 어떤 문항인가요?\n예: '지원 동기와 입사 후 포부를 서술하시오.'"
-      : "📝 어떤 문항인가요?\n예: '본인의 성격 장단점을 서술하시오.'";
-    updateItem(selectedId, { setupStep: "question", setupMsgs: [{ id: uid(), role: "bot", text: firstText }] });
+      ? "준비되셨으면, 작성할 자소서 문항을 입력해주세요! 📝\n예: '지원 동기와 입사 후 포부를 서술하시오.'"
+      : "준비되셨으면, 작성할 자소서 문항을 입력해주세요! 📝\n예: '본인의 성격 장단점을 서술하시오.'";
+    updateItem(selectedId, { setupStep: "question", setupMsgs: [{ id: uid(), role: "bot", text: introText }, { id: uid(), role: "bot", text: askText }] });
     // 회사가 바뀐 경우에만 분석 보고서 초기화
     const newKey = `${companyName.trim()}||${companyWebsite.trim()}`;
     if (companyAnalysisKeyRef.current !== newKey) {
@@ -2080,7 +2085,10 @@ export default function ChatPage() {
                             </button>
                           ))}
                         </div>
-                        <p className="text-xs text-center" style={{ color: "#9CA3AF" }}>선택한 완성본을 기준으로 면접 예상질문이 만들어져요</p>
+                        <div className="flex items-center justify-center gap-1.5 mt-1.5 px-3 py-2 rounded-lg" style={{ background: "rgba(99,102,241,0.09)", border: "1px solid rgba(99,102,241,0.22)" }}>
+                          <span style={{ fontSize: 14, lineHeight: 1 }}>💡</span>
+                          <p className="text-[13px] font-semibold" style={{ color: "#4F46E5", wordBreak: "keep-all" }}>선택한 완성본을 기준으로 면접 예상질문이 만들어져요</p>
+                        </div>
                       </div>
                     )}
 

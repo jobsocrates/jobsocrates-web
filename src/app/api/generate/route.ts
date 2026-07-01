@@ -6,8 +6,9 @@ import type { DiggingContext } from "@/types";
 
 // 전체 기본 모델 (ID 틀리면 여기 한 줄만 고치면 됨)
 const SONNET = "claude-sonnet-5";
-// 완성본은 속도 때문에 GPT mini로 (디깅은 Sonnet)
+// 완성본은 gpt-4o(한국어 문장 매끄러움), 소제목·면접다듬기 등 보조는 mini(비용). 디깅은 Sonnet.
 const GPT_MINI = "gpt-4o-mini";
+const GPT_4O = "gpt-4o";
 
 function getClient() {
   return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -149,12 +150,12 @@ async function generateOpenAIText(system: SystemParam, messages: MsgParam[], max
 // 완성본 2단계 생성: 1차 초안 → 2차 검토·교정(추상성·1문단↔본문 일관·연결·분량) → 최종본만 스트리밍.
 // 지원동기는 해석이 들어가 추상적으로 흐르기 쉬워서, 초안을 그대로 내지 않고 반드시 검토·교정 한 번 더 태운다.
 async function streamCompletion2Stage(sys: SystemParam, msgs: MsgParam[], label: "지원동기" | "수정본", draftText: string) {
-  // 1차: 초안 생성
+  // 1차: 초안 생성 (gpt-4o)
   let draftFull = "";
   try {
-    draftFull = await generateOpenAIText(sys, msgs);
+    draftFull = await generateOpenAIText(sys, msgs, 2048, GPT_4O);
   } catch {
-    return streamOpenAI(sys, msgs); // 1차 실패 시 단일 패스 폴백
+    return streamOpenAI(sys, msgs, 2048, GPT_4O); // 1차 실패 시 단일 패스 폴백
   }
   const bodyM = draftFull.match(new RegExp(`\\[${label}\\]([\\s\\S]*?)\\[\\/${label}\\]`));
   const draftBody = bodyM ? bodyM[1].trim() : draftFull.trim();
@@ -174,12 +175,12 @@ async function streamCompletion2Stage(sys: SystemParam, msgs: MsgParam[], label:
     "- 구어체·감정 토로('당황했다·막막했다·힘들었다·설레었다' 류)를 쓰지 않았는가 → 그 상황이 객관적으로 어땠는지와 내 판단으로 바꾼다.\n" +
     "- 자기 감상·평가어를 근거 없이 홀로 쓰지 않았는가. 전체가 합니다체인가.\n" +
     "규칙: 초안에 있는 사실·경험은 그대로 살린다(새 사실 지어내기 금지). 표현·구조·연결만 다듬는다. 문제가 없으면 거의 그대로 둔다.\n" +
-    `출력: 최종본만 아래 형식으로, 다른 말 없이.\n[${label}]\n(최종 완성본 본문)\n[/${label}]\n[변경사항]\n- (왜 이 방향으로 갔는지 1~2줄)\n[/변경사항]`;
+    `출력: 최종본 본문만 아래 형식으로, 다른 말 없이(변경사항은 출력하지 마라).\n[${label}]\n(최종 완성본 본문)\n[/${label}]`;
   const reviewUser =
     `[완성본 초안]\n${draftBody}` +
     (draftChanges ? `\n\n[초안 변경사항 메모]\n${draftChanges}` : "") +
     `\n\n위 초안을 검토·교정해 최종본만 출력하라.`;
-  return streamOpenAI(reviewSys, [{ role: "user", content: reviewUser }]);
+  return streamOpenAI(reviewSys, [{ role: "user", content: reviewUser }], 2048, GPT_4O);
 }
 
 async function generate(system: string, messages: MsgParam[], model = SONNET) {
@@ -329,7 +330,7 @@ export async function POST(req: Request) {
       // 완성본 작성 단계만 모델 분기 (디깅은 Sonnet 유지). 완성본은 마지막 user 메시지가 "완성본을 작성해줘."일 때 생성됨.
       const lastMsg = body.messages?.[body.messages.length - 1];
       const isCompletion = typeof lastMsg?.content === "string" && lastMsg.content.includes("완성본을 작성해줘");
-      // 완성본은 GPT mini 2단계(초안 → 검토·교정), 디깅은 Sonnet
+      // 완성본은 gpt-4o 2단계(초안 → 자기 검토·교정), 디깅은 Sonnet
       return isCompletion ? streamCompletion2Stage(sys, msgs, "지원동기", body.draft as string) : stream(sys, msgs);
     }
 
@@ -452,7 +453,7 @@ export async function POST(req: Request) {
         "- 면접에서 말하기 자연스러운 길이로. 지나치게 길면 핵심만 남겨 줄여도 좋다(글자수에 집착하진 마라). 짧으면 억지로 늘리지 마라.\n" +
         "- 다듬은 답변 본문만 출력해라. 말머리·설명·따옴표 없이. 마크다운 볼드(**) 금지.";
       const messages: MsgParam[] = [{ role: "user", content: body.answer }];
-      return streamOpenAI(sys, messages);
+      return streamOpenAI(sys, messages, 2048, GPT_4O);
     }
 
     case "trim": {
