@@ -307,27 +307,6 @@ export default function ChatPage() {
 
   // ─────────────────────────────────────────────────────────────────
 
-  // 문장 경계로 하드컷 (트림 후에도 넘으면 마지막 안전장치 — 100% 보장)
-  function hardCut(text: string, limit: number): string {
-    if (text.length <= limit) return text;
-    const slice = text.slice(0, limit);
-    const cut = Math.max(slice.lastIndexOf("다."), slice.lastIndexOf("요."), slice.lastIndexOf("다!"), slice.lastIndexOf(". "));
-    return (cut > limit * 0.6 ? slice.slice(0, cut + 1) : slice).trim();
-  }
-  // 완성본이 글자수 제한 넘으면 Haiku로 줄이고, 그래도 넘으면 하드컷
-  async function trimToLimit(text: string, limit: number): Promise<string> {
-    let out = text;
-    try {
-      const res = await fetch("/api/generate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "trim", content: text, charLimit: limit }) });
-      if (res.body) {
-        const reader = res.body.getReader(); const dec = new TextDecoder(); let acc = "";
-        while (true) { const { done, value } = await reader.read(); if (done) break; acc += dec.decode(value, { stream: true }); }
-        if (acc.trim().length > 20) out = acc.trim();
-      }
-    } catch { /* 무시 */ }
-    if (out.trim().length > limit) out = hardCut(out.trim(), limit);
-    return out.trim();
-  }
 
   async function fetchBotReply(
     history: { role: string; content: string }[],
@@ -378,18 +357,7 @@ export default function ChatPage() {
         bottomRef.current?.scrollIntoView({ behavior: "smooth" });
       }
 
-      // ── 글자수 강제: 완성본이 제한 넘으면 트림 + 하드컷 ──
-      const limitNum = charLimit ? parseInt(charLimit, 10) : 0;
-      const rMatch0 = chatMode === "motivation"
-        ? full.match(/\[지원동기\]([\s\S]*?)\[\/지원동기\]/)
-        : full.match(/\[수정본\]([\s\S]*?)\[\/수정본\]/);
-      if (limitNum && rMatch0 && rMatch0[1].trim().length > limitNum) {
-        const trimmed = await trimToLimit(rMatch0[1].trim(), limitNum);
-        if (trimmed && trimmed.length <= rMatch0[1].trim().length) {
-          full = full.replace(rMatch0[1], "\n" + trimmed + "\n");
-          setItems((prev) => prev.map((it) => it.id === itemId ? { ...it, msgs: it.msgs.map((m) => m.id === msgId ? { ...m, text: full } : m) } : it));
-        }
-      }
+      // 글자수 강제(트림) 제거 — 완성본이 제한을 넘어도 자동 수정하지 않는다.
 
       setItems((prev) =>
         prev.map((it) =>
@@ -620,6 +588,9 @@ export default function ChatPage() {
       );
 
       if (newItems.length > 0) {
+        // 카테고리 복원: [지원동기] 마커가 있으면 motivation, 없으면 analyze(직무역량/성향). chat_mode는 DB에 없어 마커로 감지.
+        const detectedMode: typeof chatMode = newItems.some((it) => it.msgs.some((m) => m.role === "bot" && m.text.includes("[지원동기]"))) ? "motivation" : "analyze";
+        setChatMode(detectedMode);
         setItems(newItems);
         setSelectedId(newItems[0].id);
         setStage("chat");
@@ -722,6 +693,9 @@ export default function ChatPage() {
       );
 
       if (newItems.length > 0) {
+        // 카테고리 복원: [지원동기] 마커가 있으면 motivation, 없으면 analyze. chat_mode는 DB에 없어 마커로 감지.
+        const detectedMode: typeof chatMode = newItems.some((it) => it.msgs.some((m) => m.role === "bot" && m.text.includes("[지원동기]"))) ? "motivation" : "analyze";
+        setChatMode(detectedMode);
         setItems(newItems);
         setSelectedId(newItems[0].id);
         setStage("chat");
@@ -851,20 +825,6 @@ export default function ChatPage() {
     if (step === "question") {
       updateItem(selectedId, { question: t });
       setTimeout(() => {
-        const bot: SetupMsg = { id: uid(), role: "bot", text: "✏️ 몇 글자로 작성할까요?\n숫자만 입력해주세요. 예: 700" };
-        updateItem(selectedId, { setupStep: "charLimit", setupMsgs: [...base, bot] });
-      }, 480);
-    } else if (step === "charLimit") {
-      const num = parseInt(t.replace(/[^0-9]/g, ""));
-      if (!num || num < 50 || num > 2000) {
-        setTimeout(() => {
-          const bot: SetupMsg = { id: uid(), role: "bot", text: "50~2000 사이 숫자로 입력해주세요. 예: 700" };
-          updateItem(selectedId, { setupMsgs: [...base, bot] });
-        }, 300);
-        return;
-      }
-      updateItem(selectedId, { charLimit: String(num) });
-      setTimeout(() => {
         const bot: SetupMsg = { id: uid(), role: "bot", text: "📋 자소서 초안을 붙여넣어주세요." };
         updateItem(selectedId, { setupStep: "draft", setupMsgs: [...base, bot] });
       }, 480);
@@ -902,7 +862,6 @@ export default function ChatPage() {
     if (!selected) return;
     if (!jobTitle.trim()) { showToast("지원 직무를 먼저 입력해주세요", "jobTitle"); return; }
     if (!selected.question.trim()) { showToast("자소서 문항을 먼저 입력해주세요", "question"); return; }
-    if (!selected.charLimit.trim()) { showToast("글자수 제한을 먼저 입력해주세요", "charLimit"); return; }
     if (!selected.draft.trim()) { showToast("자소서 초안을 먼저 입력해주세요", "draft"); return; }
 
     if (selected.msgs.length > 0) {
@@ -988,6 +947,24 @@ export default function ChatPage() {
     );
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 0);
     await fetchBotReply(newHistory, selectedId, selected.draft, selected.question, selected.charLimit, selected.dbId);
+  }
+
+  // 디깅 특정 답변부터 다시하기: 그 답변 + 이후 전부 잘라내고(이전 디깅은 유지), 그 답변을 입력창에 넣어 다시 답하게
+  function handleRedoFromAnswer(msgIdx: number) {
+    if (!selected || isStreaming) return;
+    // 로컬/어드민 전용 기능. 일반 유저는 실행 불가.
+    if (!(currentUser?.email === ADMIN_EMAIL || isLocalhost)) return;
+    const msg = selected.msgs[msgIdx];
+    if (!msg || msg.role !== "user") return;
+    // msgs와 apiHistory는 디깅 중 1:1로 순서대로 쌓임(apiHistory 앞엔 seed 1개). 뒤에서 dropCount개 자르면 정확히 대응됨.
+    const dropCount = selected.msgs.length - msgIdx;
+    const newMsgs = selected.msgs.slice(0, msgIdx);
+    const newApiHistory = selected.apiHistory.slice(0, selected.apiHistory.length - dropCount);
+    setItems((prev) => prev.map((it) => it.id === selectedId
+      ? { ...it, msgs: newMsgs, apiHistory: newApiHistory, interviewQs: [], versions: [], revCount: 0 }
+      : it));
+    setInput(msg.text);
+    setTimeout(() => { chatInputRef.current?.focus(); bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, 0);
   }
 
   async function handleRevisionRequest() {
@@ -1097,9 +1074,9 @@ export default function ChatPage() {
     let newHistory = revHistIdx !== -1 ? selected.apiHistory.slice(0, revHistIdx) : selected.apiHistory;
     if (newHistory.length && newHistory[newHistory.length - 1].role === "user" && newHistory[newHistory.length - 1].content.includes("완성본을 작성해줘")) newHistory = newHistory.slice(0, -1);
     const displayT = "완성본을 작성해줘.";
-    // 직전 완성본을 참고로 줘서 "이것과 다르게" 쓰게 한다(변형 유도 + 거절 방지). 톤은 합니다체 명시(요청 문구의 반말 톤이 출력에 새지 않게). "완성본을 작성해줘" 문구 유지해야 완성본 모델 분기를 탐.
-    const priorText = revMsgIdx !== -1 ? selected.msgs[revMsgIdx].text : "";
-    const apiT = `완성본을 작성해줘. 아래는 직전에 만든 완성본이다. 핵심 내용과 메시지는 그대로 두되, 첫 문장과 표현·문장 구조는 완전히 다르게 새 버전으로 다시 작성하라. '단순히 ~가 아니라' 같은 상투구나 직전 버전에서 쓴 표현·맺음말을 반복하지 마라. '이미 작성했다'는 거절 없이, 완성본 본문만 합니다체(했습니다·합니다·입니다)로 출력하라.${priorText ? `\n\n[직전 완성본]\n${priorText}` : ""}`;
+    // 재생성 = 직전 완성본을 완전히 무시하고, 초안+디깅+초안분석 재료만으로 새로 뽑는다(newHistory에서 직전 완성본은 이미 잘려 있음).
+    // 직전 완성본을 참고시키면 "다르게 써"를 강요당해 좋은 표현까지 억지로 갈아치우며 갈수록 이상해짐 → 참고 안 함.
+    const apiT = "완성본을 작성해줘.";
     const newHistoryWithReq = [...newHistory, { role: "user", content: apiT }];
     setItems(prev => prev.map(it => it.id === selectedId
       ? { ...it, msgs: [...newMsgs, { id: uid(), role: "user" as const, text: displayT }], apiHistory: newHistoryWithReq, interviewQs: [] }
@@ -1245,7 +1222,7 @@ export default function ChatPage() {
   }
 
   const canStart = chatMode === "analyze"
-    ? !!jobTitle.trim() && !!selected?.question.trim() && !!selected?.charLimit.trim() && !!selected?.draft.trim() && selected?.status === "idle"
+    ? !!jobTitle.trim() && !!selected?.question.trim() && !!selected?.draft.trim() && selected?.status === "idle"
     : !!jobTitle.trim() && !!selected?.draft.trim() && selected?.status === "idle";
 
   const hasAnyRevision = !isStreaming && (selected?.msgs.some(
@@ -1770,13 +1747,6 @@ export default function ChatPage() {
                           </svg>
                         </button>
                       </div>
-                      {selected.setupStep === "draft" && setupInput.length > 0 && (
-                        <div className="px-1 pt-1.5 pb-0.5 text-right">
-                          <span className="text-[11px]" style={{ color: selected.charLimit && setupInput.length > Number(selected.charLimit) ? "#EF4444" : "#9CA3AF" }}>
-                            {setupInput.length}{selected.charLimit ? ` / ${selected.charLimit}자` : "자"}
-                          </span>
-                        </div>
-                      )}
                       </>
                     )}
                   </div>
@@ -1895,6 +1865,14 @@ export default function ChatPage() {
                 <div className="flex-1 overflow-y-auto hide-scrollbar px-5 py-5" style={{ background: "#F3F4F6" }}>
                   <div className="max-w-2xl lg:max-w-3xl mx-auto flex flex-col gap-4">
                     {selected.msgs.map((msg, msgIdx) => {
+                      // resume 시 DB에서 불러온 내부 시드 명령은 화면에 표시하지 않는다
+                      if (msg.role === "user" && (
+                        msg.text === "초안 진단을 시작해줘." ||
+                        msg.text === "초안을 분석하고 첫 질문을 시작해줘." ||
+                        msg.text === "자소서 초안을 분석하고 첫 질문을 시작해줘."
+                      )) {
+                        return null;
+                      }
                       const isDiagnosis = msgIdx === 0 && msg.role === "bot";
                       const isRevisionComplete = msg.role === "bot"
                         && (
@@ -1918,7 +1896,9 @@ export default function ChatPage() {
                         return <DiagnosisCard key={msg.id} text={msg.text} streaming={isStreaming} />;
                       }
 
-                      if (isRevisionInProgress && !isRevisionStreaming && !isRevisionComplete) {
+                      // 완성본은 다 만들어질 때까지(마커가 닫힐 때까지) 로딩만 보여주고, 완성되면 통으로 렌더한다.
+                      // (설계→작성이 끝난 뒤 한 번에 출력 — 본문이 실시간으로 한 글자씩 스트리밍되지 않게. 첫 생성·재생성 동일.)
+                      if (isStreaming && (isRevisionInProgress || isRevisionStreaming) && !isRevisionComplete) {
                         return <RevisionLoadingCard key={msg.id} />;
                       }
 
@@ -1938,27 +1918,48 @@ export default function ChatPage() {
                         );
                       }
 
+                      // 어드민/로컬 전용. 완성본까지 끝난 세션(어드민에서 이어열기)에서도 디깅 답변부터 다시할 수 있게 완성본 유무는 따지지 않는다.
+                      // 시드 메시지("초안 진단을 시작해줘" 등)나 완성본 트리거는 제외 — 바로 앞이 코치(bot) 질문인 실제 답변에만 표시.
+                      const showRedo = (currentUser?.email === ADMIN_EMAIL || isLocalhost)
+                        && msg.role === "user"
+                        && msg.text !== "완성본을 작성해줘."
+                        && msgIdx > 0
+                        && selected.msgs[msgIdx - 1]?.role === "bot"
+                        && !isStreaming;
+
                       return (
-                        <div key={msg.id} className={`flex items-end gap-2.5 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                          {msg.role === "bot" && <BotBubbleAvatar />}
-                          <div
-                            className="max-w-[80%] px-4 py-3.5 text-sm leading-[1.85] whitespace-pre-wrap"
-                            style={
-                              msg.role === "bot"
-                                ? { background: "#FFFFFF", color: "#111827", borderRadius: "4px 16px 16px 16px", wordBreak: "keep-all", boxShadow: "0 1px 4px rgba(0,0,0,0.07)", border: "1px solid #E5E7EB" }
-                                : { background: DS_PRIMARY, color: "#fff", borderRadius: "16px 4px 16px 16px", wordBreak: "keep-all" }
-                            }
-                          >
-                            {msg.role === "bot" && msg.text === "" ? (
-                              isStreaming ? (
-                                <div className="flex items-center h-6">
-                                  <StreamingLoadingMsg />
-                                </div>
-                              ) : (
-                                <span className="text-xs" style={{ color: "#9CA3AF" }}>응답을 불러오지 못했어요. 다시 시도해주세요.</span>
-                              )
-                            ) : msg.role === "bot" ? stripMd(msg.text) : msg.text}
+                        <div key={msg.id} className={`flex flex-col gap-1 ${msg.role === "user" ? "items-end" : "items-start"}`}>
+                          <div className={`flex items-end gap-2.5 w-full ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                            {msg.role === "bot" && <BotBubbleAvatar />}
+                            <div
+                              className="max-w-[80%] px-4 py-3.5 text-sm leading-[1.85] whitespace-pre-wrap"
+                              style={
+                                msg.role === "bot"
+                                  ? { background: "#FFFFFF", color: "#111827", borderRadius: "4px 16px 16px 16px", wordBreak: "keep-all", boxShadow: "0 1px 4px rgba(0,0,0,0.07)", border: "1px solid #E5E7EB" }
+                                  : { background: DS_PRIMARY, color: "#fff", borderRadius: "16px 4px 16px 16px", wordBreak: "keep-all" }
+                              }
+                            >
+                              {msg.role === "bot" && msg.text === "" ? (
+                                isStreaming ? (
+                                  <div className="flex items-center h-6">
+                                    <StreamingLoadingMsg />
+                                  </div>
+                                ) : (
+                                  <span className="text-xs" style={{ color: "#9CA3AF" }}>응답을 불러오지 못했어요. 다시 시도해주세요.</span>
+                                )
+                              ) : msg.role === "bot" ? stripMd(msg.text) : msg.text}
+                            </div>
                           </div>
+                          {showRedo && (
+                            <button
+                              onClick={() => handleRedoFromAnswer(msgIdx)}
+                              className="text-[11px] font-medium px-2 py-0.5 rounded-md hover:bg-black/5 transition-colors"
+                              style={{ color: "#9CA3AF" }}
+                              title="이 답변부터 다시합니다. 이전 디깅은 그대로 유지돼요."
+                            >
+                              ↺ 여기서 다시 답변
+                            </button>
+                          )}
                         </div>
                       );
                     })}

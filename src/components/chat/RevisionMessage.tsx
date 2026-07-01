@@ -45,10 +45,6 @@ export function RevisionMessage({ text, companyName, jobTitle, question, charLim
     finally { setLoadingSub(false); }
   }
 
-  const revLen = revision ? revision.trim().length : 0;
-  const limitNum = charLimit ? Number(charLimit) : 0;
-  const overLimit = limitNum > 0 && revLen > limitNum;
-
   return (
     <div className="flex flex-col gap-3 w-full">
       {rest && (
@@ -68,9 +64,6 @@ export function RevisionMessage({ text, companyName, jobTitle, question, charLim
             <div className="flex items-center gap-2">
               <img src="/ai-avatar.webp" alt="" className="w-5 h-5 rounded-full object-cover flex-shrink-0" />
               <span className="text-sm font-semibold" style={{ color: "#4C3F99" }}>완성본</span>
-              <span className="text-xs" style={{ color: overLimit ? "#DC2626" : "#A78BFA" }}>
-                {revLen}자{limitNum > 0 ? ` / ${limitNum}자` : ""}
-              </span>
             </div>
             <div className="flex items-center gap-1.5">
               <button

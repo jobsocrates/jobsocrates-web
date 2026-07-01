@@ -135,7 +135,7 @@ export default function ReviewsPage() {
                   <img src={r.photo_url!} alt="손글씨 후기" style={{ width: "100%", display: "block", objectFit: "cover" }} />
                   <div style={{ padding: "12px 14px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
                     <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: SUB, minWidth: 0 }}>
-                      <span style={{ flexShrink: 0, fontSize: 10, fontWeight: 700, color: GOLD, background: "rgba(201,151,0,0.1)", padding: "2px 7px", borderRadius: 999 }}>✍️ 손글씨</span>
+                      <span style={{ flexShrink: 0, fontSize: 12, fontWeight: 700, color: GOLD, background: "rgba(201,151,0,0.1)", padding: "4px 11px", borderRadius: 999 }}>✍️ 손글씨 리뷰</span>
                       <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{maskEmail(r.email)}</span>
                     </span>
                     <span style={{ flexShrink: 0, fontSize: 11, color: FAINT }}>{formatReviewDate(r.created_at)}</span>
@@ -147,7 +147,7 @@ export default function ReviewsPage() {
                   <p style={{ fontSize: 14.5, color: INK, lineHeight: 1.75, wordBreak: "keep-all", marginBottom: 14 }}>{r.content}</p>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, borderTop: "1px solid #F3F4F6", paddingTop: 11 }}>
                     <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, color: SUB, minWidth: 0 }}>
-                      <span style={{ flexShrink: 0, fontSize: 10, fontWeight: 700, color: INDIGO_LT, background: "rgba(99,102,241,0.1)", padding: "2px 7px", borderRadius: 999 }}>💬 디깅</span>
+                      <span style={{ flexShrink: 0, fontSize: 12, fontWeight: 700, color: INDIGO_LT, background: "rgba(99,102,241,0.1)", padding: "4px 11px", borderRadius: 999 }}>💬 디깅 리뷰</span>
                       <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{maskEmail(r.email)}{r.job_title ? ` · ${r.job_title}` : ""}</span>
                     </span>
                     <span style={{ flexShrink: 0, fontSize: 11, color: FAINT }}>{formatReviewDate(r.created_at)}</span>

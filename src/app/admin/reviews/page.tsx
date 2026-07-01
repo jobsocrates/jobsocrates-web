@@ -85,7 +85,7 @@ export default function AdminReviewsPage() {
       const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
       const path = `${uid}/${Date.now()}.${ext}`;
       const { error: upErr } = await supabase.storage.from("review-photos").upload(path, file, { upsert: false });
-      if (upErr) { setPErr("업로드에 실패했어요. 다시 시도해주세요."); return; }
+      if (upErr) { console.error("[review-photo upload]", upErr); setPErr(`업로드 실패: ${upErr.message || "알 수 없는 오류"}`); return; }
       const { data: pub } = supabase.storage.from("review-photos").getPublicUrl(path);
       await callApi({ action: "seedPhoto", email: pEmail.trim() || null, job_title: pJob.trim() || null, photo_url: pub.publicUrl }, token);
       setPEmail(""); setPJob("");
