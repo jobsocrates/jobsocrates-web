@@ -81,7 +81,7 @@ function toOpenAIText(content: MsgParam["content"]): string {
   return content.map((b) => (b.type === "text" ? b.text : "")).join("\n").trim();
 }
 
-async function streamOpenAI(system: SystemParam, messages: MsgParam[], maxTokens = 2048, model = GPT_MINI) {
+async function streamOpenAI(system: SystemParam, messages: MsgParam[], maxTokens = 2048, model = GPT_MINI, temperature?: number) {
   const enc = new TextEncoder();
   const client = getOpenAI();
   const sysText = typeof system === "string" ? system : system.map((s) => s.text).join("\n\n");
@@ -91,7 +91,7 @@ async function streamOpenAI(system: SystemParam, messages: MsgParam[], maxTokens
   ];
   let s: Awaited<ReturnType<typeof client.chat.completions.create>>;
   try {
-    s = await client.chat.completions.create({ model, max_tokens: maxTokens, messages: oaiMessages, stream: true });
+    s = await client.chat.completions.create({ model, max_tokens: maxTokens, messages: oaiMessages, stream: true, ...(temperature !== undefined ? { temperature } : {}) });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "API 연결 오류";
     return new Response(enc.encode(`오류가 발생했어요. 다시 시도해주세요.\n(${msg})`), {
@@ -135,27 +135,27 @@ async function generateOpenAI(system: string, messages: MsgParam[], model = GPT_
   }
 }
 
-// GPT mini 비스트리밍 텍스트 생성 (2단계 1차용)
-async function generateOpenAIText(system: SystemParam, messages: MsgParam[], maxTokens = 2048, model = GPT_MINI): Promise<string> {
+// OpenAI 비스트리밍 텍스트 생성 (2단계 1차용, 모델은 호출부에서 지정)
+async function generateOpenAIText(system: SystemParam, messages: MsgParam[], maxTokens = 2048, model = GPT_MINI, temperature?: number): Promise<string> {
   const client = getOpenAI();
   const sysText = typeof system === "string" ? system : system.map((s) => s.text).join("\n\n");
   const oaiMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [
     { role: "system", content: sysText },
     ...messages.map((m) => ({ role: m.role as "user" | "assistant", content: toOpenAIText(m.content) })),
   ];
-  const res = await client.chat.completions.create({ model, max_tokens: maxTokens, messages: oaiMessages });
+  const res = await client.chat.completions.create({ model, max_tokens: maxTokens, messages: oaiMessages, ...(temperature !== undefined ? { temperature } : {}) });
   return res.choices[0]?.message?.content ?? "";
 }
 
 // 완성본 2단계 생성: 1차 초안 → 2차 검토·교정(추상성·1문단↔본문 일관·연결·분량) → 최종본만 스트리밍.
 // 지원동기는 해석이 들어가 추상적으로 흐르기 쉬워서, 초안을 그대로 내지 않고 반드시 검토·교정 한 번 더 태운다.
 async function streamCompletion2Stage(sys: SystemParam, msgs: MsgParam[], label: "지원동기" | "수정본", draftText: string) {
-  // 1차: 초안 생성 (gpt-4o)
+  // 1차: 초안 생성 (gpt-4o, temperature 0.7 — 재생성마다 품질이 널뛰지 않게)
   let draftFull = "";
   try {
-    draftFull = await generateOpenAIText(sys, msgs, 2048, GPT_4O);
+    draftFull = await generateOpenAIText(sys, msgs, 2048, GPT_4O, 0.7);
   } catch {
-    return streamOpenAI(sys, msgs, 2048, GPT_4O); // 1차 실패 시 단일 패스 폴백
+    return streamOpenAI(sys, msgs, 2048, GPT_4O, 0.7); // 1차 실패 시 단일 패스 폴백
   }
   const bodyM = draftFull.match(new RegExp(`\\[${label}\\]([\\s\\S]*?)\\[\\/${label}\\]`));
   const draftBody = bodyM ? bodyM[1].trim() : draftFull.trim();
@@ -180,7 +180,7 @@ async function streamCompletion2Stage(sys: SystemParam, msgs: MsgParam[], label:
     `[완성본 초안]\n${draftBody}` +
     (draftChanges ? `\n\n[초안 변경사항 메모]\n${draftChanges}` : "") +
     `\n\n위 초안을 검토·교정해 최종본만 출력하라.`;
-  return streamOpenAI(reviewSys, [{ role: "user", content: reviewUser }], 2048, GPT_4O);
+  return streamOpenAI(reviewSys, [{ role: "user", content: reviewUser }], 2048, GPT_4O, 0.5);
 }
 
 async function generate(system: string, messages: MsgParam[], model = SONNET) {
@@ -299,10 +299,10 @@ export async function POST(req: Request) {
           }];
         }
       }
-      // 완성본(수정본) 작성 단계만 Haiku로 (디깅은 Sonnet). 트리거: 마지막 user 메시지 "완성본을 작성해줘."
+      // 완성본(수정본) 작성 단계만 gpt-4o(temp 0.7), 디깅은 Sonnet. 트리거: 마지막 user 메시지 "완성본을 작성해줘."
       const lastMsgP = body.messages?.[body.messages.length - 1];
       const isCompletionP = typeof lastMsgP?.content === "string" && lastMsgP.content.includes("완성본을 작성해줘");
-      return isCompletionP ? streamOpenAI(sys, msgs) : stream(sys, msgs);
+      return isCompletionP ? streamOpenAI(sys, msgs, 2048, GPT_4O, 0.7) : stream(sys, msgs);
     }
 
     case "motivation": {
@@ -357,10 +357,10 @@ export async function POST(req: Request) {
           }];
         }
       }
-      // 수정본(완성본) 작성 단계만 Opus로 (디깅은 Sonnet). 트리거: 마지막 user 메시지 "완성본을 작성해줘."
+      // 수정본(완성본) 작성 단계만 gpt-4o(temp 0.7), 디깅은 Sonnet. 트리거: 마지막 user 메시지 "완성본을 작성해줘."
       const lastMsgA = body.messages?.[body.messages.length - 1];
       const isCompletionA = typeof lastMsgA?.content === "string" && lastMsgA.content.includes("완성본을 작성해줘");
-      return isCompletionA ? streamOpenAI(sys, msgs) : stream(sys, msgs);
+      return isCompletionA ? streamOpenAI(sys, msgs, 2048, GPT_4O, 0.7) : stream(sys, msgs);
     }
 
     case "interview-questions": {
@@ -497,7 +497,7 @@ export async function POST(req: Request) {
       const messages: MsgParam[] = [
         { role: "user", content: `직무: ${body.jobTitle || "미입력"}\n자소서 문항: ${body.question || "미입력"}\n\n완성된 자소서:\n${body.coverLetter}\n\n위 글에 어울리는 소제목 3개를 JSON 배열로만 추천해줘.` },
       ];
-      return generateOpenAI(sys, messages);
+      return generateOpenAI(sys, messages, GPT_4O);
     }
 
     case "update-message": {
