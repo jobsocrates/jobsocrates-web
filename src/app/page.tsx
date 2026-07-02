@@ -106,6 +106,7 @@ export default function Home() {
   const [scrolled, setScrolled] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [badgeCount, setBadgeCount] = useState<number | null>(null);
+  const [showComingSoon, setShowComingSoon] = useState(false);
 
   async function fetchBadge(uid: string) {
     const { data } = await supabase.from("profiles").select("credits").eq("id", uid).single();
@@ -143,6 +144,11 @@ export default function Home() {
   function openAuth(tab: "login" | "signup") { setAuthTab(tab); setAuthOpen(true); }
   function handleStartChat() {
     if (userEmail) {
+      const isAdmin = userEmail === ADMIN_EMAIL;
+      if (!isAdmin && badgeCount !== null && badgeCount <= 0) {
+        setShowComingSoon(true);
+        return;
+      }
       sessionStorage.setItem("showTutorial", "1");
       window.location.href = "/chat";
     } else openAuth("login");
@@ -242,9 +248,8 @@ export default function Home() {
                       <span className="hidden sm:inline">관리자</span>
                     </a>
                   )}
-                  <a
-                    href="/chat"
-                    onClick={() => sessionStorage.setItem("showTutorial", "1")}
+                  <button
+                    onClick={handleStartChat}
                     className="text-sm px-4 py-2 rounded-lg font-semibold transition-all hover:opacity-85 active:scale-[0.97]"
                     style={scrolled
                       ? { background: NAVY_BTN, color: "#fff" }
@@ -252,7 +257,7 @@ export default function Home() {
                     }
                   >
                     시작하기
-                  </a>
+                  </button>
                   <button
                     onClick={() => supabase.auth.signOut().then(() => { setUserEmail(null); setBadgeCount(null); })}
                     className="text-sm transition-colors hover:opacity-70"
@@ -650,6 +655,19 @@ export default function Home() {
       </div>
 
       {authOpen && <AuthModal tab={authTab} onClose={() => setAuthOpen(false)} />}
+
+      {showComingSoon && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(6px)" }}
+          onClick={() => setShowComingSoon(false)}>
+          <div style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: 24, padding: "32px 24px", maxWidth: 340, width: "100%", textAlign: "center", boxShadow: "0 24px 64px -12px rgba(17,24,39,0.25)" }}
+            onClick={e => e.stopPropagation()}>
+            <p style={{ fontSize: 32, marginBottom: 12 }}>🚀</p>
+            <p style={{ fontSize: 16, fontWeight: 700, color: "#111827", marginBottom: 8 }}>곧 오픈 예정이에요 🙏</p>
+            <p style={{ fontSize: 13.5, color: "#6B7280", lineHeight: 1.75, wordBreak: "keep-all" }}>지금은 준비 중이라 조금만 기다려주세요.<br />오픈하면 바로 이용하실 수 있어요!</p>
+            <button onClick={() => setShowComingSoon(false)} style={{ marginTop: 22, width: "100%", padding: "13px 0", borderRadius: 12, background: "#F3F4F6", border: "1px solid #E5E7EB", color: "#6B7280", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>확인</button>
+          </div>
+        </div>
+      )}
     </>
   );
 }

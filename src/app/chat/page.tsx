@@ -910,7 +910,7 @@ export default function ChatPage() {
 
     const isAdmin = currentUser?.email === ADMIN_EMAIL;
     if (!isAdmin && userCredits !== null && userCredits <= 0) {
-      showToast("뱃지가 없어요. 관리자에게 문의해주세요", "");
+      showToast("곧 오픈 예정이에요. 조금만 기다려주세요 🙏", "");
       return;
     }
 
@@ -951,7 +951,7 @@ export default function ChatPage() {
         if (creditErr) console.error("[DB] use_credit error:", creditErr);
         if (creditResult === "insufficient") {
           await supabase.from("cover_items").delete().eq("id", itemDbId);
-          showToast("뱃지가 없어요. 관리자에게 문의해주세요", "");
+          showToast("곧 오픈 예정이에요. 조금만 기다려주세요 🙏", "");
           return;
         }
         if (creditResult === "ok") {
@@ -2768,7 +2768,7 @@ export default function ChatPage() {
                 updateItem(selectedId, { interviewQs: [] });
                 const isAdmin = currentUser?.email === ADMIN_EMAIL;
                 if (!isAdmin && userCredits !== null && userCredits <= 0) {
-                  showToast("뱃지가 없어요. 관리자에게 문의해주세요", "");
+                  showToast("곧 오픈 예정이에요. 조금만 기다려주세요 🙏", "");
                   return;
                 }
                 proceedWithAnalysis();
