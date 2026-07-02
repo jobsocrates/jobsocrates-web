@@ -2092,8 +2092,8 @@ export default function ChatPage() {
                       </div>
                     )}
 
-                    {/* 완성본 재생성. 프로덕션=어드민+면접 전+최대 3개 / localhost=테스트용 항상(면접 후·3개 넘어도) */}
-                    {(currentUser?.email === ADMIN_EMAIL || isLocalhost) && hasAnyRevision && (interviewQs.length === 0 || isLocalhost) && (
+                    {/* 완성본 재생성. 프로덕션=모든 유저 면접 전 최대 3개 / localhost=테스트용 항상(면접 후·3개 넘어도) */}
+                    {hasAnyRevision && (interviewQs.length === 0 || isLocalhost) && (
                       ((selected?.revCount ?? 0) >= 3 && !isLocalhost) ? (
                         <div className="w-full py-3 rounded-xl text-xs text-center" style={{ background: "#F9FAFB", border: "1px solid #E5E7EB", color: "#9CA3AF" }}>
                           완성본은 최대 3개까지 만들 수 있어요 · 마이페이지에서 모두 확인
@@ -2106,7 +2106,7 @@ export default function ChatPage() {
                           }}
                           disabled={isStreaming}
                           className="w-full py-3 rounded-xl text-sm font-semibold transition-all hover:opacity-90 disabled:opacity-30 flex items-center justify-center gap-1.5"
-                          style={{ background: "#FFF7ED", border: "1.5px solid #FDBA74", color: "#C2410C" }}
+                          style={{ background: "rgba(99,102,241,0.07)", border: "1.5px solid rgba(99,102,241,0.35)", color: "#4F46E5" }}
                         >
                           🔄 완성본 재생성 ({selected?.revCount ?? 0}{isLocalhost ? "" : "/3"})
                         </button>

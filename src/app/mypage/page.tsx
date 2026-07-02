@@ -61,6 +61,8 @@ export default function MyPage() {
   const [viewLoadingId, setViewLoadingId] = useState<string | null>(null);
   const [showAllSessions, setShowAllSessions] = useState(false);
 
+  // 계정 설정 (접기)
+  const [showAccount, setShowAccount] = useState(false);
   // 비밀번호 변경
   const [pwNew, setPwNew] = useState("");
   const [pwConfirm, setPwConfirm] = useState("");
@@ -314,23 +316,26 @@ export default function MyPage() {
         </Link>
       </header>
 
-      {/* 뱃지 카드 */}
+      {/* 뱃지 카드 — 다크 네이비 브랜드 카드 (랜딩과 톤 통일) */}
       <div style={{ maxWidth: 960, margin: "0 auto", padding: "24px 20px 0" }}>
-        <div style={{ borderRadius: 20, border: `1px solid ${credits > 0 ? "rgba(201,151,0,0.3)" : "rgba(220,38,38,0.25)"}`, background: CARD, padding: "24px 28px", boxShadow: "0 8px 28px -16px rgba(17,24,39,0.18)", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
-          <div>
-            <p style={{ fontSize: 12.5, color: SUB, marginBottom: 8 }}>{user.email}</p>
-            <p style={{ fontSize: 13, fontWeight: 700, color: credits > 0 ? GOLD : RED, marginBottom: 4 }}>남은 뱃지</p>
+        <div style={{ borderRadius: 20, border: "1px solid rgba(129,140,248,0.22)", background: "linear-gradient(160deg, #0D1B3E 0%, #1A3461 100%)", padding: "26px 28px", boxShadow: "0 20px 48px -20px rgba(6,12,32,0.55)", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 16, position: "relative", overflow: "hidden" }}>
+          {/* 오로라 오브 */}
+          <div style={{ position: "absolute", top: "-40%", right: "-6%", width: 280, height: 280, borderRadius: "50%", background: "#3B62CC", filter: "blur(90px)", opacity: 0.3, pointerEvents: "none" }} />
+          <div style={{ position: "absolute", bottom: "-50%", left: "18%", width: 240, height: 240, borderRadius: "50%", background: "#A78BFA", filter: "blur(90px)", opacity: 0.14, pointerEvents: "none" }} />
+          <div style={{ position: "relative" }}>
+            <p style={{ fontSize: 12.5, color: "rgba(255,255,255,0.45)", marginBottom: 8 }}>{user.email}</p>
+            <p style={{ fontSize: 13, fontWeight: 700, color: credits > 0 ? "#F0C24B" : "rgba(255,255,255,0.55)", marginBottom: 4 }}>남은 뱃지</p>
             <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-              <span style={{ fontSize: 56, fontWeight: 800, color: credits > 0 ? GOLD : RED, letterSpacing: "-0.03em", lineHeight: 1 }}>{credits}</span>
-              <span style={{ fontSize: 18, color: credits > 0 ? "rgba(201,151,0,0.65)" : "rgba(220,38,38,0.6)" }}>개</span>
+              <span style={{ fontSize: 56, fontWeight: 800, color: credits > 0 ? "#F0C24B" : "rgba(255,255,255,0.85)", letterSpacing: "-0.03em", lineHeight: 1, textShadow: credits > 0 ? "0 0 28px rgba(240,194,75,0.35)" : "none" }}>{credits}</span>
+              <span style={{ fontSize: 18, color: credits > 0 ? "rgba(240,194,75,0.6)" : "rgba(255,255,255,0.4)" }}>개</span>
             </div>
-            <p style={{ fontSize: 12, color: FAINT, marginTop: 10 }}>뱃지 1개 = 자소서 문항 1개 완성 · 분석 시작 시 차감</p>
+            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.38)", marginTop: 10 }}>뱃지 1개 = 자소서 문항 1개 완성 · 분석 시작 시 차감</p>
           </div>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 12 }}>
-            <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="#E0A82E" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>
+          <div style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 12 }}>
+            <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke={credits > 0 ? "#F0C24B" : "rgba(255,255,255,0.35)"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={credits > 0 ? { filter: "drop-shadow(0 0 10px rgba(240,194,75,0.4))" } : undefined}><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>
             <button
               onClick={() => setShowTutorial(true)}
-              style={{ fontSize: 13, fontWeight: 600, color: INK, background: CARD, border: `1px solid ${BORDER}`, borderRadius: 9, padding: "7px 16px", cursor: "pointer" }}
+              style={{ fontSize: 13, fontWeight: 600, color: "#fff", background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.22)", borderRadius: 9, padding: "7px 16px", cursor: "pointer" }}
             >
               사용법
             </button>
@@ -552,54 +557,65 @@ export default function MyPage() {
             );
           })()}
 
-          {/* 비밀번호 변경 */}
-          <div style={{ borderRadius: 16, border: `1px solid ${BORDER}`, background: CARD, padding: "20px", boxShadow: "0 4px 16px -12px rgba(17,24,39,0.15)" }}>
-            <p style={{ fontSize: 13, fontWeight: 700, color: INK, marginBottom: 14 }}>비밀번호 변경</p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <input
-                type="password"
-                placeholder="새 비밀번호 (6자 이상)"
-                value={pwNew}
-                onChange={e => setPwNew(e.target.value)}
-                className="mp-input"
-                style={{ width: "100%", background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, padding: "10px 14px", fontSize: 14, color: INK, outline: "none", boxSizing: "border-box" }}
-              />
-              <input
-                type="password"
-                placeholder="새 비밀번호 확인"
-                value={pwConfirm}
-                onChange={e => setPwConfirm(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && handleChangePassword()}
-                className="mp-input"
-                style={{ width: "100%", background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, padding: "10px 14px", fontSize: 14, color: INK, outline: "none", boxSizing: "border-box" }}
-              />
-              {pwMsg && (
-                <p style={{ fontSize: 13, fontWeight: 500, color: pwMsg.ok ? GREEN : RED }}>{pwMsg.text}</p>
-              )}
-              <button
-                onClick={handleChangePassword}
-                disabled={pwLoading}
-                style={{ padding: "10px 0", borderRadius: 10, background: GRAD, border: "none", color: "#fff", fontSize: 14, fontWeight: 700, cursor: pwLoading ? "default" : "pointer", opacity: pwLoading ? 0.5 : 1, boxShadow: "0 8px 22px -12px rgba(49,46,129,0.5)" }}
-              >
-                {pwLoading ? "변경 중..." : "비밀번호 변경"}
-              </button>
-            </div>
-          </div>
-
-          {/* 회원탈퇴 */}
-          <div style={{ padding: "16px 20px", borderRadius: 16, border: "1px solid rgba(220,38,38,0.18)", background: "rgba(220,38,38,0.03)" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-              <div>
-                <p style={{ fontSize: 13, fontWeight: 700, color: "#991B1B" }}>회원탈퇴</p>
-                <p style={{ fontSize: 12, color: SUB, marginTop: 3 }}>계정과 모든 데이터가 삭제돼요.</p>
+          {/* 계정 설정 (접기) */}
+          <div style={{ borderRadius: 16, border: `1px solid ${BORDER}`, background: CARD, boxShadow: "0 4px 16px -12px rgba(17,24,39,0.15)", overflow: "hidden" }}>
+            <button
+              onClick={() => setShowAccount(v => !v)}
+              style={{ width: "100%", padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", background: "transparent", border: "none", cursor: "pointer" }}
+            >
+              <span style={{ fontSize: 13, fontWeight: 700, color: INK }}>계정 설정</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={FAINT} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: showAccount ? "rotate(180deg)" : "none", transition: "transform 0.2s ease" }}>
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+            {showAccount && (
+              <div style={{ padding: "0 20px 20px", display: "flex", flexDirection: "column", gap: 18 }}>
+                {/* 비밀번호 변경 */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  <p style={{ fontSize: 12.5, fontWeight: 700, color: SUB }}>비밀번호 변경</p>
+                  <input
+                    type="password"
+                    placeholder="새 비밀번호 (6자 이상)"
+                    value={pwNew}
+                    onChange={e => setPwNew(e.target.value)}
+                    className="mp-input"
+                    style={{ width: "100%", background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, padding: "10px 14px", fontSize: 14, color: INK, outline: "none", boxSizing: "border-box" }}
+                  />
+                  <input
+                    type="password"
+                    placeholder="새 비밀번호 확인"
+                    value={pwConfirm}
+                    onChange={e => setPwConfirm(e.target.value)}
+                    onKeyDown={e => e.key === "Enter" && handleChangePassword()}
+                    className="mp-input"
+                    style={{ width: "100%", background: CARD, border: `1px solid ${BORDER}`, borderRadius: 10, padding: "10px 14px", fontSize: 14, color: INK, outline: "none", boxSizing: "border-box" }}
+                  />
+                  {pwMsg && (
+                    <p style={{ fontSize: 13, fontWeight: 500, color: pwMsg.ok ? GREEN : RED }}>{pwMsg.text}</p>
+                  )}
+                  <button
+                    onClick={handleChangePassword}
+                    disabled={pwLoading}
+                    style={{ padding: "10px 0", borderRadius: 10, background: GRAD, border: "none", color: "#fff", fontSize: 14, fontWeight: 700, cursor: pwLoading ? "default" : "pointer", opacity: pwLoading ? 0.5 : 1, boxShadow: "0 8px 22px -12px rgba(49,46,129,0.5)" }}
+                  >
+                    {pwLoading ? "변경 중..." : "비밀번호 변경"}
+                  </button>
+                </div>
+                {/* 회원탈퇴 */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, paddingTop: 14, borderTop: `1px solid #F3F4F6` }}>
+                  <div>
+                    <p style={{ fontSize: 12.5, fontWeight: 700, color: SUB }}>회원탈퇴</p>
+                    <p style={{ fontSize: 12, color: FAINT, marginTop: 3 }}>계정과 모든 데이터가 삭제돼요.</p>
+                  </div>
+                  <button
+                    onClick={() => setShowDeleteConfirm(true)}
+                    style={{ fontSize: 12, fontWeight: 600, color: RED, background: CARD, border: "1px solid rgba(220,38,38,0.3)", borderRadius: 9, padding: "7px 14px", cursor: "pointer", flexShrink: 0 }}
+                  >
+                    탈퇴하기
+                  </button>
+                </div>
               </div>
-              <button
-                onClick={() => setShowDeleteConfirm(true)}
-                style={{ fontSize: 12, fontWeight: 600, color: RED, background: CARD, border: "1px solid rgba(220,38,38,0.3)", borderRadius: 9, padding: "7px 14px", cursor: "pointer", flexShrink: 0 }}
-              >
-                탈퇴하기
-              </button>
-            </div>
+            )}
           </div>
         </div>
       </div>
