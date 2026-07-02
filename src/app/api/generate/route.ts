@@ -281,8 +281,8 @@ export async function POST(req: Request) {
 
     case "personality": {
       const sys: Anthropic.Messages.TextBlockParam[] = [
-        { type: "text", text: prompt("common") + "\n\n" + prompt("personality_v2"), cache_control: { type: "ephemeral" } },
-        { type: "text", text: `## 세션 정보\n직무: ${body.jobTitle || "미입력"}\n회사: ${body.companyInfo || "미입력"}\n글자 수 제한: ${body.charLimit ? `${body.charLimit}자 (수정본 작성 시 이 글자 수에 맞춰야 함)` : "미입력"}${body.jobPostText ? `\n\n## 채용공고(JD)\n${body.jobPostText}` : ""}\n\n## 자소서 초안\n${body.draft}`, cache_control: { type: "ephemeral" } },
+        { type: "text", text: prompt("common") + "\n\n" + prompt("personality_v3"), cache_control: { type: "ephemeral" } },
+        { type: "text", text: `## 세션 정보\n직무: ${body.jobTitle || "미입력"}\n회사: ${body.companyInfo || "미입력"}\n문항: ${body.question || "미입력"}\n글자 수 제한: ${body.charLimit ? `${body.charLimit}자 (수정본 작성 시 이 글자 수에 맞춰야 함)` : "미입력"}${body.jobPostText ? `\n\n## 채용공고(JD)\n${body.jobPostText}` : ""}\n\n## 자소서 초안\n${body.draft}`, cache_control: { type: "ephemeral" } },
       ];
       const baseMsgs: MsgParam[] = body.messages?.length > 0
         ? body.messages

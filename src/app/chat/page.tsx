@@ -343,7 +343,7 @@ export default function ChatPage() {
           chatMode === "motivation"
             ? { type: "motivation", jobTitle, companyInfo, draft, charLimit, messages: history, analysisReport: analysisContent, jobPostText, jobPostImage: history.length <= 1 ? jobPostImagePreview : "" }
             : chatMode === "personality"
-            ? { type: "personality", jobTitle, companyInfo, draft, charLimit, messages: history, analysisReport: analysisContent, jobPostText, jobPostImage: history.length <= 1 ? jobPostImagePreview : "" }
+            ? { type: "personality", jobTitle, companyInfo, question, draft, charLimit, messages: history, analysisReport: analysisContent, jobPostText, jobPostImage: history.length <= 1 ? jobPostImagePreview : "" }
             : { type: "analyze", jobTitle, companyInfo, question, draft, charLimit, messages: history, analysisReport: analysisContent, jobPostText, jobPostImage: history.length <= 1 ? jobPostImagePreview : "" }
         ),
       });
