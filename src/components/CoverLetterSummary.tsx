@@ -1,10 +1,17 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
-const ACCENT = "#FF6B35";
-const BLUE = "#6B8EFF";
-const GOLD = "#FFD166";
+const LOADING_LINES = [
+  "디깅에서 나온 판단들을 다시 읽고 있어요…",
+  "이 회사가 뭘로 돈 버는지 뜯어보는 중…",
+  "면접관이 찌를 만한 급소를 찾고 있어요…",
+  "당신만의 무기를 골라내는 중이에요…",
+  "회사의 고민과 당신 경험이 만나는 지점을 잇는 중…",
+  "밖에서 본 당신의 진짜 강점을 짚는 중이에요…",
+  "면접장에서 통할 한 줄을 벼리고 있어요…",
+  "거의 다 됐어요. 마지막으로 다듬는 중…",
+];
 
 export interface SummaryMsg {
   id: number;
@@ -19,9 +26,13 @@ export interface SummaryInterviewQ {
 
 export interface FinalAnalysis {
   companyJob: string;
+  jobRole?: string; // 직무 해부 — 이 자리는 왜 뽑는가
   weapons: { title: string; competency?: string; detail: string }[];
-  interviewKeys: { q: string; a: string }[];
+  oneLine?: string; // 나의 한 줄 — 회사의 고민 ↔ 내 무기 앵커
+  interviewKeys?: { q: string; a: string }[]; // 구버전 호환(더는 생성 안 함)
   insight: { edge: string; caution: string; direction: string };
+  weakSpots?: { q: string; guide: string }[]; // 예상 급소 + 받아치는 방향
+  homework?: string[]; // 면접 전 숙제
 }
 
 interface Props {
@@ -221,9 +232,13 @@ ${finalAnalysis ? `
     <span class="section-num">★</span>
     <span class="section-title">면접 한 장 — 면접장에 들고 가세요</span>
   </div>
-  ${finalAnalysis.companyJob ? `<div class="op-block op-company"><p class="op-label">🏢 이 회사·직무 (이건 말할 수 있어야 해요)</p><p class="op-text">${escHtml(finalAnalysis.companyJob)}</p><p class="op-note">취업소크라테스가 정리한 초안이에요. 맞는지 확인하고 본인 말로 다시 정리해보세요.</p></div>` : ""}
+  ${finalAnalysis.companyJob ? `<div class="op-block op-company"><p class="op-label">🏢 이 회사는 뭘로 돈을 벌까</p><p class="op-text">${escHtml(finalAnalysis.companyJob)}</p><p class="op-note">취업소크라테스가 정리한 초안이에요. 맞는지 확인하고 본인 말로 다시 정리해보세요.</p></div>` : ""}
+  ${finalAnalysis.jobRole ? `<div class="op-block op-company"><p class="op-label">🧭 이 자리는 왜 뽑을까 · 직무 해부</p><p class="op-text">${escHtml(finalAnalysis.jobRole)}</p></div>` : ""}
   ${finalAnalysis.weapons?.length ? `<div class="op-block"><p class="op-label">💪 내 무기</p>${finalAnalysis.weapons.map((w, i) => `<div class="op-wp"><p class="op-wp-t"><span class="op-wp-n">${String(i + 1).padStart(2, "0")}</span> ${escHtml(w.title)}</p>${w.competency ? `<p class="op-wp-row"><span class="op-wp-lab">역량</span> ${escHtml(w.competency)}</p>` : ""}<p class="op-wp-row"><span class="op-wp-lab">근거</span> ${escHtml(w.detail)}</p></div>`).join("")}</div>` : ""}
+  ${finalAnalysis.oneLine ? `<div class="op-block" style="background:#eef2ff;border-color:#c7d2fe"><p class="op-label">🎯 나의 한 줄</p><p class="op-text" style="font-weight:700">“${escHtml(finalAnalysis.oneLine)}”</p></div>` : ""}
   ${finalAnalysis.interviewKeys?.length ? `<div class="op-block"><p class="op-label">🎤 이 질문엔 이렇게</p>${finalAnalysis.interviewKeys.map(k => `<div class="op-qa"><p class="op-q">Q. ${escHtml(k.q)}</p><p class="op-a">→ ${escHtml(k.a)}</p></div>`).join("")}</div>` : ""}
+  ${finalAnalysis.weakSpots?.length ? `<div class="op-block" style="background:#fef2f2;border-color:#fecaca"><p class="op-label">⚡ 예상 급소</p>${finalAnalysis.weakSpots.map(w => `<div class="op-qa"><p class="op-q">Q. ${escHtml(w.q)}</p><p class="op-a">→ ${escHtml(w.guide)}</p></div>`).join("")}</div>` : ""}
+  ${finalAnalysis.homework?.length ? `<div class="op-block"><p class="op-label">✅ 면접 전 숙제</p>${finalAnalysis.homework.map((h, i) => `<p class="op-item"><span class="op-item-t">${i + 1}.</span> ${escHtml(h)}</p>`).join("")}</div>` : ""}
   ${finalAnalysis.insight ? `<div class="op-block"><p class="op-label">👀 취업소크라테스가 본 당신</p>${finalAnalysis.insight.edge ? `<div class="op-ins"><p class="op-ins-t" style="color:#15803d">✨ 이게 진짜 강점이에요</p><p class="op-text">${escHtml(finalAnalysis.insight.edge)}</p></div>` : ""}${finalAnalysis.insight.caution ? `<div class="op-ins"><p class="op-ins-t" style="color:#b45309">⚠️ 이건 조심하면 좋아요</p><p class="op-text">${escHtml(finalAnalysis.insight.caution)}</p></div>` : ""}${finalAnalysis.insight.direction ? `<div class="op-ins"><p class="op-ins-t" style="color:#c2410c">🎯 그래서 면접에선</p><p class="op-text">${escHtml(finalAnalysis.insight.direction)}</p></div>` : ""}</div>` : ""}
 </div>
 <hr>
@@ -317,7 +332,7 @@ ${interviewQs.length > 0 ? `
 }
 
 /* ── 메인 컴포넌트 ── */
-export function CoverLetterSummary({ jobTitle, question, draft, msgs, interviewQs = [], analysisContent, finalAnalysis, finalAnalysisLoading, onClose, onNextItem }: Props) {
+export function CoverLetterSummary({ jobTitle, question, msgs, interviewQs = [], analysisContent, finalAnalysis, finalAnalysisLoading, onClose, onNextItem }: Props) {
   useEffect(() => {
     document.body.style.overflow = "hidden";
     return () => { document.body.style.overflow = ""; };
@@ -329,10 +344,15 @@ export function CoverLetterSummary({ jobTitle, question, draft, msgs, interviewQ
   const { subtitle, revision, changes } =
     revMsgIdx >= 0 ? parseRevisionMsg(msgs[revMsgIdx].text) : { subtitle: "", revision: "", changes: "" };
 
-  const changeItems = changes
-    .split("\n")
-    .map((l) => l.replace(/^[-·•]\s*/, "").trim())
-    .filter(Boolean);
+  const fa = finalAnalysis;
+  const loading = !!finalAnalysisLoading && !finalAnalysis;
+
+  const [loadIdx, setLoadIdx] = useState(0);
+  useEffect(() => {
+    if (!loading) { setLoadIdx(0); return; }
+    const t = setInterval(() => setLoadIdx((i) => (i + 1) % LOADING_LINES.length), 2600);
+    return () => clearInterval(t);
+  }, [loading]);
 
   function handlePdf() {
     const html = buildPrintHtml(
@@ -348,421 +368,305 @@ export function CoverLetterSummary({ jobTitle, question, draft, msgs, interviewQ
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-5"
-      style={{ background: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)" }}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      className="fixed inset-0 z-50 flex flex-col"
+      style={{ background: "#F9FAFB", color: "#111827", animation: "summaryPageIn 0.36s cubic-bezier(0.22,1,0.36,1)" }}
     >
-      <div
-        className="w-full flex flex-col rounded-2xl overflow-hidden"
-        style={{
-          maxWidth: "900px",
-          maxHeight: "88vh",
-          background: "#0D0D18",
-          border: "1px solid rgba(255,255,255,0.1)",
-          boxShadow: "0 32px 80px rgba(0,0,0,0.6)",
-          color: "rgba(255,255,255,0.88)",
-        }}
-      >
+      <style>{`@keyframes summaryPageIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}@keyframes revealUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+
       {/* 헤더 */}
-      <div
-        className="flex items-center justify-between px-6 py-4 flex-shrink-0 border-b"
-        style={{ borderColor: "rgba(255,255,255,0.07)" }}
-      >
-        <div>
-          <p className="text-sm font-semibold text-white">첨삭 리포트</p>
-          <p className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.38)" }}>
-            {jobTitle && `${jobTitle} · `}{question || "문항 미입력"}
-          </p>
+      <div className="flex-shrink-0 border-b" style={{ borderColor: "#E5E7EB", background: "#FFFFFF" }}>
+        <div className="max-w-3xl mx-auto w-full flex items-center justify-between px-6 py-4">
+          <button
+            onClick={onClose}
+            className="flex items-center gap-1.5 text-sm font-semibold transition-opacity hover:opacity-70"
+            style={{ color: "#4F46E5" }}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+            대화로 돌아가기
+          </button>
+          <div className="text-right">
+            <p className="text-sm font-bold" style={{ color: "#111827" }}>면접 브리핑</p>
+            {jobTitle && <p className="text-xs mt-0.5" style={{ color: "#9CA3AF" }}>{jobTitle}</p>}
+          </div>
         </div>
-        <button
-          onClick={onClose}
-          className="w-8 h-8 flex items-center justify-center rounded-xl transition-all hover:opacity-70"
-          style={{ background: "rgba(255,255,255,0.15)", color: "#fff", fontSize: "18px", lineHeight: 1 }}
-        >
-          ×
-        </button>
       </div>
 
       {/* 본문 */}
-      <div className="flex-1 overflow-y-auto px-6 py-7">
-        <div className="max-w-4xl mx-auto flex flex-col gap-12">
+      <div className="flex-1 overflow-y-auto px-6 py-8">
+        <div className="max-w-3xl mx-auto flex flex-col gap-6">
 
-          {/* ★ 당신 분석 (자기이해 리포트) */}
-          {(finalAnalysis || finalAnalysisLoading) && (
-            <section>
-              <style>{`@keyframes revealUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-              <div style={{ animation: "revealUp .5s ease both" }}>
-                <p style={{ fontSize: 21, fontWeight: 800, color: "#fff", letterSpacing: "-0.02em", wordBreak: "keep-all" }}>
-                  🎉 {jobTitle ? `${jobTitle} ` : ""}면접, 이렇게 준비됐어요
-                </p>
-                <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginTop: 6, lineHeight: 1.6, wordBreak: "keep-all" }}>면접장에 들고 갈 한 장이에요. 외워서 읽지 말고, 사실을 확인한 뒤 본인 말로 다시 정리해보세요.</p>
-              </div>
+          {/* 히어로 */}
+          <div style={{ animation: "revealUp .5s ease both" }}>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full mb-3" style={{ background: "rgba(79,70,229,0.08)", border: "1px solid rgba(79,70,229,0.22)" }}>
+              <span style={{ fontSize: 12 }}>🎯</span>
+              <span className="text-xs font-bold" style={{ color: "#4F46E5" }}>면접 한 장 브리핑</span>
+            </span>
+            <h1 className="text-2xl font-bold" style={{ color: "#111827", letterSpacing: "-0.02em", wordBreak: "keep-all" }}>{jobTitle ? `${jobTitle} ` : ""}면접, 이 한 장이면 돼요</h1>
+            <p className="text-sm mt-2" style={{ color: "#6B7280", lineHeight: 1.65, wordBreak: "keep-all" }}>회사를 이해하고 → 내 무기를 알고 → 실전 태도까지. 외우지 말고, 읽고 본인 언어로 소화하세요.</p>
+          </div>
 
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 16, animation: "revealUp .5s ease .08s both" }}>
-                <Stat label="완성본" value={`${revision.length}자`} />
-                <Stat label="면접 대비" value={`${interviewQs.length}문항`} />
-                {finalAnalysis && finalAnalysis.weapons?.length > 0 && <Stat label="내 무기" value={`${finalAnalysis.weapons.length}개`} />}
-                {draft?.trim() && <Stat label="초안 → 완성" value="한 단계 ↑" />}
-              </div>
+          {loading ? (
+            <div className="rounded-2xl px-6 py-10 flex flex-col items-center text-center" style={{ background: "#FFFFFF", border: "1px solid #E9EBEF", boxShadow: "0 2px 10px -6px rgba(17,24,39,0.08)" }}>
+              <span style={{ width: 30, height: 30, borderRadius: "50%", border: "3px solid rgba(79,70,229,0.15)", borderTopColor: "#4F46E5", display: "inline-block", animation: "spin .8s linear infinite" }} />
+              <p key={loadIdx} className="text-[15px] font-semibold mt-5" style={{ color: "#312E81", wordBreak: "keep-all", animation: "loadFade .5s ease" }}>
+                {LOADING_LINES[loadIdx]}
+              </p>
+              <p className="text-xs mt-2.5" style={{ color: "#9CA3AF", wordBreak: "keep-all", lineHeight: 1.6 }}>
+                디깅부터 완성본까지 다시 훑어 만드는 브리핑이라, 조금 걸려요.<br />좋은 건 원래 시간이 좀 들거든요. ☕
+              </p>
+              <style>{`@keyframes loadFade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}`}</style>
+            </div>
+          ) : (
+            <>
+              {/* PART 1 · 이해 */}
+              <PartLabel n="PART 1" text="이 회사를 이해하기" />
+              <BriefCard accent="#3B62CC" icon="🏢" title="이 회사는 뭘로 돈을 벌까">
+                {fa?.companyJob
+                  ? <><BodyText>{fa.companyJob}</BodyText><Note>확인하고 본인 말로 다시 정리해보세요.</Note></>
+                  : <Soon text="무엇을 팔고, 누가 사주고, 무엇으로 경쟁하고, 지금 이 회사의 고민은 무엇인지 — 면접관 눈높이로 정리돼요." />}
+              </BriefCard>
+              <BriefCard accent="#3B62CC" icon="🧭" title="이 자리는 왜 뽑을까 · 직무 해부">
+                {fa?.jobRole
+                  ? <BodyText>{fa.jobRole}</BodyText>
+                  : <Soon text="이 직무가 회사 안에서 실제로 하는 일, 신입에게 진짜 기대하는 것, 현업이 쓰는 말." />}
+              </BriefCard>
 
-              {finalAnalysisLoading && !finalAnalysis ? (
-                <div style={{ marginTop: 18, display: "flex", alignItems: "center", gap: 10, color: "rgba(255,255,255,0.45)", fontSize: 13 }}>
-                  <span style={{ width: 16, height: 16, borderRadius: "50%", border: "2px solid rgba(255,255,255,0.2)", borderTopColor: "#A78BFA", display: "inline-block", animation: "spin .8s linear infinite" }} />
-                  면접 한 장을 정리하고 있어요…
-                </div>
-              ) : finalAnalysis ? (
-                <div style={{ marginTop: 18, display: "flex", flexDirection: "column", gap: 14 }}>
-                  {finalAnalysis.companyJob && (
-                    <div style={{ animation: "revealUp .5s ease .16s both", padding: "16px 18px", borderRadius: 16, background: "rgba(96,165,250,0.08)", border: "1px solid rgba(96,165,250,0.22)" }}>
-                      <p style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.1em", color: "#60A5FA", marginBottom: 7 }}>🏢 이 회사·직무 (이건 말할 수 있어야 해요)</p>
-                      <p style={{ fontSize: 14.5, lineHeight: 1.7, color: "rgba(255,255,255,0.92)", wordBreak: "keep-all" }}>{finalAnalysis.companyJob}</p>
-                      <p style={{ fontSize: 12, lineHeight: 1.6, color: "rgba(255,255,255,0.42)", marginTop: 9, wordBreak: "keep-all" }}>👉 취업소크라테스가 정리한 초안이에요. 맞는지 확인하고, 본인 말로 다시 정리해보세요.</p>
-                    </div>
-                  )}
-                  {finalAnalysis.weapons?.length > 0 && (
-                    <div style={{ animation: "revealUp .5s ease .24s both" }}>
-                      <p style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.1em", color: "rgb(74,222,128)", marginBottom: 10 }}>💪 내 무기</p>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                        {finalAnalysis.weapons.map((s, i) => (
-                          <div key={i} style={{ padding: "14px 16px", borderRadius: 14, background: "rgba(74,222,128,0.05)", border: "1px solid rgba(74,222,128,0.18)" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 8 }}>
-                              <span style={{ flexShrink: 0, width: 22, height: 22, borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, color: "rgb(74,222,128)", background: "rgba(74,222,128,0.14)" }}>{String(i + 1).padStart(2, "0")}</span>
-                              <p style={{ fontSize: 14, fontWeight: 700, color: "#fff", wordBreak: "keep-all" }}>{s.title}</p>
-                            </div>
-                            {s.competency && (
-                              <div style={{ display: "flex", gap: 8, marginBottom: 7, paddingLeft: 31 }}>
-                                <span style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.38)", flexShrink: 0, marginTop: 2 }}>역량</span>
-                                <span style={{ fontSize: 12.5, fontWeight: 600, color: "rgb(134,239,172)", wordBreak: "keep-all" }}>{s.competency}</span>
-                              </div>
-                            )}
-                            <div style={{ display: "flex", gap: 8, paddingLeft: 31 }}>
-                              <span style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.38)", flexShrink: 0, marginTop: 3 }}>근거</span>
-                              <p style={{ fontSize: 13, lineHeight: 1.65, color: "rgba(255,255,255,0.82)", wordBreak: "keep-all" }}>{s.detail}</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {finalAnalysis.interviewKeys?.length > 0 && (
-                    <div style={{ animation: "revealUp .5s ease .32s both" }}>
-                      <p style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.1em", color: "#FF8A65", marginBottom: 10 }}>🎤 이 질문엔 이렇게</p>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                        {finalAnalysis.interviewKeys.map((k, i) => (
-                          <div key={i} style={{ padding: "13px 16px", borderRadius: 14, background: "rgba(255,138,101,0.06)", border: "1px solid rgba(255,138,101,0.2)" }}>
-                            <p style={{ fontSize: 13, fontWeight: 700, color: "#FFB59B", marginBottom: 5, wordBreak: "keep-all" }}>Q. {k.q}</p>
-                            <p style={{ fontSize: 13, lineHeight: 1.65, color: "rgba(255,255,255,0.82)", wordBreak: "keep-all" }}>→ {k.a}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {finalAnalysis.insight && (
-                    <div style={{ animation: "revealUp .5s ease .4s both", padding: "16px 18px", borderRadius: 16, background: "rgba(167,139,250,0.08)", border: "1px solid rgba(167,139,250,0.22)", display: "flex", flexDirection: "column", gap: 13 }}>
-                      <p style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.1em", color: "#A78BFA" }}>👀 취업소크라테스가 본 당신</p>
-                      {finalAnalysis.insight.edge && (
-                        <div>
-                          <p style={{ fontSize: 12.5, fontWeight: 700, color: "rgb(134,239,172)", marginBottom: 4 }}>✨ 이게 진짜 강점이에요</p>
-                          <p style={{ fontSize: 13.5, lineHeight: 1.7, color: "rgba(255,255,255,0.9)", wordBreak: "keep-all" }}>{finalAnalysis.insight.edge}</p>
+              {/* PART 2 · 나 */}
+              <PartLabel n="PART 2" text="나를 무기로 만들기" />
+              <BriefCard accent="#16A34A" icon="💪" title="내 무기 · 강점 키워드">
+                {fa?.weapons?.length ? (
+                  <div className="flex flex-col gap-2.5">
+                    {fa.weapons.map((w, i) => (
+                      <div key={i} style={{ padding: "13px 15px", borderRadius: 12, background: "#F0FDF4", border: "1px solid #BBF7D0" }}>
+                        <div className="flex items-center gap-2 flex-wrap mb-1.5">
+                          <span className="text-sm font-bold" style={{ color: "#111827" }}>{w.title}</span>
+                          {w.competency && <span className="text-xs font-semibold" style={{ color: "#15803D", background: "#DCFCE7", borderRadius: 6, padding: "1px 8px" }}>{w.competency}</span>}
                         </div>
-                      )}
-                      {finalAnalysis.insight.caution && (
-                        <div>
-                          <p style={{ fontSize: 12.5, fontWeight: 700, color: "#FFD166", marginBottom: 4 }}>⚠️ 이건 조심하면 좋아요</p>
-                          <p style={{ fontSize: 13.5, lineHeight: 1.7, color: "rgba(255,255,255,0.9)", wordBreak: "keep-all" }}>{finalAnalysis.insight.caution}</p>
-                        </div>
-                      )}
-                      {finalAnalysis.insight.direction && (
-                        <div>
-                          <p style={{ fontSize: 12.5, fontWeight: 700, color: "#FF8A65", marginBottom: 4 }}>🎯 그래서 면접에선</p>
-                          <p style={{ fontSize: 13.5, lineHeight: 1.7, color: "rgba(255,255,255,0.9)", wordBreak: "keep-all" }}>{finalAnalysis.insight.direction}</p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ) : null}
-            </section>
-          )}
-
-          {/* 00 · 기업·직무 분석 보고서 */}
-          {analysisContent?.trim() && (
-            <Section number="00" title="기업 · 직무 분석" numColor="rgba(167,139,250,0.7)">
-              <div className="flex flex-col gap-6">
-                {analysisContent.split(/(?=##\s)/).filter(s => s.trim()).map((block, i) => {
-                  const lines = block.trim().split("\n").filter(Boolean);
-                  const rawTitle = lines[0]?.replace(/^##\s*/, "") ?? "";
-                  const numMatch = rawTitle.match(/^(\S+)\s+(\d+)\.\s*(.+)$/);
-                  const emoji = numMatch ? numMatch[1] : "";
-                  const sectionTitle = numMatch ? numMatch[3] : rawTitle;
-                  const bullets = lines.slice(1).filter(l => l.startsWith("- ")).map(l => l.replace(/^-\s*/, ""));
-                  return (
-                    <div key={i} className="rounded-2xl overflow-hidden" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
-                      <div className="px-5 py-3.5 border-b" style={{ borderColor: "rgba(255,255,255,0.06)", background: "rgba(255,255,255,0.04)" }}>
-                        <div className="flex items-center gap-2">
-                          <span className="text-base">{emoji}</span>
-                          <span className="text-sm font-bold text-white">{sectionTitle}</span>
-                        </div>
-                      </div>
-                      <div className="px-5 py-4 flex flex-col gap-4">
-                        {bullets.map((b, j) => {
-                          const colonIdx = b.indexOf(": ");
-                          const label = colonIdx > 0 && colonIdx < 24 ? b.slice(0, colonIdx) : null;
-                          const body = label ? b.slice(colonIdx + 2) : b;
-                          return (
-                            <div key={j} className="flex flex-col gap-1 pl-3" style={{ borderLeft: "2px solid rgba(167,139,250,0.3)" }}>
-                              {label && <p className="text-xs font-bold" style={{ color: "#A78BFA" }}>{label}</p>}
-                              <p className="text-sm leading-relaxed" style={{ color: "rgba(255,255,255,0.75)", wordBreak: "keep-all" }}>{body}</p>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </Section>
-          )}
-
-          {/* 01 · 완성본 */}
-          <Section number="01" title="완성본" numColor={`${GOLD}99`}>
-            <div className="flex flex-col gap-4">
-              {revision && subtitle && (
-                <p className="text-base font-bold" style={{ color: "#fff", letterSpacing: "-0.02em", marginBottom: -6 }}>{subtitle}</p>
-              )}
-              {revision ? (
-                <DraftBox label="수정된 자소서" text={revision} accent />
-              ) : (
-                <div
-                  className="rounded-2xl flex items-center justify-center py-10"
-                  style={{ background: "rgba(255,255,255,0.02)", border: "1px dashed rgba(255,255,255,0.1)" }}
-                >
-                  <p className="text-sm" style={{ color: "rgba(255,255,255,0.2)" }}>완성본이 아직 작성되지 않았어요</p>
-                </div>
-              )}
-
-              {changeItems.length > 0 && (
-                <div
-                  className="rounded-2xl overflow-hidden"
-                  style={{ background: `${GOLD}09`, border: `1px solid ${GOLD}28` }}
-                >
-                  <div className="flex items-center gap-2 px-4 py-2.5 border-b" style={{ borderColor: `${GOLD}20` }}>
-                    <span style={{ fontSize: "12px" }}>✏️</span>
-                    <span className="text-xs font-semibold" style={{ color: GOLD }}>바뀐 점</span>
-                  </div>
-                  <div className="px-4 py-3.5 flex flex-col gap-2.5">
-                    {changeItems.map((item, i) => (
-                      <div key={i} className="flex items-start gap-2.5">
-                        <span className="text-xs flex-shrink-0 mt-[3px] font-bold" style={{ color: GOLD }}>·</span>
-                        <p className="text-sm leading-relaxed" style={{ color: "rgba(255,255,255,0.8)", wordBreak: "keep-all" }}>
-                          {item}
-                        </p>
+                        <p className="text-[13px]" style={{ color: "#374151", lineHeight: 1.65, wordBreak: "keep-all" }}>{w.detail}</p>
                       </div>
                     ))}
                   </div>
-                </div>
-              )}
-            </div>
-          </Section>
+                ) : <Soon text="디깅에서 검증된 강점을 키워드로 뽑고, 어느 경험에서 증명됐는지·이 직무 어디서 쓰이는지 붙여줘요." />}
+              </BriefCard>
+              <BriefCard accent="#4F46E5" icon="🎯" title="나의 한 줄" highlight>
+                {fa?.oneLine ? (
+                  <>
+                    <p className="text-[15px] font-bold" style={{ color: "#312E81", lineHeight: 1.7, wordBreak: "keep-all" }}>“{fa.oneLine}”</p>
+                    <Note>어떤 질문이 와도 결국 이 문장으로 돌아오면 돼요.</Note>
+                  </>
+                ) : <Soon text="회사의 고민과 내 무기가 만나는 지점을 한 문장으로. 어떤 질문이 와도 여기로 돌아오면 되는 앵커." />}
+              </BriefCard>
 
-          {/* 02 · 진단 & 첨삭 대화 */}
-          <Section number="02" title="진단 & 첨삭 대화" numColor={`${BLUE}99`}>
-            <div className="flex flex-col gap-3">
-              {diagMsgs.map((msg, i) => {
-                if (!stripMd(msg.text).trim() && !msg.text.includes("[수정본]") && !msg.text.includes("[지원동기]")) return null;
-                const isRevMsg = msg.role === "bot" && (msg.text.includes("[수정본]") || msg.text.includes("[지원동기]"));
-                return (
-                  <SummaryMsgRow
-                    key={msg.id}
-                    msg={msg}
-                    isDiagnosis={i === 0 && msg.role === "bot"}
-                    isRevisionMsg={isRevMsg}
-                  />
-                );
-              })}
-            </div>
-          </Section>
+              {/* PART 3 · 실전 */}
+              <PartLabel n="PART 3" text="면접장에서" />
+              <BriefCard accent="#7C5CBF" icon="👀" title="면접 태도·방향 · 전문가 시선">
+                {fa?.insight ? (
+                  <div className="flex flex-col gap-3">
+                    {fa.insight.edge && <InsightRow color="#16A34A" label="✨ 이게 진짜 강점" text={fa.insight.edge} />}
+                    {fa.insight.caution && <InsightRow color="#C2740A" label="⚠️ 이건 조심하면 좋아요" text={fa.insight.caution} />}
+                    {fa.insight.direction && <InsightRow color="#4F46E5" label="🎯 그래서 면접에선" text={fa.insight.direction} />}
+                  </div>
+                ) : <Soon text="면접관이 확인하려는 것, 내 답변이 자칫 어떻게 비칠 수 있는지, 무엇을 앞세우고 무엇은 아낄지." />}
+              </BriefCard>
+              <BriefCard accent="#DC2626" icon="⚡" title="예상 급소">
+                {fa?.weakSpots?.length ? (
+                  <div className="flex flex-col gap-2.5">
+                    {fa.weakSpots.map((w, i) => (
+                      <div key={i} style={{ padding: "12px 14px", borderRadius: 12, background: "#FEF2F2", border: "1px solid #FECACA" }}>
+                        <p className="text-[13px] font-bold mb-1" style={{ color: "#B91C1C", wordBreak: "keep-all" }}>Q. {w.q}</p>
+                        <p className="text-[13px]" style={{ color: "#374151", lineHeight: 1.65, wordBreak: "keep-all" }}>→ {w.guide}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : <Soon text="이 회사가 나를 찌를 만한 질문 2~3개와, 각각 어떻게 받아칠지 방향." />}
+              </BriefCard>
+              <BriefCard accent="#4F46E5" icon="✅" title="면접 전 숙제">
+                {fa?.homework?.length ? (
+                  <div className="flex flex-col gap-2">
+                    {fa.homework.map((h, i) => (
+                      <div key={i} className="flex items-start gap-2.5">
+                        <span className="flex-shrink-0 mt-[2px] w-4 h-4 rounded flex items-center justify-center" style={{ border: "1.5px solid #A5B4FC", background: "#EEF2FF" }}>
+                          <span style={{ fontSize: 9, color: "#4F46E5", fontWeight: 800 }}>{i + 1}</span>
+                        </span>
+                        <p className="text-[13px]" style={{ color: "#374151", lineHeight: 1.65, wordBreak: "keep-all" }}>{h}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : <Soon text="가기 전에 직접 확인할 것 — 최근 뉴스 하나, 제품 하나 써보기, 핵심 용어 하나." />}
+              </BriefCard>
+            </>
+          )}
 
-          {/* 03 · 면접 Q&A */}
+          {/* 기록 (참고) */}
+          <PartLabel n="기록" text="완성본 · 대화 다시 보기" />
+          {revision && (
+            <RecordFold icon="📄" title="완성본" defaultOpen>
+              {subtitle && <p className="text-sm font-bold mb-2" style={{ color: "#4C3F99", wordBreak: "keep-all" }}>{subtitle}</p>}
+              <p className="text-[13px] whitespace-pre-wrap" style={{ color: "#374151", lineHeight: 1.85, wordBreak: "keep-all" }}>{revision}</p>
+            </RecordFold>
+          )}
+          {diagMsgs.length > 0 && (
+            <RecordFold icon="💬" title="디깅 대화 기록">
+              <div className="flex flex-col gap-2.5">
+                {diagMsgs.map((msg, i) => <LightMsgRow key={msg.id} msg={msg} isDiagnosis={i === 0 && msg.role === "bot"} />)}
+              </div>
+            </RecordFold>
+          )}
           {interviewQs.length > 0 && (
-            <Section number="03" title="면접 예상 Q&A" numColor={`${ACCENT}99`}>
-              <div className="flex flex-col gap-6">
+            <RecordFold icon="🎤" title={`면접 예상 Q&A (${interviewQs.length}문항)`}>
+              <div className="flex flex-col gap-5">
                 {interviewQs.map((q, i) => (
                   <div key={i}>
-                    <div className="flex items-start gap-2 mb-3">
-                      <span className="text-xs font-bold flex-shrink-0 mt-[3px]" style={{ color: BLUE }}>Q{i + 1}</span>
-                      <p className="text-sm font-semibold text-white" style={{ wordBreak: "keep-all", lineHeight: 1.6 }}>{q.question}</p>
+                    <div className="flex items-start gap-2 mb-2.5">
+                      <span className="text-xs font-bold flex-shrink-0 mt-[3px]" style={{ color: "#4F46E5" }}>Q{i + 1}</span>
+                      <p className="text-[13px] font-semibold" style={{ color: "#111827", wordBreak: "keep-all", lineHeight: 1.6 }}>{q.question}</p>
                     </div>
                     {q.msgs.length > 0 ? (
-                      <div className="flex flex-col gap-3">
-                        {q.msgs.map((msg) => <SummaryMsgRow key={msg.id} msg={msg} />)}
+                      <div className="flex flex-col gap-2.5">
+                        {q.msgs.map((msg) => <LightMsgRow key={msg.id} msg={msg} />)}
                       </div>
                     ) : (
-                      <p className="text-xs" style={{ color: "rgba(255,255,255,0.25)" }}>아직 답변하지 않은 질문이에요</p>
+                      <p className="text-xs pl-6" style={{ color: "#B6BCC6" }}>답변하지 않은 질문이에요</p>
                     )}
                   </div>
                 ))}
               </div>
-            </Section>
+            </RecordFold>
           )}
         </div>
       </div>
 
       {/* 푸터 */}
-      <div
-        className="flex-shrink-0 px-6 pt-4 pb-5 border-t flex flex-col gap-3"
-        style={{ borderColor: "rgba(255,255,255,0.07)", background: "rgba(255,255,255,0.02)" }}
-      >
-        {/* 안내 + PDF */}
-        <div className="flex items-center justify-between gap-4">
-          <p className="text-xs" style={{ color: "rgba(255,255,255,0.22)" }}>
-            기록은 마이페이지에서 언제든지 다시 볼 수 있어요
-          </p>
-          <button
-            onClick={handlePdf}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium transition-all hover:opacity-75 flex-shrink-0"
-            style={{
-              background: "rgba(255,255,255,0.06)",
-              color: "rgba(255,255,255,0.45)",
-              border: "1px solid rgba(255,255,255,0.1)",
-            }}
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="7 10 12 15 17 10"/>
-              <line x1="12" y1="15" x2="12" y2="3"/>
-            </svg>
-            PDF 저장
-          </button>
-        </div>
-
-        {/* 주요 액션 */}
-        <div className="flex gap-3">
-          <button
-            onClick={onClose}
-            className="flex-1 py-3 rounded-xl text-sm font-medium transition-all hover:opacity-75"
-            style={{
-              background: "rgba(255,255,255,0.05)",
-              color: "rgba(255,255,255,0.45)",
-              border: "1px solid rgba(255,255,255,0.08)",
-            }}
-          >
-            완료하기
-          </button>
-          {onNextItem && (
+      <div className="flex-shrink-0 border-t" style={{ borderColor: "#E5E7EB", background: "#FFFFFF" }}>
+        <div className="max-w-3xl mx-auto w-full px-6 pt-4 pb-5 flex flex-col gap-3">
+          <div className="flex items-center justify-between gap-4">
+            <p className="text-xs" style={{ color: "#9CA3AF" }}>마이페이지에서 언제든 다시 볼 수 있어요</p>
             <button
-              onClick={onNextItem}
-              className="flex-1 py-3 rounded-xl text-sm font-semibold text-white transition-all hover:scale-[1.02] active:scale-[0.98]"
-              style={{ background: ACCENT, boxShadow: `0 0 20px ${ACCENT}35` }}
+              onClick={handlePdf}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all hover:opacity-80 flex-shrink-0"
+              style={{ background: "#F3F4F6", color: "#4F46E5", border: "1px solid #E5E7EB" }}
             >
-              다음 문항 작성하기 →
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              PDF 저장
             </button>
-          )}
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={onClose}
+              className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all hover:opacity-80"
+              style={{ background: "#F3F4F6", color: "#6B7280", border: "1px solid #E5E7EB" }}
+            >
+              완료하기
+            </button>
+            {onNextItem && (
+              <button
+                onClick={onNextItem}
+                className="flex-1 py-3 rounded-xl text-sm font-bold text-white transition-all hover:opacity-92 active:scale-[0.98]"
+                style={{ background: "linear-gradient(135deg, #1A3461 0%, #312E81 100%)", boxShadow: "0 10px 28px -10px rgba(49,46,129,0.5)" }}
+              >
+                다음 문항 작성하기 →
+              </button>
+            )}
+          </div>
         </div>
       </div>
-
-      </div>
     </div>
   );
 }
 
-/* ── 하위 컴포넌트 ── */
+/* ── 하위 컴포넌트 (라이트) ── */
 
-function Stat({ label, value }: { label: string; value: string }) {
+function PartLabel({ n, text }: { n: string; text: string }) {
   return (
-    <div style={{ flex: "1 1 120px", minWidth: 110, padding: "12px 14px", borderRadius: 13, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
-      <p style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginBottom: 4 }}>{label}</p>
-      <p style={{ fontSize: 18, fontWeight: 800, color: "#fff", letterSpacing: "-0.02em" }}>{value}</p>
+    <div className="flex items-center gap-2.5 mt-2" style={{ animation: "revealUp .5s ease both" }}>
+      <span className="text-[11px] font-bold px-2 py-0.5 rounded" style={{ color: "#4F46E5", background: "rgba(79,70,229,0.09)", letterSpacing: "0.06em" }}>{n}</span>
+      <span className="text-sm font-bold" style={{ color: "#111827" }}>{text}</span>
+      <span className="flex-1 h-px" style={{ background: "#E5E7EB" }} />
     </div>
   );
 }
 
-function Section({ number, title, numColor, children }: { number: string; title: string; numColor: string; children: ReactNode }) {
+function BriefCard({ accent, icon, title, highlight, children }: { accent: string; icon: string; title: string; highlight?: boolean; children: ReactNode }) {
   return (
-    <section>
-      <div className="flex items-center gap-3 mb-5">
-        <span className="text-2xl font-black" style={{ color: numColor, lineHeight: 1, letterSpacing: "-0.02em" }}>{number}</span>
-        <span className="text-base font-semibold text-white">{title}</span>
+    <div className="rounded-2xl overflow-hidden" style={{ background: "#FFFFFF", border: `1px solid ${highlight ? accent : "#E9EBEF"}`, borderLeft: `3px solid ${accent}`, boxShadow: highlight ? `0 10px 28px -14px ${accent}80` : "0 2px 10px -6px rgba(17,24,39,0.08)", animation: "revealUp .5s ease both" }}>
+      <div className="flex items-center gap-2 px-5 pt-4 pb-2.5">
+        <span style={{ fontSize: 16 }}>{icon}</span>
+        <span className="text-[15px] font-bold" style={{ color: "#111827", wordBreak: "keep-all" }}>{title}</span>
       </div>
-      {children}
-    </section>
-  );
-}
-
-function DraftBox({ label, text, accent }: { label: string; text: string; accent?: boolean }) {
-  return (
-    <div
-      className="rounded-2xl overflow-hidden"
-      style={{
-        background: accent ? `${BLUE}0D` : "rgba(255,255,255,0.04)",
-        border: `1px solid ${accent ? `${BLUE}28` : "rgba(255,255,255,0.08)"}`,
-      }}
-    >
-      <div className="px-4 py-2.5 border-b" style={{ borderColor: accent ? `${BLUE}20` : "rgba(255,255,255,0.07)" }}>
-        <p className="text-xs font-medium" style={{ color: accent ? BLUE : "rgba(255,255,255,0.35)" }}>{label}</p>
-      </div>
-      <div className="px-4 py-4">
-        <p className="text-sm whitespace-pre-wrap" style={{ color: "rgba(255,255,255,0.78)", lineHeight: "1.9", wordBreak: "keep-all" }}>
-          {text}
-        </p>
-      </div>
+      <div className="px-5 pb-4">{children}</div>
     </div>
   );
 }
 
-function SummaryMsgRow({
-  msg,
-  isDiagnosis,
-  isRevisionMsg,
-}: {
-  msg: SummaryMsg;
-  isDiagnosis?: boolean;
-  isRevisionMsg?: boolean;
-}) {
+function BodyText({ children }: { children: ReactNode }) {
+  return <p className="text-sm" style={{ color: "#374151", lineHeight: 1.75, wordBreak: "keep-all" }}>{children}</p>;
+}
+
+function Note({ children }: { children: ReactNode }) {
+  return <p className="text-xs mt-2.5" style={{ color: "#9CA3AF", wordBreak: "keep-all" }}>👉 {children}</p>;
+}
+
+function Soon({ text }: { text: string }) {
+  return (
+    <div className="rounded-xl px-4 py-3" style={{ background: "#F9FAFB", border: "1px dashed #D1D5DB" }}>
+      <p className="text-[13px]" style={{ color: "#6B7280", lineHeight: 1.65, wordBreak: "keep-all" }}>{text}</p>
+      <p className="text-[11px] mt-1.5 font-semibold" style={{ color: "#B6BCC6" }}>곧 채워질 항목이에요</p>
+    </div>
+  );
+}
+
+function InsightRow({ color, label, text }: { color: string; label: string; text: string }) {
+  return (
+    <div>
+      <p className="text-xs font-bold mb-1" style={{ color }}>{label}</p>
+      <p className="text-sm" style={{ color: "#374151", lineHeight: 1.7, wordBreak: "keep-all" }}>{text}</p>
+    </div>
+  );
+}
+
+function RecordFold({ icon, title, defaultOpen, children }: { icon: string; title: string; defaultOpen?: boolean; children: ReactNode }) {
+  return (
+    <details open={defaultOpen} className="rounded-2xl overflow-hidden group" style={{ background: "#FFFFFF", border: "1px solid #E9EBEF", boxShadow: "0 2px 10px -6px rgba(17,24,39,0.08)" }}>
+      <summary className="flex items-center gap-2 px-5 py-4 cursor-pointer select-none list-none" style={{ color: "#111827" }}>
+        <span style={{ fontSize: 15 }}>{icon}</span>
+        <span className="text-sm font-bold flex-1" style={{ wordBreak: "keep-all" }}>{title}</span>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="transition-transform group-open:rotate-180"><polyline points="6 9 12 15 18 9"/></svg>
+      </summary>
+      <div className="px-5 pb-5">{children}</div>
+    </details>
+  );
+}
+
+function LightMsgRow({ msg, isDiagnosis }: { msg: SummaryMsg; isDiagnosis?: boolean }) {
+  const text = stripMd(msg.text).replace(/^AI:\s*/i, "");
+  if (!text.trim()) return null;
   const isBot = msg.role === "bot";
-
   if (isDiagnosis) {
     return (
-      <div className="rounded-2xl overflow-hidden" style={{ background: `${BLUE}0A`, border: `1px solid ${BLUE}1C` }}>
-        <div className="px-4 py-2.5 border-b" style={{ borderColor: `${BLUE}18` }}>
-          <p className="text-xs font-semibold" style={{ color: BLUE }}>초안 진단</p>
-        </div>
-        <div className="px-5 py-4">
-          <p className="text-sm lg:text-base leading-[1.85] whitespace-pre-wrap" style={{ color: "rgba(255,255,255,0.85)", wordBreak: "keep-all" }}>
-            {stripMd(msg.text)}
-          </p>
-        </div>
+      <div className="rounded-xl px-4 py-3.5" style={{ background: "#EEF2FF", border: "1px solid #C7D2FE" }}>
+        <p className="text-xs font-bold mb-1.5" style={{ color: "#4F46E5" }}>초안 진단</p>
+        <p className="text-[13px] whitespace-pre-wrap" style={{ color: "#374151", lineHeight: 1.8, wordBreak: "keep-all" }}>{text}</p>
       </div>
     );
   }
-
-  // 수정본 메시지 뒤에 붙는 "읽어보고 어색한 점이 있으면..." 텍스트 표시 안 함
-  if (isRevisionMsg) return null;
-
   return (
-    <div className={`flex gap-3 ${isBot ? "" : "flex-row-reverse"}`}>
-      {isBot ? (
-        <img src="/logo.jpg" alt="" className="w-7 h-7 rounded-lg object-contain flex-shrink-0 mt-1" style={{ background: "#fff", padding: "1px" }} />
-      ) : (
-        <div
-          className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-1"
-          style={{ background: ACCENT, color: "#fff" }}
-        >
-          나
-        </div>
-      )}
+    <div className={`flex ${isBot ? "justify-start" : "justify-end"}`}>
       <div
-        className="rounded-2xl px-4 py-3.5 text-sm lg:text-base leading-[1.85] whitespace-pre-wrap"
+        className="rounded-xl px-3.5 py-2.5 text-[13px] whitespace-pre-wrap"
         style={{
-          background: isBot ? "rgba(255,255,255,0.07)" : `${ACCENT}18`,
-          borderLeft: isBot ? `2px solid ${BLUE}50` : undefined,
-          borderRight: isBot ? undefined : `2px solid ${ACCENT}60`,
-          color: "rgba(255,255,255,0.88)",
+          maxWidth: "88%",
+          background: isBot ? "#F3F4F6" : "#EEF2FF",
+          border: `1px solid ${isBot ? "#E5E7EB" : "#C7D2FE"}`,
+          color: "#374151",
+          lineHeight: 1.75,
           wordBreak: "keep-all",
-          maxWidth: "86%",
         }}
       >
-        {stripMd(msg.text).replace(/^AI:\s*/i, "")}
+        {text}
       </div>
     </div>
   );

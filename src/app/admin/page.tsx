@@ -62,7 +62,7 @@ interface CoverItemFull {
   }[];
 }
 
-interface UserProfile { id: string; email: string; credits: number; created_at?: string; }
+interface UserProfile { id: string; email: string; credits: number; created_at?: string; education?: string | null; major?: string | null; }
 interface PostItem {
   id: string;
   title: string;
@@ -87,6 +87,9 @@ interface DashStats {
   sessions: Breakdown;
   views: Breakdown;
   dailyViews: { date: string; count: number }[];
+  eduStats: { label: string; users: number; sessions: number }[];
+  majors: { label: string; count: number }[];
+  eduUnknown: number;
 }
 
 export default function AdminPage() {
@@ -282,11 +285,41 @@ export default function AdminPage() {
       .sort(([a], [b]) => b.localeCompare(a))
       .map(([date, count]) => ({ date, count }));
 
+    // 학력·전공 집계
+    const [{ data: eduRows }, { data: sessRows }] = await Promise.all([
+      supabase.from("profiles").select("id, education, major"),
+      supabase.from("sessions").select("user_id"),
+    ]);
+    const EDU_ORDER = ["4년제 졸업", "석·박사", "2·3년제 졸업", "고등학교 졸업"];
+    const eduByUser: Record<string, string> = {};
+    const eduUserCount: Record<string, number> = {};
+    const majorCount: Record<string, number> = {};
+    let eduUnknown = 0;
+    (eduRows || []).forEach((r) => {
+      const edu = (r.education as string) || "";
+      if (edu) { eduByUser[r.id as string] = edu; eduUserCount[edu] = (eduUserCount[edu] || 0) + 1; }
+      else eduUnknown += 1;
+      const mj = ((r.major as string) || "").trim();
+      if (mj) majorCount[mj] = (majorCount[mj] || 0) + 1;
+    });
+    const eduSessCount: Record<string, number> = {};
+    (sessRows || []).forEach((s) => {
+      const edu = eduByUser[s.user_id as string];
+      if (edu) eduSessCount[edu] = (eduSessCount[edu] || 0) + 1;
+    });
+    const eduStats = EDU_ORDER
+      .map((label) => ({ label, users: eduUserCount[label] || 0, sessions: eduSessCount[label] || 0 }))
+      .filter((e) => e.users > 0);
+    const majors = Object.entries(majorCount)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 8)
+      .map(([label, count]) => ({ label, count }));
+
     setStats({
       users:    { today: uToday || 0, week: uWeek || 0, month: uMonth || 0, total: uTotal || 0 },
       sessions: { today: sToday || 0, week: sWeek || 0, month: sMonth || 0, total: sTotal || 0 },
       views:    { today: vToday || 0, week: vWeek || 0, month: vMonth || 0, total: vTotal || 0 },
-      dailyViews,
+      dailyViews, eduStats, majors, eduUnknown,
     });
   }
 
@@ -379,7 +412,7 @@ export default function AdminPage() {
     try {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, email, credits, created_at")
+        .select("id, email, credits, created_at, education, major")
         .order("created_at", { ascending: false });
       if (error) console.error("[fetchUsers]", error);
       setUsers((data || []) as UserProfile[]);
@@ -753,6 +786,47 @@ export default function AdminPage() {
               )}
             </div>
           </div>
+
+          {/* 학력·전공 */}
+          {stats && (stats.eduStats.length > 0 || stats.eduUnknown > 0) && (
+            <div style={{ marginTop: 14, borderRadius: 16, background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.06)", overflow: "hidden" }}>
+              <div style={{ padding: "14px 20px", borderBottom: "1px solid rgba(255,255,255,0.05)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <p style={{ fontSize: 12.5, fontWeight: 600, color: "rgba(255,255,255,0.55)" }}>학력별 현황 <span style={{ color: "rgba(255,255,255,0.25)", fontWeight: 400 }}>· 가입자 / 세션</span></p>
+                {stats.eduUnknown > 0 && <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>미입력 {stats.eduUnknown}명</span>}
+              </div>
+              {stats.eduStats.length > 0 ? (
+                <div style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: 13 }}>
+                  {stats.eduStats.map((e) => {
+                    const maxU = Math.max(...stats.eduStats.map((x) => x.users), 1);
+                    return (
+                      <div key={e.label} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <span style={{ fontSize: 12.5, color: "rgba(255,255,255,0.72)", width: 84, flexShrink: 0 }}>{e.label}</span>
+                        <div style={{ flex: 1, height: 8, borderRadius: 4, background: "rgba(255,255,255,0.05)", overflow: "hidden" }}>
+                          <div style={{ height: "100%", width: `${(e.users / maxU) * 100}%`, background: ACCENT, borderRadius: 4, transition: "width 0.4s ease" }} />
+                        </div>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.85)", width: 38, textAlign: "right", flexShrink: 0 }}>{e.users}명</span>
+                        <span style={{ fontSize: 11.5, color: "rgba(255,255,255,0.4)", width: 52, textAlign: "right", flexShrink: 0 }}>세션 {e.sessions}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p style={{ padding: "16px 20px", fontSize: 12, color: "rgba(255,255,255,0.25)" }}>아직 학력 입력 데이터가 없어요</p>
+              )}
+              {stats.majors.length > 0 && (
+                <div style={{ padding: "0 20px 16px" }}>
+                  <p style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.3)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10 }}>전공 분포 · 상위 {stats.majors.length}</p>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+                    {stats.majors.map((m) => (
+                      <span key={m.label} style={{ fontSize: 12, color: "rgba(255,255,255,0.7)", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 20, padding: "4px 11px" }}>
+                        {m.label} <b style={{ color: VIOLET, fontWeight: 700 }}>{m.count}</b>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -1148,11 +1222,16 @@ export default function AdminPage() {
               <div key={u.id} className="admin-users-row" style={{ display: "grid", gridTemplateColumns: "minmax(180px,1fr) 90px auto 44px", gap: 0, padding: "14px 20px", borderBottom: "1px solid rgba(255,255,255,0.04)", alignItems: "center" }}>
                 <div className="admin-users-info" style={{ paddingRight: 12, minWidth: 0 }}>
                   <p style={{ fontSize: 13, fontWeight: 500, color: "rgba(255,255,255,0.82)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.email}</p>
-                  {u.created_at && (
-                    <p style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginTop: 3 }}>
-                      가입 {u.created_at.slice(0, 10)}
-                    </p>
-                  )}
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 3, flexWrap: "wrap" }}>
+                    {u.created_at && (
+                      <span style={{ fontSize: 11, color: "rgba(255,255,255,0.35)" }}>가입 {u.created_at.slice(0, 10)}</span>
+                    )}
+                    {u.education && (
+                      <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(129,140,248,0.9)", background: "rgba(129,140,248,0.12)", borderRadius: 6, padding: "1px 7px" }}>
+                        🎓 {u.education}{u.major ? ` · ${u.major}` : ""}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <p className="admin-users-badge" style={{ fontSize: 17, fontWeight: 700, color: u.credits > 0 ? "rgba(255,209,102,0.9)" : "rgba(255,255,255,0.25)", textAlign: "center" }}>
                   🏅 {u.credits}

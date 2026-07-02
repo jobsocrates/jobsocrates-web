@@ -11,9 +11,10 @@ interface Props {
   onSubmit: () => void;
   onRetry: () => void;
   onFinish: () => void;
+  locked?: boolean;
 }
 
-export function InterviewQCard({ item, index, onToggle, onInputChange, onSubmit, onRetry, onFinish }: Props) {
+export function InterviewQCard({ item, index, onToggle, onInputChange, onSubmit, onRetry, onFinish, locked = false }: Props) {
   return (
     <div
       className="rounded-2xl overflow-hidden"
@@ -79,7 +80,13 @@ export function InterviewQCard({ item, index, onToggle, onInputChange, onSubmit,
             </div>
           )}
 
-          {(item.phase === "initial" || item.phase === "retrying") && !item.isLoadingFeedback && (
+          {locked && item.msgs.length === 0 && (
+            <div className="px-4 py-3">
+              <span className="text-xs" style={{ color: "#9CA3AF" }}>🔒 미답변으로 마무리된 질문이에요.</span>
+            </div>
+          )}
+
+          {!locked && (item.phase === "initial" || item.phase === "retrying") && !item.isLoadingFeedback && (
             <div className="px-4 py-3 flex flex-col gap-1.5">
               {item.phase === "retrying" && (
                 <p className="text-xs mb-0.5 leading-relaxed" style={{ color: VIOLET }}>
@@ -130,7 +137,7 @@ export function InterviewQCard({ item, index, onToggle, onInputChange, onSubmit,
             </div>
           )}
 
-          {item.phase === "feedback" && (
+          {!locked && item.phase === "feedback" && (
             <div className="px-4 pb-3 pt-1 flex gap-2">
               <button
                 onClick={onRetry}

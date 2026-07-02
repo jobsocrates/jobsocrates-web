@@ -62,7 +62,7 @@ const initItem: CoverItem = {
   apiHistory: [],
   interviewQs: [],
   isLoadingQs: false,
-  setupStep: "question",
+  setupStep: "draft",
   setupMsgs: [],
 };
 
@@ -92,6 +92,12 @@ export default function ChatPage() {
 
   const [jobTitle, setJobTitle] = useState("");
   const [chatMode, setChatMode] = useState<"analyze" | "personality" | "motivation">("analyze");
+  // 시작 프로세스: 학력(최초1회) → 공고 → 카테고리 → 챗
+  const [infoStep, setInfoStep] = useState<"education" | "posting" | "category">("posting");
+  const [profileLoaded, setProfileLoaded] = useState(false);
+  const [education, setEducation] = useState("");
+  const [major, setMajor] = useState("");
+  const [eduSaving, setEduSaving] = useState(false);
   const [modeDropdownOpen, setModeDropdownOpen] = useState(false);
   const [companyInfo, setCompanyInfo] = useState("");
 
@@ -165,6 +171,7 @@ export default function ChatPage() {
     trackVisitor();
     // getSession: localStorage 세션을 즉시 읽어 currentUser 확보
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session?.user) { setProfileLoaded(true); setInfoStep("posting"); }
       if (session?.user) {
         setCurrentUser({ id: session.user.id, email: session.user.email ?? "" });
         supabase.from("profiles").upsert(
@@ -209,11 +216,11 @@ export default function ChatPage() {
   function addItem(mode: typeof chatMode = chatMode) {
     const id = uid();
     const askText = mode === "analyze"
-      ? "새 문항이네요! 📝 분석할 자소서 문항을 입력해주세요.\n예: '팀 프로젝트에서 발휘한 리더십 경험을 서술하시오.'"
+      ? "새 자소서네요! 📝 분석할 자소서 초안을 붙여넣어주세요."
       : mode === "motivation"
-      ? "새 문항이네요! 📝 작성할 자소서 문항을 입력해주세요.\n예: '지원 동기와 입사 후 포부를 서술하시오.'"
-      : "새 문항이네요! 📝 작성할 자소서 문항을 입력해주세요.\n예: '본인의 성격 장단점을 서술하시오.'";
-    const item: CoverItem = { id, dbId: null, question: "", draft: "", charLimit: "", status: "idle", msgs: [], apiHistory: [], interviewQs: [], isLoadingQs: false, setupStep: "question", setupMsgs: [{ id: uid(), role: "bot", text: askText }] };
+      ? "새 자소서네요! 📝 작성한 지원동기·포부 초안을 붙여넣어주세요."
+      : "새 자소서네요! 📝 작성한 자소서 초안을 붙여넣어주세요.";
+    const item: CoverItem = { id, dbId: null, question: "", draft: "", charLimit: "", status: "idle", msgs: [], apiHistory: [], interviewQs: [], isLoadingQs: false, setupStep: "draft", setupMsgs: [{ id: uid(), role: "bot", text: askText }] };
     setItems((prev) => [...prev, item]);
     setSelectedId(id);
   }
@@ -234,7 +241,7 @@ export default function ChatPage() {
     setItems((prev) => {
       const next = prev.filter((it) => it.id !== id);
       if (next.length === 0) {
-        const fresh: CoverItem = { id: uid(), dbId: null, question: "", draft: "", charLimit: "", status: "idle", msgs: [], apiHistory: [], interviewQs: [], isLoadingQs: false, setupStep: "question", setupMsgs: [] };
+        const fresh: CoverItem = { id: uid(), dbId: null, question: "", draft: "", charLimit: "", status: "idle", msgs: [], apiHistory: [], interviewQs: [], isLoadingQs: false, setupStep: "draft", setupMsgs: [] };
         setSelectedId(fresh.id);
         return [fresh];
       }
@@ -462,7 +469,7 @@ export default function ChatPage() {
 
       const { data: allItems } = await supabase
         .from("cover_items")
-        .select("id, question, draft, char_limit, status, order_index")
+        .select("id, question, draft, char_limit, status, order_index, finalized")
         .eq("session_id", parentSession.id)
         .order("order_index");
 
@@ -509,7 +516,7 @@ export default function ChatPage() {
 
       const { data: allItems } = await supabase
         .from("cover_items")
-        .select("id, question, draft, char_limit, status, order_index")
+        .select("id, question, draft, char_limit, status, order_index, finalized")
         .eq("session_id", sessionId)
         .order("order_index");
 
@@ -581,6 +588,7 @@ export default function ChatPage() {
             interviewQs: loadedInterviewQs,
             isLoadingQs: false,
             revCount: revRows?.length ?? 0,
+            finalized: (ci.finalized as boolean) ?? false,
             setupStep: "ready" as const,
             setupMsgs: [] as SetupMsg[],
           };
@@ -604,10 +612,32 @@ export default function ChatPage() {
     creditsFetchedRef.current = true;
     const { data } = await supabase
       .from("profiles")
-      .select("credits")
+      .select("credits, education, major")
       .eq("id", userId)
       .single();
-    if (data) setUserCredits(data.credits ?? 0);
+    if (data) {
+      setUserCredits(data.credits ?? 0);
+      if (data.education) {
+        setEducation(data.education as string);
+        setMajor((data.major as string) ?? "");
+        setInfoStep("posting");
+      } else {
+        // 학력 정보 없음 = 최초 사용자 → 학력 단계부터
+        setInfoStep("education");
+      }
+    }
+    setProfileLoaded(true);
+  }
+
+  async function saveEducation() {
+    if (!education) { showToast("학력을 선택해주세요"); return; }
+    if (!major.trim()) { showToast("전공을 입력해주세요"); return; }
+    setEduSaving(true);
+    if (currentUser) {
+      await supabase.from("profiles").update({ education, major: major.trim() }).eq("id", currentUser.id);
+    }
+    setEduSaving(false);
+    setInfoStep("posting");
   }
 
 
@@ -686,6 +716,7 @@ export default function ChatPage() {
             interviewQs: loadedInterviewQs,
             isLoadingQs: false,
             revCount: revRows?.length ?? 0,
+            finalized: (ci.finalized as boolean) ?? false,
             setupStep: "ready" as const,
             setupMsgs: [] as SetupMsg[],
           };
@@ -746,15 +777,19 @@ export default function ChatPage() {
     setCompanyInfo(companyName.trim());
     const introText =
       "안녕하세요! 🙌 취업소크라테스예요.\n\n" +
-      "저희는 일반 사이트와 달리 초안·기업·직무를 함께 분석하고 추론해서 자소서를 만들어요. 그래서 고성능 모델을 쓰는데, 분석·추론엔 강하지만 한국어 문장을 매끄럽게 다듬는 건 후처리가 더 잘해서 완성본 어휘가 다소 딱딱하게 느껴질 수 있어요. ✍️\n\n" +
-      "그래서 마음에 들 때까지 완성본을 최대 3번까지 새로 뽑아볼 수 있게 해뒀어요! 🔄\n\n" +
-      "그래도 조금 딱딱하다 싶으면, 한국어 문장을 자연스럽게 다듬는 데 좋은 ChatGPT에 \"내용은 그대로 살리고 문장만 깔끔하게 다듬어줘\"라고 해보세요 — 훨씬 정제된 흐름으로 보실 수 있어요. 😊";
+      "저희는 초안·기업·직무를 함께 분석해서 자소서를 만들어요.\n" +
+      "분석·추론에 강한 고성능 모델을 쓰다 보니, 완성본 문장이 조금 딱딱하게 느껴질 수 있어요. ✍️";
+    const noticeText =
+      "🔄  완성본이 마음에 안 들면 최대 3번까지 새로 뽑을 수 있어요.\n\n" +
+      "💬  문장이 딱딱하면 ChatGPT에 이렇게 해보세요 —\n" +
+      "\"내용은 그대로 살리고, 문장만 깔끔하게 다듬어줘\"\n" +
+      "훨씬 매끄러운 흐름으로 볼 수 있어요. 😊";
     const askText = chatMode === "analyze"
-      ? "준비되셨으면, 분석할 자소서 문항을 입력해주세요! 📝\n예: '팀 프로젝트에서 발휘한 리더십 경험을 서술하시오.'"
+      ? "준비되셨으면, 분석할 자소서 초안을 붙여넣어주세요! 📝"
       : chatMode === "motivation"
-      ? "준비되셨으면, 작성할 자소서 문항을 입력해주세요! 📝\n예: '지원 동기와 입사 후 포부를 서술하시오.'"
-      : "준비되셨으면, 작성할 자소서 문항을 입력해주세요! 📝\n예: '본인의 성격 장단점을 서술하시오.'";
-    updateItem(selectedId, { setupStep: "question", setupMsgs: [{ id: uid(), role: "bot", text: introText }, { id: uid(), role: "bot", text: askText }] });
+      ? "준비되셨으면, 작성한 지원동기·포부 초안을 붙여넣어주세요! 📝"
+      : "준비되셨으면, 작성한 자소서 초안을 붙여넣어주세요! 📝";
+    updateItem(selectedId, { setupStep: "draft", setupMsgs: [{ id: uid(), role: "bot", text: introText }, { id: uid(), role: "bot", text: noticeText }, { id: uid(), role: "bot", text: askText }] });
     // 회사가 바뀐 경우에만 분석 보고서 초기화
     const newKey = `${companyName.trim()}||${companyWebsite.trim()}`;
     if (companyAnalysisKeyRef.current !== newKey) {
@@ -866,7 +901,6 @@ export default function ChatPage() {
   async function handleStartClick() {
     if (!selected) return;
     if (!jobTitle.trim()) { showToast("지원 직무를 먼저 입력해주세요", "jobTitle"); return; }
-    if (!selected.question.trim()) { showToast("자소서 문항을 먼저 입력해주세요", "question"); return; }
     if (!selected.draft.trim()) { showToast("자소서 초안을 먼저 입력해주세요", "draft"); return; }
 
     if (selected.msgs.length > 0) {
@@ -1019,6 +1053,11 @@ export default function ChatPage() {
   async function openSummary() {
     setShowSummary(true);
     if (!selected) return;
+    // 마무리 = 면접 잠금(되돌릴 수 없음). 최초 1회만 DB 반영.
+    if (!selected.finalized) {
+      updateItem(selected.id, { finalized: true });
+      if (selected.dbId) supabase.from("cover_items").update({ finalized: true }).eq("id", selected.dbId);
+    }
     if (finalAnalysisFor === selected.id && (finalAnalysis || finalAnalysisLoading)) return;
     const revMsg = selected.msgs.find(
       (m) => m.role === "bot" && (m.text.includes("[수정본]") || m.text.includes("[지원동기]"))
@@ -1042,7 +1081,7 @@ export default function ChatPage() {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "final-analysis", jobTitle, companyInfo: companyName, question: selected.question, coverLetter, draft: selected.draft, digging, interviewAnswers, analysisContent }),
+        body: JSON.stringify({ type: "final-analysis", chatMode, jobTitle, companyInfo: companyName, question: selected.question, coverLetter, draft: selected.draft, digging, interviewAnswers, analysisContent }),
       });
       const data = await res.json();
       if (data && Array.isArray(data.weapons)) setFinalAnalysis(data as FinalAnalysis);
@@ -1226,9 +1265,7 @@ export default function ChatPage() {
     updateInterviewQ(qId, { phase: "done" });
   }
 
-  const canStart = chatMode === "analyze"
-    ? !!jobTitle.trim() && !!selected?.question.trim() && !!selected?.draft.trim() && selected?.status === "idle"
-    : !!jobTitle.trim() && !!selected?.draft.trim() && selected?.status === "idle";
+  const canStart = !!jobTitle.trim() && !!selected?.draft.trim() && selected?.status === "idle";
 
   const hasAnyRevision = !isStreaming && (selected?.msgs.some(
     (m) => m.role === "bot" && (
@@ -1267,6 +1304,7 @@ export default function ChatPage() {
             .info-rise-2 { animation: infoRise 0.6s cubic-bezier(0.22,1,0.36,1) 0.13s both; }
             .info-rise-3 { animation: infoRise 0.6s cubic-bezier(0.22,1,0.36,1) 0.21s both; }
             .info-rise-4 { animation: infoRise 0.6s cubic-bezier(0.22,1,0.36,1) 0.29s both; }
+            .cat-card:hover .cat-tip, .cat-card:focus-visible .cat-tip { opacity: 1; }
           `}</style>
 
           {/* ── 왼쪽: 작업 사이드바(항목 있을 때) or 브랜드 패널(첫 진입) ── */}
@@ -1372,9 +1410,48 @@ export default function ChatPage() {
 
             <div className="flex-1 flex items-center justify-center px-6 pb-8 overflow-y-auto">
               <div className="w-full max-w-[480px] flex flex-col gap-6 info-rise-2">
+                {!profileLoaded && (
+                  <div className="flex items-center justify-center py-16">
+                    <div style={{ width: 24, height: 24, borderRadius: "50%", border: "2px solid rgba(49,46,129,0.18)", borderTopColor: "#312E81", animation: "spin 0.8s linear infinite" }} />
+                    <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+                  </div>
+                )}
+
+                {/* ── STEP 1: 학력·전공 (최초 1회) ── */}
+                {profileLoaded && infoStep === "education" && (
+                  <div className="flex flex-col gap-6">
+                    <div className="flex flex-col gap-1.5">
+                      <h1 className="text-2xl sm:text-[1.75rem] font-bold" style={{ color: "#111827", letterSpacing: "-0.02em" }}>먼저, 학력을 알려주세요</h1>
+                      <p className="text-sm" style={{ color: "#6B7280", wordBreak: "keep-all" }}>최초 1회만 입력하면 돼요. 다음부터는 묻지 않아요! 😊</p>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <label className="text-xs font-semibold pl-0.5" style={{ color: "#374151", letterSpacing: "0.06em" }}>학력</label>
+                      <div className="grid grid-cols-2 gap-2.5">
+                        {["4년제 졸업", "2·3년제 졸업", "고등학교 졸업", "석·박사"].map((opt) => {
+                          const on = education === opt;
+                          return (
+                            <button key={opt} onClick={() => setEducation(opt)} className="px-4 py-3.5 rounded-xl text-sm font-semibold transition-all active:scale-[0.98]" style={{ background: on ? "#F5F3FF" : "#FFFFFF", border: `1.5px solid ${on ? "#A78BFA" : "#E5E7EB"}`, color: on ? "#4C3F99" : "#374151" }}>{opt}</button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <label className="text-xs font-semibold pl-0.5" style={{ color: "#374151", letterSpacing: "0.06em" }}>전공</label>
+                      <input value={major} onChange={(e) => setMajor(e.target.value)} onKeyDown={(e) => e.key === "Enter" && saveEducation()} placeholder="예: 컴퓨터공학, 경영학" className="ds-input w-full px-4 py-3.5 rounded-xl text-sm placeholder:text-[#B6BCC6]" style={{ background: "#FFFFFF", border: "1.5px solid #E5E7EB", color: "#111827", outline: "none" }} />
+                    </div>
+                    <button onClick={saveEducation} disabled={eduSaving} className="w-full inline-flex items-center justify-center gap-2 px-6 py-4 rounded-xl font-bold text-[15px] transition-all hover:opacity-92 active:scale-[0.98] disabled:opacity-50" style={{ background: "linear-gradient(135deg, #1A3461 0%, #312E81 100%)", color: "#FFFFFF", boxShadow: "0 10px 28px -10px rgba(49,46,129,0.55)", letterSpacing: "-0.01em" }}>
+                      {eduSaving ? "저장 중..." : "다음"}
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
+                    </button>
+                  </div>
+                )}
+
+                {/* ── STEP 2: 공고 입력 ── */}
+                {profileLoaded && infoStep === "posting" && (
+                <>
                 <div className="flex flex-col gap-1.5">
                   <h1 className="text-2xl sm:text-[1.75rem] font-bold" style={{ color: "#111827", letterSpacing: "-0.02em" }}>어떤 공고에 지원하나요?</h1>
-                  <p className="text-sm" style={{ color: "#6B7280" }}>정보를 입력하면 바로 채팅으로 이어집니다.</p>
+                  <p className="text-sm" style={{ color: "#6B7280" }}>회사·직무 정보를 입력하고 다음으로 넘어가요.</p>
                 </div>
 
                 {/* 회사 정보 */}
@@ -1435,37 +1512,56 @@ export default function ChatPage() {
                   </div>
                 </div>
 
-                {/* 카테고리 */}
-                <div className="flex flex-col gap-2">
-                  <p className="text-xs font-semibold pl-0.5" style={{ color: "#374151", letterSpacing: "0.06em" }}>자소서 유형</p>
-                  <div className="grid grid-cols-3 gap-2.5">
-                    {([
-                      { key: "analyze",     label: "직무 역량",      desc: "경험으로 직무 적합성을 보여주고 싶다면",  color: BLUE,   emoji: "💼" },
-                      { key: "motivation",  label: "지원 동기·포부", desc: "왜 이 회사·직무인지, 포부를 쓴다면",     color: GOLD,   emoji: "✨" },
-                      { key: "personality", label: "성격·인성",      desc: "성격 장단점·가치관, 갈등·협업·도전 경험",  color: VIOLET, emoji: "🌱" },
-                    ] as { key: typeof chatMode; label: string; desc: string; color: string; emoji: string }[]).map(({ key, label, desc, color, emoji }) => {
-                      const on = chatMode === key;
-                      return (
-                        <button key={key} onClick={() => { if (key === "personality" && process.env.NODE_ENV === "production") { setShowPersonalityBlock(true); return; } setChatMode(key); }} className="flex flex-col gap-2 px-4 py-4 rounded-xl text-left transition-all active:scale-[0.98]" style={{ background: on ? `${color}0C` : "#FFFFFF", border: `1.5px solid ${on ? color : "#E5E7EB"}`, boxShadow: on ? `0 6px 18px -8px ${color}80` : "none" }}>
-                          <span className="text-xl leading-none">{emoji}</span>
-                          <span className="text-sm font-bold" style={{ color: on ? color : "#111827" }}>{label}</span>
-                          <p className="text-xs leading-relaxed" style={{ color: "#6B7280", wordBreak: "keep-all" }}>{desc}</p>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
                 <button
-                  onClick={handleGoToChat}
+                  onClick={() => { if (!jobTitle.trim()) { showToast("지원 직무를 입력해주세요", "jobTitle"); return; } setInfoStep("category"); }}
                   className="w-full inline-flex items-center justify-center gap-2 px-6 py-4 rounded-xl font-bold text-[15px] transition-all hover:opacity-92 active:scale-[0.98]"
                   style={{ background: "linear-gradient(135deg, #1A3461 0%, #312E81 100%)", color: "#FFFFFF", boxShadow: "0 10px 28px -10px rgba(49,46,129,0.55)", letterSpacing: "-0.01em" }}
                 >
-                  채팅 시작하기
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
-                  </svg>
+                  다음
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
                 </button>
+                </>
+                )}
+
+                {/* ── STEP 3: 카테고리 (마우스오버 툴팁) ── */}
+                {profileLoaded && infoStep === "category" && (
+                <>
+                <div className="flex flex-col gap-1.5">
+                  <h1 className="text-2xl sm:text-[1.75rem] font-bold" style={{ color: "#111827", letterSpacing: "-0.02em" }}>어떤 자소서를 쓸까요?</h1>
+                  <p className="text-sm" style={{ color: "#6B7280", wordBreak: "keep-all" }}>선택한 유형에 맞춰 대화와 완성본 방향이 달라져요. 항목에 마우스를 올리면 설명이 나와요.</p>
+                </div>
+                <div className="flex flex-col gap-2.5">
+                  {([
+                    { key: "analyze",     label: "직무 역량",      tip: "직무 역량 어필이 필요하신 분! 경험 속 판단·행동을 파고들어 직무 역량 중심으로 서술해요.",  color: BLUE,   emoji: "💼" },
+                    { key: "motivation",  label: "지원 동기·포부", tip: "지원 동기가 필요하신 분! 왜 이 회사·직무인지와 입사 후 포부가 함께 작성돼요.",     color: GOLD,   emoji: "✨" },
+                    { key: "personality", label: "성격·인성",      tip: "성격 장단점, 갈등·협업 경험, 관심 있는 이슈 같은 인성 문항을 쓰실 분에게 맞아요.",  color: VIOLET, emoji: "🌱" },
+                  ] as { key: typeof chatMode; label: string; tip: string; color: string; emoji: string }[]).map(({ key, label, tip, color, emoji }) => {
+                    const on = chatMode === key;
+                    return (
+                      <button key={key} onClick={() => { if (key === "personality" && process.env.NODE_ENV === "production") { setShowPersonalityBlock(true); return; } setChatMode(key); }} className="cat-card group relative flex items-center gap-3 px-4 py-4 rounded-xl text-left transition-all active:scale-[0.99]" style={{ background: on ? `${color}0C` : "#FFFFFF", border: `1.5px solid ${on ? color : "#E5E7EB"}`, boxShadow: on ? `0 6px 18px -8px ${color}80` : "none" }}>
+                        <span className="text-xl leading-none flex-shrink-0">{emoji}</span>
+                        <span className="text-sm font-bold flex-1" style={{ color: on ? color : "#111827" }}>{label}</span>
+                        {on
+                          ? <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><polyline points="20 6 9 17 4 12"/></svg>
+                          : <span className="text-xs flex-shrink-0" style={{ color: "#B6BCC6" }}>ⓘ</span>}
+                        <span className="cat-tip pointer-events-none absolute left-0 right-0 top-full mt-1.5 z-10 px-3.5 py-2.5 rounded-xl text-xs leading-relaxed opacity-0 transition-opacity duration-150" style={{ background: "#1F2937", color: "rgba(255,255,255,0.95)", boxShadow: "0 12px 32px -8px rgba(0,0,0,0.45)", wordBreak: "keep-all" }}>{tip}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="flex gap-2.5">
+                  <button onClick={() => setInfoStep("posting")} className="px-5 py-4 rounded-xl font-semibold text-sm transition-all hover:opacity-80" style={{ background: "#F3F4F6", color: "#6B7280" }}>이전</button>
+                  <button
+                    onClick={handleGoToChat}
+                    className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-4 rounded-xl font-bold text-[15px] transition-all hover:opacity-92 active:scale-[0.98]"
+                    style={{ background: "linear-gradient(135deg, #1A3461 0%, #312E81 100%)", color: "#FFFFFF", boxShadow: "0 10px 28px -10px rgba(49,46,129,0.55)", letterSpacing: "-0.01em" }}
+                  >
+                    채팅 시작하기
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
+                  </button>
+                </div>
+                </>
+                )}
               </div>
             </div>
           </div>
@@ -1988,6 +2084,7 @@ export default function ChatPage() {
                             onSubmit={() => fetchInterviewFeedback(q.id)}
                             onRetry={() => retryInterviewAnswer(q.id)}
                             onFinish={() => finishInterviewQ(q.id)}
+                            locked={!!selected?.finalized}
                           />
                         ))}
                       </div>
@@ -2151,7 +2248,7 @@ export default function ChatPage() {
                         <button
                           onClick={() => {
                             const allAnswered = interviewQs.every(q => q.msgs.length > 0);
-                            if (!allAnswered) { setShowInterviewWarning(true); } else { openSummary(); }
+                            if (selected?.finalized || allAnswered) { openSummary(); } else { setShowInterviewWarning(true); }
                           }}
                           className="w-full py-3 rounded-xl text-sm font-semibold transition-all hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-2"
                           style={{
@@ -2484,26 +2581,28 @@ export default function ChatPage() {
           >
             <div className="flex flex-col gap-2">
               <p className="text-base font-bold" style={{ color: "#111827" }}>
-                면접 답변이 작성되지 않았어요
+                아직 마무리 안 된 면접 질문이 있어요
               </p>
               <p className="text-sm leading-relaxed" style={{ color: "#6B7280", wordBreak: "keep-all" }}>
-                이대로 완료하면 정리본에 면접 Q&A 내용이 나오지 않아요. 그래도 완료하시겠어요?
+                다 답변하지 않아도 마무리할 수 있어요. 그냥 마무리하시겠어요?
+                <br />
+                <span style={{ color: "#DC2626", fontWeight: 600 }}>한 번 마무리하면 되돌릴 수 없어요.</span>
               </p>
             </div>
             <div className="flex gap-2.5">
-              <button
-                onClick={() => { setShowInterviewWarning(false); openSummary(); }}
-                className="flex-1 py-3.5 rounded-xl text-sm font-bold text-white transition-all hover:opacity-92 active:scale-[0.98]"
-                style={{ background: "linear-gradient(135deg, #1A3461 0%, #312E81 100%)", boxShadow: "0 10px 28px -10px rgba(49,46,129,0.5)" }}
-              >
-                그냥 완료
-              </button>
               <button
                 onClick={() => setShowInterviewWarning(false)}
                 className="flex-1 py-3.5 rounded-xl text-sm font-semibold transition-all hover:opacity-80"
                 style={{ background: "#F3F4F6", color: "#6B7280", border: "1px solid #E5E7EB" }}
               >
-                돌아가기
+                더 답변할게요
+              </button>
+              <button
+                onClick={() => { setShowInterviewWarning(false); openSummary(); }}
+                className="flex-1 py-3.5 rounded-xl text-sm font-bold text-white transition-all hover:opacity-92 active:scale-[0.98]"
+                style={{ background: "linear-gradient(135deg, #1A3461 0%, #312E81 100%)", boxShadow: "0 10px 28px -10px rgba(49,46,129,0.5)" }}
+              >
+                그냥 마무리하기
               </button>
             </div>
           </div>

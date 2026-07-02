@@ -6,6 +6,7 @@ import type { DiggingContext } from "@/types";
 
 // 전체 기본 모델 (ID 틀리면 여기 한 줄만 고치면 됨)
 const SONNET = "claude-sonnet-5";
+const SONNET_46 = "claude-sonnet-4-6"; // thinking 안 하는 버전 — 비스트리밍 JSON 생성용(면접 한 장 등). sonnet-5는 thinking에 토큰 다 써 빈 응답 나옴.
 // 완성본은 gpt-4o(한국어 문장 매끄러움), 소제목·면접다듬기 등 보조는 mini(비용). 디깅은 Sonnet.
 const GPT_MINI = "gpt-4o-mini";
 const GPT_4O = "gpt-4o";
@@ -183,15 +184,16 @@ async function streamCompletion2Stage(sys: SystemParam, msgs: MsgParam[], label:
   return streamOpenAI(reviewSys, [{ role: "user", content: reviewUser }], 2048, GPT_4O, 0.5);
 }
 
-async function generate(system: string, messages: MsgParam[], model = SONNET) {
+async function generate(system: string, messages: MsgParam[], model = SONNET, maxTokens = 2048) {
   const client = getClient();
   const res = await client.messages.create({
     model,
-    max_tokens: 2048,
+    max_tokens: maxTokens,
     system,
     messages,
   });
-  const text = res.content[0].type === "text" ? res.content[0].text : "";
+  const textBlock = res.content.find((c) => c.type === "text");
+  const text = textBlock && textBlock.type === "text" ? textBlock.text : "";
   const match = text.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
   try {
     return Response.json(match ? JSON.parse(match[0]) : { raw: text });
@@ -694,27 +696,36 @@ ${COMMON_PRINCIPLES}
     }
 
     case "final-analysis": {
+      const mode = (body.chatMode as string) || "analyze";
+      const modeGuide =
+        mode === "motivation"
+          ? "[카테고리: 지원동기] 디깅에서 회사 이해를 깊게 팠으니 companyJob을 가장 진하게 써라(디깅에서 학생과 합의된 이해를 중심으로). oneLine은 디깅에서 잡은 접합점(회사 환경의 난점·요구 ↔ 학생 경험의 판단)을 그대로 앵커로 세워라. weakSpots는 '왜 하필 우리 회사인가 / 다른 회사도 되지 않나 / 포부가 막연하지 않나'처럼 동기의 진정성을 찌르는 질문 위주로.\n"
+          : mode === "personality"
+          ? "[카테고리: 성격·인성] 회사 재료가 얕을 수 있다. companyJob은 재료가 있는 만큼만 짧게 쓰고 없으면 빈 문자열로 둬라(지어내기 금지). weapons는 직무 스킬보다 '성향·일하는 방식'의 강점으로(예: 갈등에서 먼저 움직이는 방식, 꾸준함이 작동하는 방식). oneLine은 '내 이런 성향이 이 직무의 이런 장면에서 강점이 된다'로. weakSpots는 단점·약점을 찌르는 질문(단점이 업무에서 문제되지 않냐, 그 성격이 팀에 피곤하지 않냐 류) 위주로.\n"
+          : "[카테고리: 직무역량] jobRole을 가장 진하게 써라(이 직무가 실제로 하는 일과 신입에게 기대하는 것). weapons는 디깅에서 검증된 판단·행동 기반의 직무 역량으로. weakSpots는 경험의 깊이를 검증하는 질문(그거 진짜 본인이 했나, 규모가 작지 않나, 다른 선택지는 왜 안 했나 류) 위주로.\n";
       const sys =
-        "당신은 면접 코치입니다. 학생이 이 회사 면접에 들고 갈 '면접 한 장'을 만듭니다. 디깅·완성본·면접 답변·기업 분석을 바탕으로 면접장에서 바로 꺼내 말할 수 있게 핵심을 추리고, 마지막엔 학생이 스스로 못 보는 '외부 전문가의 시선'을 더합니다.\n" +
-        "규칙:\n" +
-        "- 반드시 이 학생·이 회사의 실제 내용에서만. 일반론·뻔한 말(성실함·열정·소통능력 등) 금지.\n" +
-        "- companyJob: 이 회사가 무엇을 하는 곳이고 이 직무가 무엇을 하는 자리인지 한두 문장으로. 면접관이 '우리 회사 아세요?'라고 물으면 답할 핵심. 학생이 이걸 보고 사실 확인 후 본인 말로 다시 정리할 것이므로, 외운 듯한 미사여구 말고 핵심만 담백하게.\n" +
-        "- weapons: 이 직무에 맞는 학생의 핵심 무기(강점) 2~3개. 각 항목은 title·competency·detail 세 가지.\n" +
-        "  · title: 강점 이름 2~12자, 명사 나열 말고 자연스럽게.\n" +
-        "  · competency: 이 강점이 직무 역량으로 무엇인지 6~14자로 분류(예: 데이터 기반 의사결정 / 신뢰성 중심 사고). 한 개만.\n" +
-        "  · detail: 그 강점이 드러난 근거를 한 문장으로, '무엇을 했고 → 그래서 어떻게 됐다' 흐름으로. ※'~에서 드러납니다/확인됩니다/보입니다' 같은 기계적·번역투 종결 절대 금지.\n" +
-        "- interviewKeys: 학생이 연습한 면접 질문마다 '면접에서 이것만 기억하면 되는 핵심 한 줄'. q는 질문을 짧게. a는 전체 답변을 옮기지 말고 그 답의 핵심 포인트만 짧게(외우기 쉽게 한 줄). 답변이 없거나 부실하면 디깅·완성본에서 끌어와 채워라. 질문이 없으면 빈 배열.\n" +
-        "- insight: 학생이 스스로 못 보는 '취업소크라테스의 외부 시선'. 세 항목 모두 제안형으로 써라(\"~로 보여요\", \"~인 것 같아요\", \"조심하면 좋아요\"). 면접관의 속마음을 단정하거나(\"면접관은 ~를 본다\") 사람을 단정(\"~한 사람입니다\")하지 마라.\n" +
-        "  · edge: 밖에서 봤을 때 이 학생의 진짜 강점·남다른 한 끗. 학생이 당연하게 여기거나 과소평가했지만 신입 중엔 드문 것을, 이 경험의 어디서 그게 보이는지 구체적으로 짚어라.\n" +
-        "  · caution: 이 학생의 강점·답변이 자칫 이렇게 비칠 수 있으니 조심하라는 점 하나 + 대신 이렇게 하면 좋다. 약점 지적이 아니라 '이렇게 보일 위험'과 방향이다.\n" +
-        "  · direction: 그래서 이 회사 면접에서 무엇을 앞세우고 어떻게 풀면 좋을지 종합 방향 하나.\n" +
-        "- 과장 금지. 담백하게. 쉼표 남발 금지. 번역투 금지 — 사람이 말하듯 능동적이고 자연스러운 한국어로.\n" +
-        "반드시 JSON만 출력하세요. 다른 텍스트 없이: {\"companyJob\":\"...\",\"weapons\":[{\"title\":\"...\",\"competency\":\"...\",\"detail\":\"...\"}],\"interviewKeys\":[{\"q\":\"...\",\"a\":\"...\"}],\"insight\":{\"edge\":\"...\",\"caution\":\"...\",\"direction\":\"...\"}}";
+        "당신은 면접 코치입니다. 학생이 면접 전에 읽을 '면접 브리핑'을 만듭니다. 목적은 대화 요약이 아니라 학습입니다 — 학생이 이 회사와 직무를 어떤 눈으로 이해해야 하는지 깨닫고, 자기 무기를 알고, 실전에서 어떤 태도로 임할지까지 잡아주는 한 장.\n" +
+        "재료: 디깅 대화·완성본·면접 답변·기업 분석. 반드시 이 학생·이 회사의 실제 내용에서만 써라. 일반론·뻔한 말(성실함·열정·소통능력) 금지. 재료에 없는 사실을 지어내지 마라 — 재료가 부족한 항목은 짧게 쓰거나 빈 값(\"\" 또는 [])으로 둬라.\n" +
+        "분량: 너무 짧게 요약하지 마라. 각 항목은 학생이 읽고 '아, 이렇게 봐야 하는구나' 배우는 맛이 있게 충분히 풀어 써라(단 항목당 지정 분량 안에서).\n\n" +
+        modeGuide + "\n" +
+        "항목별 지침:\n" +
+        "- companyJob (3~5문장): 이 회사는 뭘로 돈을 버는가. 회사 소개 요약이 아니라 구조를 가르쳐라 — 무엇을 팔고, 누가 사주고, 무엇으로 경쟁하고, 지금 이 회사의 고민·과제가 무엇인지. 면접관 눈높이로 회사를 읽는 법을 배우게. 외운 티 나는 미사여구 금지.\n" +
+        "- jobRole (3~4문장): 이 자리는 왜 뽑는가. 이 직무가 회사 안에서 실제로 하는 일, 신입에게 진짜 기대하는 것, 현업이 쓰는 말로. JD 복붙 말고 '이 직무를 이해한 사람'의 언어로.\n" +
+        "- weapons (2~3개): 디깅에서 검증된 학생의 핵심 무기. title은 강점 이름 2~12자(자연스럽게), competency는 직무 역량 분류 6~14자 한 개, detail은 1~2문장 — 어느 경험의 어떤 장면에서 증명됐고 이 직무 어느 장면에서 쓰일지. '~에서 드러납니다/확인됩니다' 같은 기계적 종결 금지.\n" +
+        "- oneLine (한 문장): 회사·직무의 요구와 학생 무기가 만나는 지점. 어떤 질문이 와도 돌아올 앵커 문장. 학생이 면접에서 실제로 말할 수 있는 자연스러운 한국어로(슬로건·광고문구 금지).\n" +
+        "- insight: 학생이 스스로 못 보는 외부 시선. 각 2~3문장, 모두 제안형(\"~로 보여요\", \"~인 것 같아요\"). 면접관 속마음 단정·사람 단정 금지.\n" +
+        "  · edge: 학생이 당연하게 여기지만 신입 중엔 드문 진짜 강점. 이 경험의 어디서 그게 보이는지 구체적으로.\n" +
+        "  · caution: 강점·답변이 자칫 어떻게 비칠 수 있는지 + 대신 이렇게. 약점 지적이 아니라 '보일 위험'과 방향.\n" +
+        "  · direction: 그래서 이 면접에서 무엇을 앞세우고 어떻게 풀지 종합 방향.\n" +
+        "- weakSpots (2~3개): 면접관이 이 학생을 찌를 만한 급소 질문. q는 실제 면접에서 나올 법한 짧은 질문, guide는 받아치는 방향 1~2문장(모범답안 통째로 말고, 어떤 재료로 어떻게 방어할지 방향).\n" +
+        "- homework (2~3개): 면접 가기 전에 학생이 직접 할 구체적 숙제. 이 회사·직무 기준으로 실제 실행 가능하게(막연한 '조사해보세요' 금지 — 무엇을 어디서 볼지까지).\n" +
+        "문체: 과장 금지, 담백하게. 쉼표 남발 금지. 번역투 금지 — 사람이 말하듯 자연스러운 한국어. 학생에게 말 걸듯 '~해요/~이에요' 체로.\n" +
+        "반드시 JSON만 출력하세요. 다른 텍스트 없이: {\"companyJob\":\"...\",\"jobRole\":\"...\",\"weapons\":[{\"title\":\"...\",\"competency\":\"...\",\"detail\":\"...\"}],\"oneLine\":\"...\",\"insight\":{\"edge\":\"...\",\"caution\":\"...\",\"direction\":\"...\"},\"weakSpots\":[{\"q\":\"...\",\"guide\":\"...\"}],\"homework\":[\"...\"]}";
       const messages: MsgParam[] = [
         { role: "user", content:
-          `직무: ${body.jobTitle || "미입력"}\n회사: ${body.companyInfo || "미입력"}\n문항: ${body.question || "미입력"}\n\n[기업·직무 이해 분석]\n${body.analysisContent || "없음"}\n\n[완성본]\n${body.coverLetter || "없음"}\n\n[디깅 대화]\n${body.digging || "없음"}\n\n[면접 질문·답변]\n${body.interviewAnswers || "없음"}\n\n위를 바탕으로 '면접 한 장' JSON만 출력해줘.` },
+          `직무: ${body.jobTitle || "미입력"}\n회사: ${body.companyInfo || "미입력"}\n문항: ${body.question || "미입력"}\n\n[기업·직무 이해 분석]\n${body.analysisContent || "없음"}\n\n[완성본]\n${body.coverLetter || "없음"}\n\n[디깅 대화]\n${body.digging || "없음"}\n\n[면접 질문·답변]\n${body.interviewAnswers || "없음"}\n\n위를 바탕으로 '면접 브리핑' JSON만 출력해줘.` },
       ];
-      return generate(sys, messages);
+      return generate(sys, messages, SONNET_46, 4096);
     }
 
     default:
