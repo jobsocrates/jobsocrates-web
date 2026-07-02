@@ -304,7 +304,8 @@ export async function POST(req: Request) {
       // 완성본(수정본) 작성 단계만 gpt-4o(temp 0.7), 디깅은 Sonnet. 트리거: 마지막 user 메시지 "완성본을 작성해줘."
       const lastMsgP = body.messages?.[body.messages.length - 1];
       const isCompletionP = typeof lastMsgP?.content === "string" && lastMsgP.content.includes("완성본을 작성해줘");
-      return isCompletionP ? streamOpenAI(sys, msgs, 2048, GPT_4O, 0.7) : stream(sys, msgs);
+      // analyze와 동일: 첫 진단(직무 이해 + ①②③)이 thinking 토큰과 겹쳐 잘리지 않게 8192.
+      return isCompletionP ? streamOpenAI(sys, msgs, 2048, GPT_4O, 0.7) : stream(sys, msgs, 8192);
     }
 
     case "motivation": {
@@ -362,7 +363,9 @@ export async function POST(req: Request) {
       // 수정본(완성본) 작성 단계만 gpt-4o(temp 0.7), 디깅은 Sonnet. 트리거: 마지막 user 메시지 "완성본을 작성해줘."
       const lastMsgA = body.messages?.[body.messages.length - 1];
       const isCompletionA = typeof lastMsgA?.content === "string" && lastMsgA.content.includes("완성본을 작성해줘");
-      return isCompletionA ? streamOpenAI(sys, msgs, 2048, GPT_4O, 0.7) : stream(sys, msgs);
+      // 첫 진단은 "기업과 직무 이해"(길다) + ①②③ 진단이라 sonnet thinking 토큰까지 더하면
+      // 2048로는 ① 중간에 잘린다. 8192로 올려 잘림 방지(짧은 디깅 응답은 일찍 끝나므로 무해).
+      return isCompletionA ? streamOpenAI(sys, msgs, 2048, GPT_4O, 0.7) : stream(sys, msgs, 8192);
     }
 
     case "interview-questions": {
