@@ -45,6 +45,7 @@ interface Props {
   finalAnalysis?: FinalAnalysis | null;
   finalAnalysisLoading?: boolean;
   onClose: () => void;
+  onComplete?: () => void;
   onNextItem?: () => void;
 }
 
@@ -332,7 +333,7 @@ ${interviewQs.length > 0 ? `
 }
 
 /* ── 메인 컴포넌트 ── */
-export function CoverLetterSummary({ jobTitle, question, msgs, interviewQs = [], analysisContent, finalAnalysis, finalAnalysisLoading, onClose, onNextItem }: Props) {
+export function CoverLetterSummary({ jobTitle, question, msgs, interviewQs = [], analysisContent, finalAnalysis, finalAnalysisLoading, onClose, onComplete, onNextItem }: Props) {
   useEffect(() => {
     document.body.style.overflow = "hidden";
     return () => { document.body.style.overflow = ""; };
@@ -556,7 +557,7 @@ export function CoverLetterSummary({ jobTitle, question, msgs, interviewQs = [],
           </div>
           <div className="flex gap-3">
             <button
-              onClick={onClose}
+              onClick={onComplete ?? onClose}
               className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all hover:opacity-80"
               style={{ background: "#F3F4F6", color: "#6B7280", border: "1px solid #E5E7EB" }}
             >

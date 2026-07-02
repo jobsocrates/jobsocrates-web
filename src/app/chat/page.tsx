@@ -2653,6 +2653,7 @@ export default function ChatPage() {
           finalAnalysis={finalAnalysis}
           finalAnalysisLoading={finalAnalysisLoading}
           onClose={() => setShowSummary(false)}
+          onComplete={() => { setShowSummary(false); window.location.href = "/"; }}
           onNextItem={() => { setShowSummary(false); setShowModeSelect(true); }}
         />
       )}
